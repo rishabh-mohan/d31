@@ -1,0 +1,448 @@
+/// The effect registry: everything that can change the run.
+///
+/// Two vocabularies meet here.
+///
+/// 1. `changer` blocks on nodes and location actions, as KSS authors them:
+///      { "funcCode": "INCREASE_STAT", "args": [1, 150],
+///        "changes": [ {"type":"set"|"add", "target":"SWITCH", "value":n} ] }
+///    `changes` always runs (it is the switch bookkeeping); `funcCode` is the
+///    gameplay verb.
+///
+/// 2. Item `effects`, which this project recovered from `effectText` because
+///    the original keeps them compiled. Shapes are in docs/PACK-FORMAT.md.
+///
+/// Both are open registries: add a handler, and packs can use the verb.
+library;
+
+import 'dart:math';
+
+import 'conditions.dart';
+import 'pack.dart';
+import 'state.dart';
+
+typedef ChangerHandler = void Function(
+  GameState state,
+  List<dynamic> args,
+  EffectEngine engine,
+);
+
+class EffectEngine {
+  final ConditionEvaluator conditions;
+  final Map<String, ChangerHandler> handlers;
+
+  /// funcCodes a pack used that this engine has no handler for. The dev panel
+  /// lists these: an unimplemented verb silently doing nothing is exactly the
+  /// bug that is hardest to notice.
+  final Set<String> unknownFuncCodes = {};
+
+  /// Set when an effect ends the run, so the caller can stop the loop.
+  bool endRequested = false;
+  String? endLabel;
+  int? endCode;
+
+  /// Set by MOVE_LOCATION so the loop can follow.
+  int? moveToLocation;
+
+  EffectEngine({
+    ConditionEvaluator? conditions,
+    Map<String, ChangerHandler>? extra,
+  }) : conditions = conditions ?? ConditionEvaluator(),
+       handlers = {...defaultHandlers, ...?extra};
+
+  void resetTransient() {
+    endRequested = false;
+    endLabel = null;
+    endCode = null;
+    moveToLocation = null;
+  }
+
+  /// Applies one `changer` block.
+  void applyChanger(Map<String, dynamic>? changer, GameState state) {
+    if (changer == null) return;
+
+    for (final raw in (changer['changes'] as List? ?? const [])) {
+      if (raw is! Map<String, dynamic>) continue;
+      final gate = (raw['conditionSet'] as Map?)?.cast<String, dynamic>();
+      if (!conditions.evaluate(gate, state)) continue;
+      final target = raw['target'] as String?;
+      if (target == null) continue;
+      final value = (raw['value'] as num?)?.toInt() ?? 0;
+      if (raw['type'] == 'add') {
+        state.addSwitch(target, value);
+      } else {
+        state.setSwitch(target, value);
+      }
+    }
+
+    final code = changer['funcCode'] as String?;
+    if (code == null) return;
+    final handler = handlers[code];
+    if (handler == null) {
+      unknownFuncCodes.add(code);
+      return;
+    }
+    handler(state, (changer['args'] as List?) ?? const [], this);
+  }
+
+  /// Applies one item's `effects` list. Consumables apply on use; normal
+  /// items are passive and read through `GameState.passiveSum` instead, so
+  /// only `trigger`-less consumable effects run here.
+  void applyItem(GameItem item, GameState state) {
+    for (final e in item.effects) {
+      if (e['trigger'] != null) continue;
+      applyItemEffect(e, state);
+    }
+  }
+
+  void applyItemEffect(Map<String, dynamic> e, GameState state) {
+    final conds = e['conditions'];
+    if (conds is List && conds.isNotEmpty) {
+      for (final c in conds.whereType<Map>()) {
+        if (!_simpleCondition(c.cast<String, dynamic>(), state)) return;
+      }
+    }
+
+    num amount(String key) {
+      final range = e['range'];
+      if (range is List && range.length == 2) {
+        final lo = (range[0] as num?) ?? 0;
+        final hi = (range[1] as num?) ?? lo;
+        if (hi <= lo) return lo;
+        return lo + state.random.nextInt((hi - lo).toInt() + 1);
+      }
+      final v = e[key];
+      return v is num ? v : 0;
+    }
+
+    switch (e['type'] as String?) {
+      case 'stat':
+        state.addStat(e['subject'] as String? ?? 'all', amount('value'));
+      case 'hp':
+        state.addHp(amount('value'));
+      case 'hpMultiply':
+        state.hp = min(state.hpMax, state.hp * ((e['factor'] as num?) ?? 1));
+      case 'hpSet':
+        state.hp = amount('value').clamp(state.pack.rules.hpMin, state.hpMax);
+      case 'money':
+        state.addMoney(amount('value'));
+      case 'exerciseExp':
+        state.exerciseExp += amount('value');
+      case 'partTimeExp':
+        state.partTimeExp += amount('value');
+      case 'readCount':
+        final subject = e['subject'] as String?;
+        for (final b in state.pack.books.values) {
+          if (subject == null || subject == 'all' || b.subject == subject) {
+            state.bookReadCounts[b.id] =
+                (state.bookReadCounts[b.id] ?? 0) + amount('value').toInt();
+          }
+        }
+      case 'acquireItem':
+        final id = (e['itemId'] as num?)?.toInt();
+        if (id != null) state.addItem(id, ((e['count'] as num?) ?? 1).toInt());
+      case 'acquireItemRandom':
+        final pool = state.pack.items.values
+            .where((i) => i.isConsumable)
+            .toList();
+        if (pool.isNotEmpty) {
+          for (var n = 0; n < ((e['count'] as num?) ?? 1).toInt(); n++) {
+            state.addItem(pool[state.random.nextInt(pool.length)].id);
+          }
+        }
+      case 'unlockLocation':
+        final id = (e['locationId'] as num?)?.toInt();
+        if (id != null) state.unlockedLocations.add(id);
+      case 'removeTraits':
+        final kind = e['traitType'] as String? ?? 'bad';
+        state.traits.removeWhere((id) => state.pack.traits[id]?.type == kind);
+      case 'cureTrait':
+        final label = (e['trait'] as String? ?? '').toLowerCase();
+        state.traits.removeWhere(
+          (id) => (state.pack.traits[id]?.name ?? '').toLowerCase() == label,
+        );
+      // Passive modifiers: read via passiveSum while the item is held.
+      case 'studyEfficiency':
+      case 'exerciseEfficiency':
+      case 'partTimeEarnings':
+      case 'sleepEfficiency':
+      case 'hpCost':
+      case 'goalReward':
+      case 'acceptanceRate':
+      case 'surviveExhaustion':
+      case 'preventEvent':
+      case 'ui':
+        break;
+      default:
+        break;
+    }
+  }
+
+  bool _simpleCondition(Map<String, dynamic> c, GameState state) {
+    final target = c['target'] as String?;
+    if (target == null) return true;
+    num? actual;
+    switch (target) {
+      case 'EXERCISE_LEVEL':
+        actual = state.exerciseLevel.level;
+      case 'PART_TIME_JOB_LEVEL':
+        actual = state.partTimeLevel.level;
+      case 'STUDY_LEVEL':
+        actual = state.studyLevel.level;
+      case 'LOCATION_ID':
+        actual = state.locationId;
+      case 'TICK':
+        actual = state.date.tick;
+      case 'DATE_INT':
+        actual = state.date.asInt;
+      default:
+        return true; // unknown gate: do not block the effect
+    }
+    final want = (c['intValue'] as num?) ?? (c['value'] as num?) ?? 0;
+    return ConditionEvaluator.compare(
+      actual,
+      c['compareType'] as String?,
+      want,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // funcCode handlers -- every verb story 16 uses.
+  // -------------------------------------------------------------------------
+
+  static int? _int(List a, int i) {
+    if (i >= a.length) return null;
+    final v = a[i];
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
+  }
+
+  static num _num(List a, int i, [num fallback = 0]) {
+    if (i >= a.length) return fallback;
+    final v = a[i];
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? fallback;
+  }
+
+  static String? _str(List a, int i) => i < a.length ? a[i]?.toString() : null;
+
+  /// KSS addresses subjects by index. Resolve against the pack's own list so
+  /// a pack with different subjects still works.
+  static String _subjectAt(GameState s, int index) {
+    final subs = s.pack.manifest.subjects;
+    if (subs.isEmpty) return 'korean';
+    return subs[index.clamp(0, subs.length - 1)];
+  }
+
+  /// Advances one of the special side tracks. The switch name is the track's
+  /// own `<NAME>_ACTION_COUNT`; the step comes from
+  /// `rules.specialTracks.stepPerSession` so it can be retuned.
+  static void _advanceTrack(GameState s, String track) {
+    final step = s.pack.rules
+        .number('specialTracks', 'stepPerSession', 1)
+        .toInt();
+    s.addSwitch('${track}_ACTION_COUNT', step);
+  }
+
+  static final Map<String, ChangerHandler> defaultHandlers = {
+    // The host owns the loss-of-day sequence, after this global dialogue.
+    // Do not charge the stat penalty or roll the date a second time here.
+    'DEFAULT_FAIL_EVENT': (s, a, e) {},
+    // Trait effects are parked by rules.traits.enabled; the global workout
+    // event still clears its EXERCISE_LEVEL_UP switch through its changer.
+    'REMOVE_TRAIT_FROM_EXERCISE': (s, a, e) {},
+    // --- stats ---
+    'INCREASE_STAT': (s, a, e) =>
+        s.addStat(_subjectAt(s, _int(a, 0) ?? 0), _num(a, 1)),
+    'DECREASE_STAT': (s, a, e) =>
+        s.addStat(_subjectAt(s, _int(a, 0) ?? 0), -_num(a, 1)),
+    'INCREASE_STAT_ALL': (s, a, e) => s.addStat('all', _num(a, 0)),
+    'DECREASE_STAT_ALL': (s, a, e) => s.addStat('all', -_num(a, 0)),
+    'INCREASE_RANDOM_STAT': (s, a, e) => s.addStat('random', _num(a, 0)),
+    'INCREASE_LOW_STAT': (s, a, e) {
+      final i = ConditionEvaluator.defaultFuncs['FUNC_GET_LOW_STAT']!(
+        s,
+        const [],
+      );
+      s.addStat(_subjectAt(s, i.toInt()), _num(a, 0));
+    },
+    'DECREASE_TAMGOO_STAT': (s, a, e) => s.addStat('all', -_num(a, 0)),
+    'INCREASE_TAMGOO_STAT': (s, a, e) => s.addStat('all', _num(a, 0)),
+    'DECREASE_TAMGOO_HIGH_STAT': (s, a, e) {
+      final i = ConditionEvaluator.defaultFuncs['FUNC_GET_HIGH_STAT']!(
+        s,
+        const [],
+      );
+      s.addStat(_subjectAt(s, i.toInt()), -_num(a, 0));
+    },
+    'SET_RANDOM_SUBJECT': (s, a, e) =>
+        s.randomSubject = s.randomOf(s.pack.manifest.subjects),
+
+    // --- hp / money ---
+    'INCREASE_HP': (s, a, e) => s.addHp(_num(a, 0)),
+    'DECREASE_HP': (s, a, e) => s.addHp(-_num(a, 0)),
+    'INCREASE_MONEY': (s, a, e) => s.addMoney(_num(a, 0)),
+    'DECREASE_MONEY': (s, a, e) => s.addMoney(-_num(a, 0)),
+
+    // --- exp ---
+    'INCREASE_EXERCISE_EXP': (s, a, e) => s.exerciseExp += _num(a, 0),
+    'INCREASE_PART_TIME_JOB_EXP': (s, a, e) => s.partTimeExp += _num(a, 0),
+
+    // --- items ---
+    'ACQUIRE_ITEM': (s, a, e) {
+      final id = _int(a, 0);
+      // KSS also passes symbolic ids ("STOLEN_ITEM") that resolve against a
+      // story table the pack does not carry; those are skipped, and the
+      // engine records it rather than inventing an item.
+      if (id == null) {
+        e.unknownFuncCodes.add('ACQUIRE_ITEM(${_str(a, 0)})');
+        return;
+      }
+      s.addItem(id, _int(a, 1) ?? 1);
+    },
+    'ACQUIRE_ITEM_RANDOM': (s, a, e) {
+      final pool = a.whereType<num>().map((n) => n.toInt()).toList();
+      if (pool.isEmpty) return;
+      s.addItem(pool[s.random.nextInt(pool.length)]);
+    },
+    'REMOVE_ITEM': (s, a, e) {
+      final id = _int(a, 0);
+      if (id != null) s.removeItem(id, _int(a, 1) ?? 1);
+    },
+    'REMOVE_ITEM_LIST': (s, a, e) {
+      for (final n in a.whereType<num>()) {
+        s.removeItem(n.toInt());
+      }
+    },
+    'REMOVE_ITEM_RANDOM': (s, a, e) {
+      if (s.inventory.isEmpty) return;
+      final ids = s.inventory.keys.toList();
+      s.removeItem(ids[s.random.nextInt(ids.length)]);
+    },
+
+    // --- traits ---
+    'ACQUIRE_TRAIT': (s, a, e) {
+      final id = _int(a, 0);
+      if (id != null) s.traits.add(id);
+    },
+    'REMOVE_TRAIT': (s, a, e) {
+      final id = _int(a, 0);
+      if (id != null) s.traits.remove(id);
+    },
+    'REMOVE_BAD_TRAIT_RANDOM': (s, a, e) {
+      final bad = s.traits
+          .where((id) => s.pack.traits[id]?.type == 'bad')
+          .toList();
+      if (bad.isNotEmpty) s.traits.remove(bad[s.random.nextInt(bad.length)]);
+    },
+
+    // --- locations ---
+    'UNLOCK_LOCATION': (s, a, e) {
+      final id = _int(a, 0);
+      if (id != null) s.unlockedLocations.add(id);
+    },
+    'UNLOCK_LOCATION_ALL': (s, a, e) =>
+        s.unlockedLocations.addAll(s.pack.locations.keys),
+    'LOCK_LOCATION': (s, a, e) {
+      final id = _int(a, 0);
+      if (id != null) s.unlockedLocations.remove(id);
+    },
+    'LOCK_LOCATION_EXCEPT': (s, a, e) {
+      final keep = a.whereType<num>().map((n) => n.toInt()).toSet();
+      s.unlockedLocations.removeWhere((id) => !keep.contains(id));
+    },
+    'MOVE_LOCATION': (s, a, e) {
+      final id = _int(a, 0);
+      if (id != null) {
+        s.locationId = id;
+        s.unlockedLocations.add(id);
+        e.moveToLocation = id;
+      }
+    },
+    'LOCK_MOVE_LOCATION': (s, a, e) => s.movementLocked = true,
+    'UNLOCK_MOVE_LOCATION': (s, a, e) => s.movementLocked = false,
+    'START_LOCATION_COUNT': (s, a, e) {},
+
+    // --- switches ---
+    'SET_RANDOM_SWITCH': (s, a, e) {
+      final name = _str(a, 0);
+      if (name == null) return;
+      final lo = _num(a, 1).toInt();
+      final hi = _num(a, 2, lo.toDouble()).toInt();
+      s.setSwitch(name, hi <= lo ? lo : lo + s.random.nextInt(hi - lo + 1));
+    },
+    'SET_RANDOM_SWITCH_3': (s, a, e) {
+      final name = _str(a, 0);
+      if (name == null) return;
+      final lo = _num(a, 1).toInt();
+      final hi = _num(a, 2, lo.toDouble()).toInt();
+      s.setSwitch(name, hi <= lo ? lo : lo + s.random.nextInt(hi - lo + 1));
+    },
+    'SET_VALUE_TARGET': (s, a, e) {
+      // ["BANBAN2", "+=", "TAMGOO2_STAT"] -- switch, operator, source switch.
+      final dest = _str(a, 0);
+      final op = _str(a, 1) ?? '=';
+      final srcName = _str(a, 2);
+      if (dest == null || srcName == null) return;
+      final src = s.switchValue(srcName);
+      switch (op) {
+        case '+=':
+          s.addSwitch(dest, src);
+        case '-=':
+          s.addSwitch(dest, -src);
+        case '=':
+          s.setSwitch(dest, src);
+      }
+    },
+    'SET_DRAW_VALUE': (s, a, e) => s.drawValue = s.random.nextInt(100),
+    'ADD_CHALLENGE_VALUE': (s, a, e) {
+      final name = _str(a, 0);
+      if (name != null) s.addSwitch(name, _num(a, 1).toInt());
+    },
+    'ADD_BLOCK': (s, a, e) {},
+
+    // --- todos (the task list; display-only until the exam milestone) ---
+    'ADD_TODO': (s, a, e) {},
+    'ADD_TODO_2': (s, a, e) {},
+    'REMOVE_TODO': (s, a, e) {},
+
+    // --- run control ---
+    'END_GAME': (s, a, e) {
+      e.endRequested = true;
+      e.endCode = _int(a, 0);
+      e.endLabel = _str(a, 1);
+    },
+    'START_SAT': (s, a, e) {},
+
+    // --- the special location tracks -------------------------------------
+    //
+    // School offers "Idol practice", "Game practice", "Part collecting",
+    // "Special study" and "Psychic practice". Each is a side progression KSS
+    // runs in compiled code, so the mechanics are not recoverable from data.
+    // What *is* recoverable is that events gate on a matching switch, so each
+    // track advances its own counter: the content keyed to it then fires as
+    // the track progresses. How much a session is worth is tunable under
+    // `rules.specialTracks`.
+    'IDOL_ACTION': (s, a, e) => _advanceTrack(s, 'IDOL'),
+    'PRO_GAME_ACTION': (s, a, e) => _advanceTrack(s, 'PRO_GAME'),
+    'MECHANIC_ACTION': (s, a, e) => _advanceTrack(s, 'MECHANIC'),
+    'MEDICAL_ACTION': (s, a, e) => _advanceTrack(s, 'MEDICAL'),
+    'PRACTICE_PSYCHIC': (s, a, e) => _advanceTrack(s, 'PSYCHIC'),
+    'SOCCER_ACTION': (s, a, e) => _advanceTrack(s, 'SOCCER'),
+
+    // A draw/gacha beat: SET_DRAW_VALUE rolls, DO_DRAW commits the roll so
+    // FUNC_GOOD_DRAW_VALUE can be compared against it.
+    'DO_DRAW': (s, a, e) {
+      if (s.drawValue == 0) s.drawValue = s.random.nextInt(100);
+    },
+
+    // --- flavour / platform verbs with no simulation meaning ---
+    'SIREN': (s, a, e) {},
+    'GO_WEB_BROWSER': (s, a, e) {},
+    'HACKING_LESSON': (s, a, e) {},
+    'ALIVE_ART': (s, a, e) {},
+    'SLEEP': (s, a, e) {},
+    'PART_TIME_JOB': (s, a, e) {},
+    'EXERCISE': (s, a, e) {},
+    'STUDY': (s, a, e) {},
+  };
+}
