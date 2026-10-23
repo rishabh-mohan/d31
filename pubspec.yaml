@@ -1,0 +1,38 @@
+name: d30mode
+description: "A data-driven rebuild of Korean Student Simulator's 31-Day Mode."
+publish_to: 'none'
+version: 0.2.0+2
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # Used to find a writable directory for the editable copy of the content
+  # pack, so pack JSON can be changed on-device without a rebuild.
+  path_provider: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # The content pack. Everything the game is made of lives here as JSON; the
+  # app copies it to a writable directory on first run and loads that copy, so
+  # it can be edited and reloaded without rebuilding. See docs/PACK-FORMAT.md.
+  assets:
+    - packs/kss16/
+    - packs/kss16/events/
+    # Placeholder art lifted from KSS by tools/copy_assets.py. Local use
+    # only; gitignored. A pack may override any of these by shipping its own
+    # images/ folder.
+    - assets/images/backgrounds/
+    - assets/images/character/
+    - assets/images/ui/
+    - assets/images/items/
+    - assets/images/stationery/

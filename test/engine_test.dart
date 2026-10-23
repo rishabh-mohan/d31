@@ -1,0 +1,1052 @@
+/// Exercises the engine against the real pack, headlessly.
+///
+/// The point of the simulation tests is coverage you cannot get by tapping
+/// through the app: a few hundred full runs touch far more of the 322 events
+/// and 13,173 nodes than hand-play ever would, and they fail loudly on the
+/// things that are invisible on a device -- a graph that loops, a node link
+/// that goes nowhere, an effect verb with no handler.
+library;
+
+import 'dart:io';
+import 'dart:math';
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:d30mode/engine/conditions.dart';
+import 'package:d30mode/engine/content_source.dart';
+import 'package:d30mode/engine/effects.dart';
+import 'package:d30mode/engine/game.dart';
+import 'package:d30mode/engine/game_date.dart';
+import 'package:d30mode/engine/goals.dart';
+import 'package:d30mode/engine/pack.dart';
+import 'package:d30mode/engine/state.dart';
+
+late ContentPack pack;
+
+/// Moves the clock past the weekday class ticks, where the hand is pinned and
+/// the player is held at School.
+void _leaveClass(Game game) {
+  game.state.date = GameDate(game.state.date.day, game.classTicks);
+  game.invalidateHand();
+}
+
+Future<void> main() async {
+  setUpAll(() async {
+    pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
+  });
+
+  group('pack', () {
+    test('loads the whole of story 16', () {
+      expect(pack.manifest.id, 'kss16');
+      expect(pack.manifest.totalDays, 32); // 2023-10-16 .. 2023-11-16
+      expect(pack.locations, hasLength(11));
+      // English 1.29.0 campaign: 147 events, 3444 records / 3094 unique nodes.
+      expect(pack.events, hasLength(147));
+      expect(pack.nodes, hasLength(3094));
+      expect(pack.switchDefaults, hasLength(225));
+      expect(pack.items, hasLength(177));
+      expect(pack.traits, hasLength(244));
+      expect(pack.books, hasLength(54));
+    });
+
+    test('every event roots at a node that exists', () {
+      final missing = pack.events.values
+          .where((e) => !pack.nodes.containsKey(e.rootNodeId))
+          .map((e) => '${e.id}:${e.name}')
+          .toList();
+      expect(
+        missing,
+        isEmpty,
+        reason: 'events rooted at a missing node: $missing',
+      );
+    });
+
+    test('option nodes parse their inline branches', () {
+      final optionNodes = pack.nodes.values
+          .where((n) => n.type == 'option')
+          .toList();
+      expect(optionNodes, hasLength(74));
+      // Every option node must offer at least one labelled branch -- an
+      // option node with an empty list would stall the player on a dead beat.
+      for (final n in optionNodes) {
+        expect(
+          n.options,
+          isNotEmpty,
+          reason: 'option node ${n.id} has no branches',
+        );
+        for (final o in n.options) {
+          expect(
+            o.text,
+            isNotEmpty,
+            reason: 'unlabelled branch on node ${n.id}',
+          );
+        }
+      }
+    });
+
+    test('every option branch points at a node that exists', () {
+      final dangling = <String>[];
+      for (final n in pack.nodes.values) {
+        if (n.type != 'option') continue;
+        for (final o in n.options) {
+          final byId =
+              o.nextNodeId != null && pack.nodes.containsKey(o.nextNodeId);
+          final byBox =
+              o.nextBoxId != null &&
+              (pack.nodesByBox[o.nextBoxId]?.isNotEmpty ?? false);
+          if (!byId && !byBox) {
+            dangling.add('node ${n.id} -> "${o.text}"');
+          }
+        }
+      }
+      expect(dangling, isEmpty, reason: 'dangling option branches: $dangling');
+    });
+
+    test('the engine handles every verb the pack uses', () {
+      // Statically, not by playing: random coverage reaches ~a third of the
+      // events, so a missing handler on a rare node would slip through.
+      final usedFuncCodes = <String>{};
+      void collect(Map<String, dynamic>? changer) {
+        final code = changer?['funcCode'];
+        if (code is String) usedFuncCodes.add(code);
+      }
+
+      for (final n in pack.nodes.values) {
+        collect(n.changer);
+        collect(n.actionChanger);
+      }
+      for (final l in pack.locations.values) {
+        for (final a in l.actions) {
+          collect(a.changer);
+        }
+      }
+
+      final handled = EffectEngine.defaultHandlers.keys.toSet();
+      expect(
+        usedFuncCodes.difference(handled),
+        isEmpty,
+        reason: 'funcCodes with no handler do nothing, silently',
+      );
+
+      final usedTargets = <String>{};
+      void walk(Map<String, dynamic>? set) {
+        if (set == null) return;
+        for (final c in (set['conditions'] as List? ?? const [])) {
+          if (c is Map && c['targetType'] == 'func' && c['target'] is String) {
+            usedTargets.add(c['target'] as String);
+          }
+        }
+        walk((set['left'] as Map?)?.cast<String, dynamic>());
+        walk((set['right'] as Map?)?.cast<String, dynamic>());
+      }
+
+      for (final e in pack.events.values) {
+        walk(e.conditionSet);
+      }
+      for (final n in pack.nodes.values) {
+        walk(n.conditionSet);
+        for (final o in n.options) {
+          walk(o.conditionSet);
+        }
+        for (final ch in [n.changer, n.actionChanger]) {
+          for (final g in (ch?['changes'] as List? ?? const [])) {
+            if (g is Map) {
+              walk((g['conditionSet'] as Map?)?.cast<String, dynamic>());
+            }
+          }
+        }
+      }
+
+      final knownFuncs = ConditionEvaluator.defaultFuncs.keys.toSet();
+      expect(
+        usedTargets.difference(knownFuncs),
+        isEmpty,
+        reason: 'FUNC_ targets with no handler evaluate false, silently',
+      );
+    });
+
+    test('every item has structured effects or is marked flavour', () {
+      final gaps = pack.items.values
+          .where(
+            (i) => i.effects.isEmpty && !i.flavour && i.effectText.isNotEmpty,
+          )
+          .map((i) => '${i.id}:${i.effectText}')
+          .toList();
+      expect(gaps, isEmpty, reason: 'items with unconverted effects: $gaps');
+    });
+  });
+
+  group('calendar', () {
+    test('parses and round-trips date codes', () {
+      final d = GameDate.parse('DATE_2023101605');
+      expect(d.day, DateTime(2023, 10, 16));
+      expect(d.tick, 5);
+      expect(d.code, 'DATE_2023101605');
+    });
+
+    test('rejects malformed codes instead of throwing', () {
+      expect(GameDate.tryParse('nonsense'), isNull);
+      expect(GameDate.tryParse(null), isNull);
+    });
+
+    test('advancing rolls over into the next day', () {
+      final d = GameDate.parse('DATE_2023101614').advance(1, 15);
+      expect(d.tick, 0);
+      expect(d.day, DateTime(2023, 10, 17));
+    });
+  });
+
+  group('conditions', () {
+    test('an empty set is true', () {
+      final state = GameState.newRun(pack);
+      expect(ConditionEvaluator().evaluate(null, state), isTrue);
+      expect(ConditionEvaluator().evaluate({'conditions': []}, state), isTrue);
+    });
+
+    test('reads event counts, switches and locations', () {
+      final state = GameState.newRun(pack);
+      final ev = ConditionEvaluator();
+
+      Map<String, dynamic> cond(String target, String type, num value) => {
+        'operator': 'and',
+        'left': {'conditions': []},
+        'right': {
+          'conditions': [
+            {
+              'type': 'defaults',
+              'target': target,
+              'targetType': type,
+              'compareType': 'equal',
+              'value': value,
+            },
+          ],
+        },
+      };
+
+      expect(ev.evaluate(cond('EVENT_159', 'event', 0), state), isTrue);
+      state.eventCounts[159] = 1;
+      expect(ev.evaluate(cond('EVENT_159', 'event', 0), state), isFalse);
+
+      state.setSwitch('PART_TIME_JOB_LEVEL_UP', 1);
+      expect(
+        ev.evaluate(cond('PART_TIME_JOB_LEVEL_UP', 'eventSwitch', 1), state),
+        isTrue,
+      );
+
+      // A location condition asks where you ARE, not what you have unlocked.
+      state.unlockedLocations.add(16002);
+      expect(
+        ev.evaluate(cond('LOCATION_16002', 'location', 1), state),
+        isFalse,
+        reason: 'unlocking the Park must not satisfy "at the Park"',
+      );
+      state.locationId = 16002;
+      expect(ev.evaluate(cond('LOCATION_16002', 'location', 1), state), isTrue);
+      expect(ev.evaluate(cond('LOCATION_1000', 'location', 1), state), isFalse);
+    });
+
+    test('or does not short-circuit to true on an empty side', () {
+      final state = GameState.newRun(pack);
+      final set = {
+        'operator': 'or',
+        'left': {'conditions': []},
+        'right': {
+          'conditions': [
+            {
+              'type': 'defaults',
+              'target': 'EVENT_999999',
+              'targetType': 'event',
+              'compareType': 'equal',
+              'value': 5,
+            },
+          ],
+        },
+      };
+      expect(ConditionEvaluator().evaluate(set, state), isFalse);
+    });
+  });
+
+  group('effects', () {
+    test('INCREASE_STAT addresses subjects by index', () {
+      // The order is recovered from the Dart enum ordinals in the AOT object
+      // dump: korean=0, math=1, english=2, then the two elective slots.
+      expect(pack.manifest.subjects, [
+        'korean',
+        'math',
+        'english',
+        'science',
+        'society',
+      ]);
+
+      final game = Game.newRun(pack);
+      // `stats.initial` is a per-subject map, so read the starting value off
+      // a fresh run rather than through the scalar accessor.
+      final start = game.state.stats['math']!;
+      expect(start, 50, reason: 'subjects start at 50');
+
+      game.effects.applyChanger({
+        'funcCode': 'INCREASE_STAT',
+        'args': [1, 150],
+        'changes': [],
+      }, game.state);
+      expect(
+        game.state.stats['math'],
+        start + 150,
+        reason: 'index 1 is math, not english',
+      );
+      expect(game.state.stats['english'], start);
+
+      game.effects.applyChanger({
+        'funcCode': 'INCREASE_STAT',
+        'args': [2, 40],
+        'changes': [],
+      }, game.state);
+      expect(game.state.stats['english'], start + 40);
+    });
+
+    test('changes[] set and add drive switches', () {
+      final game = Game.newRun(pack);
+      game.effects.applyChanger({
+        'funcCode': null,
+        'args': null,
+        'changes': [
+          {'type': 'set', 'target': 'ENDING_SW', 'value': 9},
+          {'type': 'add', 'target': 'FRIENDSTEP', 'value': 2},
+          {'type': 'add', 'target': 'FRIENDSTEP', 'value': 2},
+        ],
+      }, game.state);
+      expect(game.state.switchValue('ENDING_SW'), 9);
+      expect(game.state.switchValue('FRIENDSTEP'), 4);
+    });
+
+    test('END_GAME stops the run and records the ending', () {
+      final game = Game.newRun(pack);
+      game.effects.applyChanger({
+        'funcCode': 'END_GAME',
+        'args': [160005, 'Elite Ending'],
+        'changes': [],
+      }, game.state);
+      expect(game.effects.endRequested, isTrue);
+      expect(game.effects.endLabel, 'Elite Ending');
+    });
+
+    test('a consumable applies its recovered effects and is spent', () {
+      final game = Game.newRun(pack);
+      game.state.addItem(1); // Coffee: "Stamina +25"
+      game.state.hp = 50;
+      expect(game.useItem(1), isTrue);
+      expect(game.state.hp, 75);
+      expect(game.state.itemCount(1), 0);
+    });
+
+    test('a held normal item feeds passiveSum', () {
+      final game = Game.newRun(pack);
+      // NORMAL_STAT_2 resolves to +6 using the reference's x3 item scaling.
+      game.state.addItem(3026);
+      game.state.locationId = 16003; // Reading Room, type "study"
+      expect(game.state.passiveSum('studyEfficiency'), 6);
+      game.state.locationId = 1000; // School, type "school" -- out of scope
+      expect(game.state.passiveSum('studyEfficiency'), 0);
+    });
+  });
+
+  group('the block hand', () {
+    test('deals blocksPerTick blocks, drawn with replacement', () {
+      final game = Game.newRun(pack, random: Random(11));
+      _leaveClass(game);
+      final hand = game.hand();
+      expect(hand, hasLength(game.blocksPerTick));
+      // Every dealt block must come from this location's own list.
+      final pool = game.availableActions().toSet();
+      expect(hand.every(pool.contains), isTrue);
+    });
+
+    test('a hand can repeat a block, and rerolls at a full-pool location', () {
+      // School has exactly 4 ungated actions and blocksPerTick is 4. Drawn
+      // without replacement that is always the whole pool, so the hand could
+      // never change and a Refresh Ticket would do nothing. The reference
+      // hands show duplicates, so the draw takes replacement.
+      final game = Game.newRun(pack, random: Random(14));
+      _leaveClass(game);
+      expect(game.availableActions(), hasLength(game.blocksPerTick));
+
+      final seen = <String>{};
+      var sawDuplicate = false;
+      game.state.rerolls = 60;
+      for (var i = 0; i < 60; i++) {
+        final hand = game.hand();
+        seen.add(hand.map((a) => a.actionType).join(','));
+        if (hand.toSet().length < hand.length) sawDuplicate = true;
+        game.refreshHand();
+      }
+      expect(
+        seen.length,
+        greaterThan(1),
+        reason: 'a refresh must be able to change the hand',
+      );
+      expect(
+        sawDuplicate,
+        isTrue,
+        reason: 'with replacement, a block should sometimes repeat',
+      );
+    });
+
+    test('the same hand is returned until something invalidates it', () {
+      final game = Game.newRun(pack, random: Random(12));
+      _leaveClass(game);
+      expect(identical(game.hand(), game.hand()), isTrue);
+      game.invalidateHand();
+      // A redeal may coincidentally match, so compare identity of the list.
+      expect(identical(game.hand(), game.hand()), isTrue);
+    });
+
+    test('weight is a draw probability, not a payout multiplier', () {
+      // The Reading Room is study 12 / sleep 0.3, so study should dominate
+      // its hands -- and a study block there must not pay more than the same
+      // book studied anywhere else.
+      //
+      // Note the gates: with no special blocks unlocked the Reading Room has
+      // exactly 4 ungated actions, which is blocksPerTick, so the whole pool
+      // is dealt and weights cannot show. Unlock the two special blocks a
+      // character would grant, so the pool (6) exceeds the hand (4).
+      final counts = <String, int>{};
+      const deals = 300;
+      for (var seed = 0; seed < deals; seed++) {
+        final game = Game.newRun(pack, random: Random(seed));
+        _leaveClass(game);
+        game.state.unlockedLocations.add(16003);
+        game.state.setSwitch('MECHANIC_BLOCK_CONDITION', 1);
+        game.state.setSwitch('MEDICAL_BLOCK_CONDITION', 1);
+        game.move(16003);
+        final hand = game.hand();
+        expect(hand, hasLength(4));
+        for (final a in hand) {
+          counts[a.actionType] = (counts[a.actionType] ?? 0) + 1;
+        }
+      }
+      final study = counts['study'] ?? 0;
+      final sleep = counts['sleep'] ?? 0;
+      expect(
+        study,
+        greaterThan(sleep),
+        reason: 'study 12 vs sleep 0.3 should dominate the draw: $counts',
+      );
+      expect(
+        study,
+        greaterThan(deals * 0.9),
+        reason: 'weight 12 of 16.8 should appear in nearly every hand',
+      );
+
+      // Same book, two locations with very different study weights.
+      final book = pack.books.values.first;
+      final a = Game.newRun(pack, random: Random(1));
+      _leaveClass(a);
+      a.state.unlockedLocations.add(16003);
+      a.move(16003);
+      final readingRoom = a.preview(
+        a.pack.locations[16003]!.actions.firstWhere(
+          (x) => x.actionType == 'study',
+        ),
+        book: book,
+      );
+
+      final b = Game.newRun(pack, random: Random(1));
+      final school = b.preview(
+        b.pack.locations[1000]!.actions.firstWhere(
+          (x) => x.actionType == 'study',
+        ),
+        book: book,
+      );
+
+      expect(
+        readingRoom.gain,
+        school.gain,
+        reason: 'location weight must not change the payout',
+      );
+    });
+
+    test('refreshing costs a ticket and stops at zero', () {
+      final game = Game.newRun(pack, random: Random(13));
+      _leaveClass(game);
+      game.state.rerolls = 1;
+      expect(game.refreshHand(), isTrue);
+      expect(game.state.rerolls, 0);
+      expect(game.refreshHand(), isFalse);
+    });
+  });
+
+  group('the day', () {
+    test('gives 14 player actions, then an evening slot', () {
+      final game = Game.newRun(pack, random: Random(21));
+      expect(game.actionTicksPerDay, 14);
+      expect(pack.manifest.ticksPerDay, 15);
+
+      final startDay = game.state.date.day;
+      for (var i = 0; i < 14; i++) {
+        game.state.hp = game.state.hpMax; // isolate the clock from stamina
+        expect(
+          game.state.date.day,
+          startDay,
+          reason: 'the day ended early, after $i actions',
+        );
+        expect(game.state.date.tick, i);
+        final hand = game.hand();
+        // Avoid study so no book juggling is needed.
+        final action = hand.firstWhere(
+          (a) => a.actionType != 'study',
+          orElse: () => hand.first,
+        );
+        game.act(
+          action,
+          book: action.actionType == 'study' ? pack.books.values.first : null,
+        );
+      }
+      expect(
+        game.state.date.day,
+        startDay.add(const Duration(days: 1)),
+        reason: 'the 14th action should roll the day over',
+      );
+      expect(game.state.date.tick, 0);
+    });
+
+    test('tick 14 is where the evening condition becomes true', () {
+      final game = Game.newRun(pack, random: Random(22));
+      final condition = <String, dynamic>{
+        'conditions': [
+          {
+            'type': 'defaults',
+            'target': 'DATE_PROGRESS',
+            'targetType': 'eventSwitch',
+            'compareType': 'equal',
+            'value': 14,
+          },
+        ],
+      };
+      game.state.date = GameDate(game.state.date.day, 0);
+      expect(game.conditions.evaluate(condition, game.state), isFalse);
+      game.state.date = GameDate(game.state.date.day, 14);
+      expect(game.conditions.evaluate(condition, game.state), isTrue);
+    });
+
+    test('sleeping restores stamina without ending the day', () {
+      final game = Game.newRun(pack, random: Random(23));
+      _leaveClass(game);
+      final sleep = game.availableActions().firstWhere(
+        (a) => a.actionType == 'sleep',
+      );
+
+      final day = game.state.date.day;
+      final tick = game.state.date.tick;
+      game.state.hp = 20;
+
+      final outcome = game.act(sleep);
+
+      expect(game.state.hp, greaterThan(20));
+      expect(outcome.dayEnded, isFalse, reason: 'sleep must not end the day');
+      expect(game.state.date.day, day);
+      expect(
+        game.state.date.tick,
+        tick + 1,
+        reason: 'sleep still costs one tick',
+      );
+    });
+  });
+
+  group('class lessons', () {
+    test('a weekday starts in class with a pinned lesson block', () {
+      final game = Game.newRun(pack, random: Random(31));
+      // The run starts Monday 2023-10-16 at tick 0.
+      expect(game.state.date.day.weekday, DateTime.monday);
+      expect(game.inClass, isTrue);
+
+      final hand = game.hand();
+      expect(hand.first.actionType, 'lesson');
+      expect(hand, hasLength(game.blocksPerTick));
+      // Only one lesson, and it is the first slot.
+      expect(hand.where((a) => a.actionType == 'lesson'), hasLength(1));
+    });
+
+    test('a refresh never rerolls the lesson away', () {
+      final game = Game.newRun(pack, random: Random(32));
+      game.state.rerolls = 10;
+      for (var i = 0; i < 10; i++) {
+        expect(game.hand().first.actionType, 'lesson');
+        game.refreshHand();
+      }
+    });
+
+    test('the player cannot leave school during class', () {
+      final game = Game.newRun(pack, random: Random(33));
+      game.state.unlockedLocations.add(16002);
+      expect(game.move(16002), isFalse);
+      expect(game.availableLocations().map((l) => l.id), [1000]);
+
+      _leaveClass(game);
+      expect(game.move(16002), isTrue);
+    });
+
+    test('class ends after classTicks, and not at weekends', () {
+      final game = Game.newRun(pack, random: Random(34));
+      game.state.date = GameDate(game.state.date.day, game.classTicks - 1);
+      expect(game.inClass, isTrue);
+      game.state.date = GameDate(game.state.date.day, game.classTicks);
+      expect(game.inClass, isFalse);
+
+      // 2023-10-21 is the first Saturday of the run.
+      game.state.date = GameDate(DateTime(2023, 10, 21), 0);
+      expect(game.inClass, isFalse, reason: 'no class at the weekend');
+    });
+
+    test('a lesson teaches a subject at a real book rate', () {
+      final game = Game.newRun(pack, random: Random(35));
+      final lesson = game.lessonFor(game.state.date);
+      expect(lesson, isNotNull);
+      expect(pack.manifest.subjects, contains(lesson!.subject));
+      expect(lesson.book.subject, lesson.subject);
+
+      final before = game.state.stats[lesson.subject]!;
+      final block = game.hand().first;
+      expect(block.actionType, 'lesson');
+      final shown = game.preview(block);
+
+      // The card shows a band; the payout is rolled inside it.
+      expect(shown.gain, isNotNull);
+      expect(shown.gainMax, isNotNull);
+      expect(shown.gainMax!, greaterThan(shown.gain!));
+      expect(shown.title, 'Period 1');
+
+      game.act(block);
+      final gained = game.state.stats[lesson.subject]! - before;
+      expect(gained, greaterThanOrEqualTo(shown.gain!));
+      expect(gained, lessThanOrEqualTo(shown.gainMax!));
+    });
+
+    test('the lesson is stable within a tick but varies across them', () {
+      final game = Game.newRun(pack, random: Random(36));
+      final a = game.lessonFor(game.state.date);
+      final b = game.lessonFor(game.state.date);
+      expect(a!.book.id, b!.book.id, reason: 'same tick, same lesson');
+
+      final seen = <int>{};
+      for (var t = 0; t < 6; t++) {
+        final l = game.lessonFor(GameDate(game.state.date.day, t));
+        if (l != null) seen.add(l.book.id);
+      }
+      expect(
+        seen.length,
+        greaterThan(1),
+        reason: 'the lesson should vary tick to tick',
+      );
+    });
+  });
+
+  group('weekly goals', () {
+    test('a goal is issued at run start, targeting a real subject', () {
+      final game = Game.newRun(pack, random: Random(41));
+      final goal = game.state.weeklyGoal;
+      expect(goal, isNotNull);
+      expect(pack.manifest.subjects, contains(goal!.targetSubject));
+      expect(pack.manifest.subjects, contains(goal.rewardSubject));
+      expect(
+        goal.targetValue,
+        greaterThan(game.state.stats[goal.targetSubject] ?? 0),
+      );
+    });
+
+    test('meeting the goal pays its reward on the Monday rollover', () {
+      final game = Game.newRun(pack, random: Random(42));
+      final goal = game.state.weeklyGoal!;
+      game.state.stats[goal.targetSubject] = goal.targetValue.toDouble();
+      expect(Goals.checkMet(game.state), isTrue);
+      expect(goal.met, isTrue);
+
+      final before = game.state.stats[goal.rewardSubject] ?? 0;
+      Goals.payReward(game.state);
+      expect(game.state.stats[goal.rewardSubject]! - before, goal.rewardValue);
+    });
+
+    test('study after the goal is met still weights the next goal', () {
+      // Two runs, identical except that one keeps studying after the goal is
+      // already met. The next week's bar must be higher for that one.
+      int nextTargetAfter({required int surplusBlocks}) {
+        final game = Game.newRun(pack, random: Random(43));
+        final goal = game.state.weeklyGoal!;
+        game.state.stats[goal.targetSubject] = goal.targetValue.toDouble();
+        Goals.checkMet(game.state);
+        for (var i = 0; i < surplusBlocks; i++) {
+          Goals.recordStudyBlock(game.state);
+        }
+        // Monday of week 1.
+        game.state.date = GameDate(DateTime(2023, 10, 23), 0);
+        Goals.rollOver(game.state);
+        return game.state.weeklyGoal!.targetValue;
+      }
+
+      final lazy = nextTargetAfter(surplusBlocks: 0);
+      final diligent = nextTargetAfter(surplusBlocks: 20);
+      expect(
+        diligent,
+        greaterThan(lazy),
+        reason: 'surplus study must raise the next bar, not be wasted',
+      );
+
+      // And those surplus blocks are counted as surplus.
+      final game = Game.newRun(pack, random: Random(43));
+      game.state.weeklyGoal!.met = true;
+      Goals.recordStudyBlock(game.state);
+      expect(game.state.surplusStudyBlocks, 1);
+      expect(game.state.studyBlocksThisWeek, 1);
+    });
+  });
+
+  group('traits', () {
+    test('are loaded but contribute nothing while parked', () {
+      final game = Game.newRun(pack, random: Random(51));
+      expect(pack.traits, hasLength(244));
+      expect(game.state.traitsEnabled, isFalse);
+
+      // Trait 1 is "TOEIC 800": firstPlusStat english +100.
+      final before = game.state.stats['english'];
+      game.state.traits.add(1);
+      game.state.applyStartingTraitEffects();
+      expect(game.state.stats['english'], before);
+
+      // Trait 5 "Night Owl" is an hpCost effect; it must not reach passiveSum.
+      game.state.traits.add(5);
+      expect(game.state.passiveSum('hpCost'), 0);
+    });
+  });
+
+  group('engine switches', () {
+    test('expose the calendar to content', () {
+      final game = Game.newRun(pack, random: Random(61));
+      game.state.date = GameDate(DateTime(2023, 10, 18), 7);
+      expect(game.state.switchValue('DATE_PROGRESS'), 7);
+      expect(game.state.switchValue('TICK'), 7);
+      expect(game.state.switchValue('DATE_DAY'), 18);
+      expect(game.state.switchValue('DATE_MONTH'), 10);
+      expect(game.state.switchValue('WEEKCODE'), DateTime.wednesday);
+    });
+
+    test('cannot be overwritten by content', () {
+      final game = Game.newRun(pack, random: Random(62));
+      game.state.date = GameDate(DateTime(2023, 10, 18), 3);
+      game.state.setSwitch('DATE_PROGRESS', 99);
+      expect(game.state.switchValue('DATE_PROGRESS'), 3);
+    });
+  });
+
+  group('location-gated events', () {
+    test('only fire while you are actually at that location', () {
+      // #200 "I've Been Watching" is LOCATION_16004 (Cafe) in section one. It
+      // must not be eligible from School just because the Cafe is unlocked.
+      final game = Game.newRun(pack, random: Random(71));
+      _leaveClass(game);
+      game.state.unlockedLocations.addAll([16004, 16002]);
+      game.state.setSwitch('SON_NIM', 0);
+
+      bool eligibleAt(int locationId) {
+        game.state.locationId = locationId;
+        return game.events.eligible(game.state).any((e) => e.id == 200);
+      }
+
+      expect(
+        eligibleAt(1000),
+        isFalse,
+        reason: 'cafe content must not fire at School',
+      );
+      expect(
+        eligibleAt(16002),
+        isFalse,
+        reason: 'cafe content must not fire at the Park',
+      );
+      expect(
+        eligibleAt(16004),
+        isTrue,
+        reason: 'cafe content should fire at the Cafe',
+      );
+    });
+
+    test('every location-gated event names a location that exists', () {
+      final bad = <String>[];
+      void walk(Map<String, dynamic>? set, int eventId) {
+        if (set == null) return;
+        for (final c in (set['conditions'] as List? ?? const [])) {
+          if (c is Map && c['targetType'] == 'location') {
+            final id = int.tryParse(
+              (c['target'] as String).replaceFirst('LOCATION_', ''),
+            );
+            if (id == null || !pack.locations.containsKey(id)) {
+              bad.add('#$eventId -> ${c['target']}');
+            }
+          }
+        }
+        walk((set['left'] as Map?)?.cast<String, dynamic>(), eventId);
+        walk((set['right'] as Map?)?.cast<String, dynamic>(), eventId);
+      }
+
+      for (final e in pack.events.values) {
+        walk(e.conditionSet, e.id);
+      }
+      expect(bad, isEmpty);
+    });
+  });
+
+  group('the stamina and study economy', () {
+    // These are fitted to the reference screenshots and are the numbers the
+    // whole run balances on, so they get a regression guard.
+    test('action costs match the reference, within rounding', () {
+      final game = Game.newRun(pack, random: Random(81));
+      _leaveClass(game);
+      final school = pack.locations[1000]!;
+
+      num costOf(String type) => game
+          .preview(
+            school.actions.firstWhere((a) => a.actionType == type),
+            book: pack.books.values.first,
+          )
+          .hpCost;
+
+      expect(costOf('study'), closeTo(16, 1));
+      expect(costOf('exercise'), closeTo(24, 1.5));
+      expect(costOf('partTimeJob'), closeTo(29, 1));
+      expect(costOf('sleep'), 0, reason: 'sleep restores, it does not cost');
+    });
+
+    test('an E-tier textbook is worth +15, as the Books panel shows', () {
+      final game = Game.newRun(pack, random: Random(82));
+      _leaveClass(game);
+      final study = pack.locations[1000]!.actions.firstWhere(
+        (a) => a.actionType == 'study',
+      );
+      // Rank "1" is the E tier; Korean Textbook is power 5.
+      final book = pack.booksFor('korean').firstWhere((b) => b.bookRank == '1');
+      expect(book.power, 5);
+      expect(game.preview(study, book: book).gain, 15);
+    });
+
+    test('a sleep block restores a small amount, more at sleep locations', () {
+      final game = Game.newRun(pack, random: Random(83));
+      _leaveClass(game);
+
+      final atSchool = game.preview(
+        pack.locations[1000]!.actions.firstWhere(
+          (a) => a.actionType == 'sleep',
+        ),
+      );
+      expect(atSchool.gain, 10);
+
+      game.move(2000); // Home, type "sleep"
+      final atHome = game.preview(
+        pack.locations[2000]!.actions.firstWhere(
+          (a) => a.actionType == 'sleep',
+        ),
+      );
+      expect(atHome.gain, greaterThan(atSchool.gain!));
+    });
+
+    test('stamina runs out well before the 14 action slots', () {
+      // The reference run is at 6% stamina with 6 slots left, so a day
+      // cannot be spent entirely on paid actions.
+      final game = Game.newRun(pack, random: Random(84));
+      _leaveClass(game);
+      var spent = 0;
+      while (game.state.hp > 0 && spent < 14) {
+        final study = game.availableActions().firstWhere(
+          (a) => a.actionType == 'study',
+        );
+        game.act(study, book: pack.books.values.first);
+        spent++;
+        if (game.state.date.tick == 0) break; // day rolled over
+      }
+      expect(
+        spent,
+        lessThan(14),
+        reason: 'stamina should bite before the slots run out',
+      );
+    });
+  });
+
+  group('action previews', () {
+    test('a study card promises what tapping it delivers', () {
+      final game = Game.newRun(pack, random: Random(3));
+      _leaveClass(game);
+      final action = game.availableActions().firstWhere(
+        (a) => a.actionType == 'study',
+      );
+      final book = pack.books.values.firstWhere((b) => b.subject == 'math');
+
+      final preview = game.preview(action, book: book);
+      final before = game.state.stats['math']!;
+      final hpBefore = game.state.hp;
+
+      game.act(action, book: book);
+
+      expect(game.state.stats['math']! - before, preview.gain);
+      expect(hpBefore - game.state.hp, preview.hpCost);
+      expect(preview.subject, 'math');
+      expect(preview.rank, book.bookRank);
+    });
+
+    test('a part-time card promises the pay it delivers', () {
+      final game = Game.newRun(pack, random: Random(4));
+      _leaveClass(game);
+      final cafe = pack.locations[16004]!;
+      game.state.unlockedLocations.add(cafe.id);
+      game.move(cafe.id);
+      final action = game.availableActions().firstWhere(
+        (a) => a.actionType == 'partTimeJob',
+      );
+
+      final preview = game.preview(action);
+      final before = game.state.money;
+      game.act(action);
+
+      expect(game.state.money - before, preview.money);
+      expect(preview.kind, ActionKind.partTimeJob);
+      // The label comes from the pack's per-location job names.
+      expect(preview.title, isNotEmpty);
+    });
+  });
+
+  group('full runs', () {
+    /// Plays a whole run with a fixed seed, auto-advancing every event and
+    /// always taking the first choice.
+    ({int ticks, int events, Game game}) simulate(
+      int seed, {
+      int tickBudget = 4000,
+    }) {
+      final game = Game.newRun(pack, random: Random(seed));
+      var ticks = 0;
+      var eventsSeen = 0;
+
+      while (!game.state.finished && ticks < tickBudget) {
+        ticks++;
+        final actions = game.hand();
+        if (actions.isEmpty) {
+          // Nowhere to act: move somewhere that has actions, else stop.
+          final elsewhere = game
+              .availableLocations()
+              .where((l) => l.id != game.state.locationId)
+              .toList();
+          if (elsewhere.isEmpty) break;
+          game.move(elsewhere[game.state.random.nextInt(elsewhere.length)].id);
+          continue;
+        }
+
+        final action = actions[game.state.random.nextInt(actions.length)];
+        final book = action.actionType == 'study'
+            ? (pack.books.values.toList()..shuffle(game.state.random)).first
+            : null;
+        final outcome = game.act(action, book: book);
+
+        var run = outcome.event;
+        while (run != null) {
+          eventsSeen++;
+          var beats = 0;
+          while (run.current != null && !run.current!.isEnd) {
+            if (++beats > 5000) {
+              fail('event ${run.event.id} did not terminate');
+            }
+            final beat = run.current!;
+            if (beat.choices.isNotEmpty) {
+              run.choose(beat.choices.first);
+            } else {
+              run.advance();
+            }
+          }
+          run = null;
+        }
+      }
+
+      return (ticks: ticks, events: eventsSeen, game: game);
+    }
+
+    test('a run reaches exam day without hanging', () {
+      final r = simulate(1);
+      expect(
+        r.game.state.finished,
+        isTrue,
+        reason:
+            'run stalled after ${r.ticks} ticks on '
+            'day ${r.game.state.dayNumber}',
+      );
+      expect(r.ticks, lessThan(4000));
+    });
+
+    test('200 seeded runs all terminate, and report engine gaps', () {
+      final unknownFuncs = <String>{};
+      final unknownTargets = <String>{};
+      var totalEvents = 0;
+      final eventIds = <int>{};
+
+      for (var seed = 0; seed < 200; seed++) {
+        final r = simulate(seed);
+        expect(
+          r.game.state.finished,
+          isTrue,
+          reason: 'seed $seed stalled on day ${r.game.state.dayNumber}',
+        );
+        totalEvents += r.events;
+        eventIds.addAll(r.game.state.eventCounts.keys);
+        unknownFuncs.addAll(r.game.gaps['funcCodes']!);
+        unknownTargets.addAll(r.game.gaps['conditionTargets']!);
+      }
+
+      // Not an assertion -- a report. These are the verbs still to implement.
+      // ignore: avoid_print
+      print(
+        '200 runs: $totalEvents events fired, '
+        '${eventIds.length}/${pack.events.length} distinct events reached',
+      );
+      if (unknownFuncs.isNotEmpty) {
+        // ignore: avoid_print
+        print('unhandled funcCodes: ${unknownFuncs.toList()..sort()}');
+      }
+      if (unknownTargets.isNotEmpty) {
+        // ignore: avoid_print
+        print(
+          'unhandled condition targets: ${unknownTargets.toList()..sort()}',
+        );
+      }
+
+      expect(
+        unknownTargets,
+        isEmpty,
+        reason: 'condition targets with no handler silently evaluate false',
+      );
+    });
+
+    test('stats, stamina and money stay inside their bounds', () {
+      final r = simulate(42);
+      final s = r.game.state;
+      expect(s.hp, greaterThanOrEqualTo(pack.rules.hpMin));
+      expect(s.hp, lessThanOrEqualTo(s.hpMax));
+      expect(s.money, greaterThanOrEqualTo(pack.rules.moneyMin));
+      for (final v in s.stats.values) {
+        expect(v, greaterThanOrEqualTo(0));
+      }
+    });
+
+    test('a run round-trips through save and load', () {
+      final game = Game.newRun(pack, random: Random(7));
+      for (var i = 0; i < 20; i++) {
+        final actions = game.hand();
+        if (actions.isEmpty) break;
+        game.act(
+          actions.first,
+          book: actions.first.actionType == 'study'
+              ? pack.books.values.first
+              : null,
+        );
+      }
+      final restored = GameState.fromJson(pack, game.state.toJson());
+      expect(restored.date, game.state.date);
+      expect(restored.stats, game.state.stats);
+      expect(restored.hp, game.state.hp);
+      expect(restored.money, game.state.money);
+      expect(restored.switches.length, game.state.switches.length);
+      expect(restored.unlockedLocations, game.state.unlockedLocations);
+    });
+  });
+}

@@ -1,0 +1,275 @@
+/// The condition evaluator.
+///
+/// KSS gates everything -- whether an event fires, which branch an `ifElse`
+/// node takes, whether a change applies -- through one recursive shape:
+///
+///   { "operator": "and"|"or",
+///     "left":  { ...conditionSet... } | { "conditions": [...] },
+///     "right": { ...conditionSet... } | { "conditions": [...] },
+///     "conditions": [ {type,target,targetType,compareType,value,args} ] }
+///
+/// A node with a `conditions` list ANDs them together. `left`/`right` combine
+/// with `operator`. Empty sides are vacuously true, which is why the common
+/// "one condition" case is written as an empty `left` and a populated `right`.
+library;
+
+import 'game_date.dart';
+import 'state.dart';
+
+typedef FuncHandler = num Function(GameState state, List<dynamic> args);
+
+class ConditionEvaluator {
+  final Map<String, FuncHandler> funcs;
+
+  ConditionEvaluator({Map<String, FuncHandler>? funcs})
+    : funcs = {...defaultFuncs, ...?funcs};
+
+  /// Targets the evaluator did not recognise. Surfaced in the dev panel so a
+  /// pack using a verb the engine lacks is visible rather than silently false.
+  final Set<String> unknownTargets = {};
+
+  bool evaluate(Map<String, dynamic>? set, GameState state) {
+    if (set == null) return true;
+
+    final conditions = set['conditions'];
+    if (conditions is List) {
+      for (final c in conditions) {
+        if (c is Map<String, dynamic> && !_single(c, state)) return false;
+      }
+    }
+
+    final left = set['left'];
+    final right = set['right'];
+    if (left == null && right == null) return true;
+
+    final leftOk = left is Map<String, dynamic> ? evaluate(left, state) : true;
+    final rightOk = right is Map<String, dynamic>
+        ? evaluate(right, state)
+        : true;
+
+    final op = (set['operator'] as String?)?.toLowerCase() ?? 'and';
+    if (op == 'or') {
+      // An empty side must not make `or` trivially true: KSS writes the
+      // single-condition case as an empty left with `and`, never `or`, but a
+      // hand-edited pack might. Treat an empty side as "no opinion".
+      final leftEmpty = _isEmpty(left);
+      final rightEmpty = _isEmpty(right);
+      if (leftEmpty && rightEmpty) return true;
+      if (leftEmpty) return rightOk;
+      if (rightEmpty) return leftOk;
+      return leftOk || rightOk;
+    }
+    return leftOk && rightOk;
+  }
+
+  bool _isEmpty(dynamic side) {
+    if (side is! Map) return true;
+    final c = side['conditions'];
+    final hasConditions = c is List && c.isNotEmpty;
+    return !hasConditions && side['left'] == null && side['right'] == null;
+  }
+
+  bool _single(Map<String, dynamic> c, GameState state) {
+    final actual = _actualValue(c, state);
+    if (actual == null) return false;
+    final expected = c['value'];
+    final want = expected is num ? expected : 0;
+    return compare(actual, c['compareType'] as String?, want);
+  }
+
+  static bool compare(num actual, String? compareType, num expected) {
+    switch (compareType) {
+      case 'equal':
+      case null:
+        return actual == expected;
+      case 'notEqual':
+        return actual != expected;
+      case 'bigger':
+      case 'greater':
+        return actual > expected;
+      case 'equalOrBigger':
+      case 'greaterEqual':
+        return actual >= expected;
+      case 'smaller':
+      case 'less':
+        return actual < expected;
+      case 'equalOrSmaller':
+      case 'lessEqual':
+        return actual <= expected;
+      default:
+        return false;
+    }
+  }
+
+  num? _actualValue(Map<String, dynamic> c, GameState state) {
+    final target = c['target'] as String?;
+    if (target == null) return null;
+    final args = (c['args'] as List?) ?? const [];
+
+    switch (c['targetType'] as String?) {
+      case 'event':
+        // EVENT_159 -> how many times event 159 has fired.
+        final id = int.tryParse(target.replaceFirst('EVENT_', ''));
+        return id == null ? null : (state.eventCounts[id] ?? 0);
+
+      case 'eventSwitch':
+        return state.switchValue(target);
+
+      case 'date':
+        final want = GameDate.tryParse(target);
+        if (want == null) return null;
+        // A date condition matches the day; the tick in the code is the slot
+        // the original scheduled it for, and is compared only when non-zero.
+        if (want.tick != 0) {
+          return (want.day == state.date.day && want.tick == state.date.tick)
+              ? 1
+              : 0;
+        }
+        return want.day == state.date.day ? 1 : 0;
+
+      case 'location':
+        // "Are you at this place right now?" -- not "is it unlocked".
+        // Confirmed by the content: #314 "Eating Shrimp Crackers in Secret"
+        // is LOCATION_1000 and opens with "this class is so boring"; #116
+        // "Library Volunteering" is LOCATION_16003; #256 "Motherlode" is the
+        // Gold Mine. 70 events are gated this way.
+        final id = int.tryParse(target.replaceFirst('LOCATION_', ''));
+        if (id == null) return null;
+        return state.locationId == id ? 1 : 0;
+
+      case 'func':
+        final handler = funcs[target];
+        if (handler == null) {
+          unknownTargets.add(target);
+          return null;
+        }
+        return handler(state, args);
+
+      default:
+        unknownTargets.add(target);
+        return null;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // The FUNC_ registry. Every target that story 16 actually uses is here;
+  // add to this map (or pass `funcs:`) to extend the vocabulary.
+  // -------------------------------------------------------------------------
+
+  static int _b(bool v) => v ? 1 : 0;
+
+  static final Map<String, FuncHandler> defaultFuncs = {
+    'FUNC_ITEM_HAVE': (s, a) {
+      final id = _intArg(a, 0);
+      return _b(id != null && s.itemCount(id) > 0);
+    },
+    'FUNC_ITEM_COUNT': (s, a) {
+      final id = _intArg(a, 0);
+      return id == null ? 0 : s.itemCount(id);
+    },
+    'FUNC_ITEM_HAVE_LIST': (s, a) =>
+        _b(a.whereType<num>().any((n) => s.itemCount(n.toInt()) > 0)),
+    'FUNC_EXIST_ITEM_LIST': (s, a) =>
+        _b(a.whereType<num>().any((n) => s.itemCount(n.toInt()) > 0)),
+    'FUNC_ITEM_USE_COUNT': (s, a) {
+      final id = _intArg(a, 0);
+      return id == null ? 0 : (s.itemUseCounts[id] ?? 0);
+    },
+    'FUNC_IS_NO_ITEM_IN_POCKET': (s, a) => _b(s.inventory.isEmpty),
+
+    'FUNC_TRAIT_HAVE': (s, a) {
+      final id = _intArg(a, 0);
+      return _b(id != null && s.traits.contains(id));
+    },
+    'FUNC_IS_TRAIT_LIST': (s, a) =>
+        _b(a.whereType<num>().any((n) => s.traits.contains(n.toInt()))),
+
+    'FUNC_RANDOM_TRUE': (s, a) {
+      // args is a percentage when given, otherwise a coin flip.
+      final pct = _numArg(a, 0) ?? 50;
+      return _b(s.random.nextDouble() * 100 < pct);
+    },
+    'FUNC_RANDOM_VALUE': (s, a) {
+      final lo = (_numArg(a, 0) ?? 0).toInt();
+      final hi = (_numArg(a, 1) ?? 100).toInt();
+      return hi <= lo ? lo : lo + s.random.nextInt(hi - lo + 1);
+    },
+
+    'FUNC_IS_MALE': (s, a) => _b(s.isMale),
+    'FUNC_IS_FEMALE': (s, a) => _b(!s.isMale),
+    'FUNC_IS_WEEKEND': (s, a) => _b(s.date.isWeekend),
+
+    'FUNC_GET_EXERCISE_LEVEL': (s, a) => s.exerciseLevel.level,
+    'FUNC_GET_PART_TIME_JOB_LEVEL': (s, a) => s.partTimeLevel.level,
+    'FUNC_GET_STUDY_LEVEL': (s, a) => s.studyLevel.level,
+    'FUNC_GET_PLUS_STAT': (s, a) => s.studyLevel.plusStat,
+
+    'FUNC_GET_LOW_STAT': (s, a) => _subjectIndexOf(s, lowest: true),
+    'FUNC_GET_HIGH_STAT': (s, a) => _subjectIndexOf(s, lowest: false),
+
+    'FUNC_IS_LOCATION_LIST': (s, a) =>
+        _b(a.whereType<num>().any((n) => n.toInt() == s.locationId)),
+    'FUNC_BEFORE_MOVE_LOCATION': (s, a) => s.locationId,
+    'FUNC_AFTER_MOVE_LOCATION': (s, a) => s.locationId,
+    'FUNC_MOVE_LOCATION_EXCEPT': (s, a) =>
+        _b(!a.whereType<num>().any((n) => n.toInt() == s.locationId)),
+    'FUNC_START_LOCATION_COUNT': (s, a) => s.locationId,
+
+    'FUNC_TODO_DAY': (s, a) => s.daysRemaining,
+    'FUNC_ROUGH_TODO_DAY': (s, a) => (s.daysRemaining / 7).floor(),
+    'FUNC_AFTER_DAY_V2': (s, a) => s.dayIndex,
+    'FUNC_GET_GAME_COUNT': (s, a) => 1,
+    'FUNC_STUDY_COUNT': (s, a) =>
+        s.bookReadCounts.values.fold<int>(0, (x, y) => x + y),
+    'FUNC_GET_SUCCESS_LENGTH': (s, a) => s.studyCombo,
+    'FUNC_GOOD_DRAW_VALUE': (s, a) => s.drawValue,
+
+    'FUNC_COMPARE_SWITCH': (s, a) {
+      final name = a.isNotEmpty ? a[0]?.toString() : null;
+      return name == null ? 0 : s.switchValue(name);
+    },
+
+    // Exam-time predicates. The exam milestone is not built yet, so these
+    // report "not yet" rather than pretending to a result. Overriding them is
+    // how the exam feature will hook in.
+    'FUNC_GET_CURRENT_EXAM_GRADE': (s, a) => 0,
+    'FUNC_IS_ENTER_UNIV_THAT_RATE': (s, a) => 0,
+    'FUNC_IS_ENTER_DEPART_LIST': (s, a) => 0,
+    'FUNC_IS_ENTER_UNIV_WITH_DEPART': (s, a) => 0,
+    'FUNC_IS_ENTER_UNIV_WITH_DEPART_TYPE': (s, a) => 0,
+    'FUNC_IS_IN_CHARACTER_LIST': (s, a) => 0,
+
+    // Store / regional predicates with no meaning in a local build. They
+    // report "no premium, not the JP build" so the content that branches on
+    // them takes the ordinary path.
+    'FUNC_GET_PREMIUM_LEVEL': (s, a) => 0,
+    'FUNC_IS_PLAYED_JP': (s, a) => 0,
+  };
+
+  static int? _intArg(List<dynamic> a, int i) {
+    if (i >= a.length) return null;
+    final v = a[i];
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
+  }
+
+  static num? _numArg(List<dynamic> a, int i) {
+    if (i >= a.length) return null;
+    final v = a[i];
+    return v is num ? v : num.tryParse(v.toString());
+  }
+
+  /// KSS addresses subjects positionally (INCREASE_STAT [1, 150] = subject 1).
+  /// These return that same index so the two sides agree.
+  static int _subjectIndexOf(GameState s, {required bool lowest}) {
+    final subjects = s.pack.manifest.subjects;
+    if (subjects.isEmpty) return 0;
+    var best = 0;
+    for (var i = 1; i < subjects.length; i++) {
+      final v = s.stats[subjects[i]] ?? 0;
+      final b = s.stats[subjects[best]] ?? 0;
+      if (lowest ? v < b : v > b) best = i;
+    }
+    return best;
+  }
+}
