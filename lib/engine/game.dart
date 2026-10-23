@@ -60,6 +60,10 @@ class ActionPreview {
   /// Whether the bar ends in a coin, as the book cards do.
   final bool showCoin;
 
+  /// Set when a study block'"'"'s book has been read through. The card then
+  /// shows "Reading Complete" in place of the progress bar.
+  final bool bookComplete;
+
   ActionPreview({
     required this.kind,
     required this.title,
@@ -71,6 +75,7 @@ class ActionPreview {
     this.money,
     this.progress = 0,
     this.showCoin = false,
+    this.bookComplete = false,
   });
 }
 
@@ -307,15 +312,42 @@ class Game {
   /// a rebuild within the same tick. A Refresh Ticket changes the hand, not
   /// this -- the slot is what moves.
   GameBook? bookForSlot(int slot) {
-    final books = pack.books.values.toList()
-      ..sort((a, b) {
-        final s = a.subject.compareTo(b.subject);
-        return s != 0 ? s : a.power.compareTo(b.power);
-      });
+    final books = studiableBooks();
     if (books.isEmpty) return null;
     final pick = Random(state.date.asInt * 31 + slot + _handSalt);
     return books[pick.nextInt(books.length)];
   }
+
+  /// How many times this book has been read.
+  int readCount(GameBook book) => state.bookReadCounts[book.id] ?? 0;
+
+  /// True once the book has been read through. A finished book is still
+  /// studiable — the reference shows a completed Korean Textbook still paying
+  /// out — it simply shows "Reading Complete" where the progress bar was.
+  bool isBookComplete(GameBook book) =>
+      book.doneCount > 0 && readCount(book) >= book.doneCount;
+
+  /// The books of one subject that are available to study, weakest first.
+  ///
+  /// Tiers unlock in order: a book is reachable only once the one below it has
+  /// been read through, which is the same rule the Books menu states as
+  /// `Unlocked when you complete reading <previous book>`. The lowest tier is
+  /// always open.
+  List<GameBook> unlockedBooksFor(String subject) {
+    final ordered = pack.booksFor(subject);
+    final out = <GameBook>[];
+    for (final book in ordered) {
+      out.add(book);
+      if (!isBookComplete(book)) break;
+    }
+    return out;
+  }
+
+  /// Every unlocked book across every subject — the pool the block lottery
+  /// draws a study block's book from. A locked tier must never be offered.
+  List<GameBook> studiableBooks() => [
+    for (final subject in pack.manifest.subjects) ...unlockedBooksFor(subject),
+  ];
 
   /// Bumped on every refresh so a redeal also reshuffles the books.
   int _handSalt = 0;
@@ -357,10 +389,11 @@ class Game {
           kind: ActionKind.study,
           title: book?.name ?? 'Study',
           subject: subject,
-          rank: book?.bookRank,
+          rank: book?.tier,
           gain: gain.round(),
           hpCost: hpCost,
           progress: _bookProgress(book),
+          bookComplete: book != null && isBookComplete(book),
           showCoin: true,
         );
 
@@ -434,8 +467,7 @@ class Game {
 
   double _bookProgress(GameBook? book) {
     if (book == null || book.doneCount <= 0) return 0;
-    final done = state.bookReadCounts[book.id] ?? 0;
-    return (done % book.doneCount) / book.doneCount;
+    return (readCount(book) / book.doneCount).clamp(0, 1).toDouble();
   }
 
   double _levelProgress(LevelTable table, num exp) {

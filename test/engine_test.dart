@@ -792,6 +792,95 @@ Future<void> main() async {
     });
   });
 
+  group('book tiers and unlocking', () {
+    test('ranks display as letters, weakest to strongest', () {
+      const expected = {'1': 'E', '2': 'D', '3': 'C', '4': 'B', '5': 'A', '6': 'S'};
+      for (final book in pack.books.values) {
+        final want = expected[book.bookRank];
+        if (want != null) expect(book.tier, want);
+      }
+      // E really is the weakest: it must not out-power the tier above it.
+      final korean = pack.booksFor('korean');
+      expect(korean.first.tier, 'E');
+      if (korean.length > 1) {
+        expect(korean.first.power, lessThanOrEqualTo(korean[1].power));
+      }
+    });
+
+    test('only the lowest tier is unlocked at the start of a run', () {
+      final game = Game.newRun(pack, random: Random(91));
+      for (final subject in pack.manifest.subjects) {
+        final unlocked = game.unlockedBooksFor(subject);
+        expect(unlocked, hasLength(1),
+            reason: '$subject should start with only its E-tier book');
+        expect(unlocked.single.tier, 'E');
+      }
+    });
+
+    test('finishing a book unlocks exactly the next tier', () {
+      final game = Game.newRun(pack, random: Random(92));
+      final korean = pack.booksFor('korean');
+      final first = korean.first;
+
+      expect(game.isBookComplete(first), isFalse);
+      game.state.bookReadCounts[first.id] = first.doneCount;
+      expect(game.isBookComplete(first), isTrue);
+
+      final unlocked = game.unlockedBooksFor('korean');
+      expect(unlocked, hasLength(2), reason: 'one tier opens, not all of them');
+      expect(unlocked.last.id, korean[1].id);
+      // Other subjects are unaffected.
+      expect(game.unlockedBooksFor('math'), hasLength(1));
+    });
+
+    test('the block lottery never offers a locked book', () {
+      final game = Game.newRun(pack, random: Random(93));
+      final allowed = game.studiableBooks().map((b) => b.id).toSet();
+      expect(allowed, isNotEmpty);
+      // Every subject contributes exactly its E-tier book at run start.
+      expect(allowed, hasLength(pack.manifest.subjects.length));
+
+      for (var slot = 0; slot < 400; slot++) {
+        final book = game.bookForSlot(slot);
+        expect(book, isNotNull);
+        expect(allowed.contains(book!.id), isTrue,
+            reason: '${book.name} (${book.tier}) is locked but was dealt');
+      }
+    });
+
+    test('a finished book still studies, and reports itself complete', () {
+      final game = Game.newRun(pack, random: Random(94));
+      _leaveClass(game);
+      final book = pack.booksFor('korean').first;
+      game.state.bookReadCounts[book.id] = book.doneCount;
+
+      final study = pack.locations[1000]!.actions
+          .firstWhere((a) => a.actionType == 'study');
+      final preview = game.preview(study, book: book);
+
+      expect(preview.bookComplete, isTrue);
+      expect(preview.gain, greaterThan(0),
+          reason: 'a read-through book still pays out');
+    });
+
+    test('progress saturates rather than wrapping past completion', () {
+      final game = Game.newRun(pack, random: Random(95));
+      _leaveClass(game);
+      final book = pack.booksFor('korean').first;
+      final study = pack.locations[1000]!.actions
+          .firstWhere((a) => a.actionType == 'study');
+
+      game.state.bookReadCounts[book.id] = book.doneCount ~/ 2;
+      final half = game.preview(study, book: book).progress;
+      expect(half, greaterThan(0));
+      expect(half, lessThan(1));
+
+      // Past the finish line the bar must stay full, not reset to empty.
+      game.state.bookReadCounts[book.id] = book.doneCount * 2;
+      expect(game.preview(study, book: book).progress, 1);
+    });
+  });
+
   group('the stamina and study economy', () {
     // These are fitted to the reference screenshots and are the numbers the
     // whole run balances on, so they get a regression guard.
@@ -885,7 +974,9 @@ Future<void> main() async {
       expect(game.state.stats['math']! - before, preview.gain);
       expect(hpBefore - game.state.hp, preview.hpCost);
       expect(preview.subject, 'math');
-      expect(preview.rank, book.bookRank);
+      // Cards show the tier letter, not the raw rank the data ships.
+      expect(preview.rank, book.tier);
+      expect(book.tier, 'E', reason: 'rank "1" is the E tier');
     });
 
     test('a part-time card promises the pay it delivers', () {

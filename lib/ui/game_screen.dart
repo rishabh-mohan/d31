@@ -594,7 +594,7 @@ class _MainPanel extends StatelessWidget {
                 : null,
           ),
           const SizedBox(height: 6),
-          Expanded(child: _Portrait(state: state)),
+          Expanded(child: RepaintBoundary(child: _Portrait(state: state))),
           const SizedBox(height: 6),
           SizedBox(
             height: 330,
@@ -1090,11 +1090,15 @@ class _ActionGrid extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(child: _cardAt(context, row * 2)),
+                    Expanded(
+                      child: RepaintBoundary(child: _cardAt(context, row * 2)),
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: row * 2 + 1 < actions.length
-                          ? _cardAt(context, row * 2 + 1)
+                          ? RepaintBoundary(
+                              child: _cardAt(context, row * 2 + 1),
+                            )
                           : const SizedBox.shrink(),
                     ),
                   ],
@@ -1130,13 +1134,15 @@ class _ActionCard extends StatelessWidget {
       preview.kind == ActionKind.exercise ||
       preview.kind == ActionKind.sleep;
 
-  /// Study shows book completion; the two level-driven cards always show
-  /// their progress to the next tier, even at zero.
+  /// Study shows how far through its book it is; the two level-driven cards
+  /// always show their progress to the next tier, even at zero. A finished
+  /// book shows [_readingComplete] instead.
   bool get _showsProgress =>
-      preview.kind == ActionKind.partTimeJob ||
-      preview.kind == ActionKind.exercise ||
-      preview.progress > 0 ||
-      preview.showCoin;
+      !preview.bookComplete &&
+      (preview.kind == ActionKind.partTimeJob ||
+          preview.kind == ActionKind.exercise ||
+          preview.progress > 0 ||
+          preview.showCoin);
 
   /// Sleep and the two level cards carry no subject/rank row, so their title
   /// should sit centred rather than leaving a gap where the row would be.
@@ -1187,7 +1193,10 @@ class _ActionCard extends StatelessWidget {
             children: [
               _title(onFill),
               if (_hasBodyRow) _body(onFill),
-              if (_showsProgress) _progressBar(),
+              if (preview.bookComplete)
+                _readingComplete()
+              else if (_showsProgress)
+                _progressBar(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1364,6 +1373,19 @@ class _ActionCard extends StatelessWidget {
       ],
     );
   }
+
+  /// The pink line a read-through book carries in place of its bar.
+  Widget _readingComplete() => const Text(
+    'Reading Complete',
+    textAlign: TextAlign.center,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+      color: Color(0xFFE2566B),
+    ),
+  );
 
   Widget _progressBar() {
     return Row(

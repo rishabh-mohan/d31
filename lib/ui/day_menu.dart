@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../engine/game.dart';
 import 'stationery_card.dart';
 import 'theme.dart';
+import 'transitions.dart';
 import 'commerce_screen.dart';
 import 'pack_image.dart';
 
@@ -25,7 +26,7 @@ class _DayMenuState extends State<DayMenu> {
   static const peach = Color(0xFFFFEEDB);
 
   Future<void> _panel(String title, Widget child, {bool fullHeight = false}) =>
-      showDialog<void>(
+      showFlyUpDialog<void>(
         context: context,
         builder: (context) => Dialog(
           backgroundColor: cream,

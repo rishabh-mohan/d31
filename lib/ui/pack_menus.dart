@@ -80,21 +80,9 @@ class _BooksMenuState extends State<BooksMenu> {
             separatorBuilder: (_, _) => const SizedBox(height: 22),
             itemBuilder: (_, i) {
               final book = books[i];
-              final rank =
-                  const {
-                    '1': 'E',
-                    '2': 'D',
-                    '3': 'C',
-                    '4': 'B',
-                    '5': 'A',
-                    '6': 'S',
-                  }[book.bookRank] ??
-                  book.bookRank;
-              final count = game.state.bookReadCounts[book.id] ?? 0;
-              final unlocked =
-                  i == 0 ||
-                  (game.state.bookReadCounts[books[i - 1].id] ?? 0) >=
-                      books[i - 1].doneCount;
+              final rank = book.tier;
+              final count = game.readCount(book);
+              final unlocked = i == 0 || game.isBookComplete(books[i - 1]);
               final rankColor = switch (rank) {
                 'E' => const Color(0xFFBFBFBF),
                 'D' => const Color(0xFF927D78),
