@@ -559,6 +559,20 @@ class GameBook {
     hpWeight: (j['hpWeight'] as num?) ?? 1,
     bookRank: j['bookRank']?.toString() ?? '1',
   );
+
+  /// The tier as the game shows it. The shipped data numbers ranks "1".."6"
+  /// but every surface in the original displays a letter — the grey circle on
+  /// a study block and the coloured spine in the Books menu both read
+  /// E/D/C/B/A/S, weakest to strongest. Anything unrecognised falls through
+  /// unchanged rather than being hidden.
+  String get tier => const {
+    '1': 'E',
+    '2': 'D',
+    '3': 'C',
+    '4': 'B',
+    '5': 'A',
+    '6': 'S',
+  }[bookRank] ?? bookRank;
 }
 
 // ---------------------------------------------------------------------------
@@ -788,7 +802,19 @@ class ContentPack {
   ];
   static List<String> get allFiles => [...requiredFiles, ...optionalFiles];
 
-  List<GameBook> booksFor(String subject) =>
+  /// Books of one subject, weakest first.
+  ///
+  /// Memoised: the pack is immutable once loaded, and this is called from the
+  /// per-frame path (every study card resolves its book through
+  /// `Game.studiableBooks`). Filtering and re-sorting all 54 books on each of
+  /// those calls showed up as frame time.
+  final Map<String, List<GameBook>> _booksBySubject = {};
+
+  List<GameBook> booksFor(String subject) => _booksBySubject.putIfAbsent(
+    subject,
+    () => List<GameBook>.unmodifiable(
       books.values.where((b) => b.subject == subject).toList()
-        ..sort((a, b) => a.power.compareTo(b.power));
+        ..sort((a, b) => a.power.compareTo(b.power)),
+    ),
+  );
 }

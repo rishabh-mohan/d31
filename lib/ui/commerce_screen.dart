@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../engine/game.dart';
 import 'pack_image.dart';
 import 'theme.dart';
+import 'transitions.dart';
 import 'stationery_card.dart';
 import 'pack_menus.dart';
 
@@ -21,12 +22,8 @@ class CommerceScreen extends StatefulWidget {
   });
 
   static Route<void> route(Game game, {PackMenu menu = PackMenu.shop}) =>
-      PageRouteBuilder<void>(
-        opaque: false,
-        barrierColor: Colors.black54,
-        pageBuilder: (_, _, _) => CommerceScreen(game: game, initialMenu: menu),
-        transitionsBuilder: (_, animation, _, child) =>
-            FadeTransition(opacity: animation, child: child),
+      flyUpRoute<void>(
+        (_) => CommerceScreen(game: game, initialMenu: menu),
       );
   @override
   State<CommerceScreen> createState() => _CommerceScreenState();

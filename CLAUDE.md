@@ -298,6 +298,102 @@ for that reason. Use the Write/Edit tools for any text containing backticks.
 
 ---
 
+## 5d. Books: tiers and unlocking
+
+The data numbers book ranks `"1"`..`"6"`; **every surface in the game shows a
+letter** — `E D C B A S`, weakest to strongest. That mapping is
+`GameBook.tier`, and it is the only place it should live (the Books menu used
+to carry its own copy).
+
+Tiers unlock in order, one at a time: a book is reachable only once the one
+below it has been read through (`readCount >= doneCount`), which is the rule
+the Books menu states as *"Unlocked when you complete reading <previous
+book>"*. `Game.unlockedBooksFor(subject)` is that rule;
+`Game.studiableBooks()` is the pool the block lottery draws from, so **a
+locked book can never be dealt**. Before this, the lottery drew from every
+book in the pack and would offer an S-tier textbook on day one.
+
+A finished book is still studiable and still pays out — the reference shows a
+completed Korean Textbook at `+93` — it simply shows **"Reading Complete"**
+in pink where its progress bar was. Progress saturates rather than wrapping;
+it used to be `readCount % doneCount`, which reset a finished book's bar to
+empty and read as "unread".
+
+### Not implemented: the completion roll
+
+Completing a book rolls for an item in the original. **Deliberately not
+built.** What the evidence supports and what it does not:
+
+- The object pool carries `BOOK_DONE`, `DONE_BOOK_`, `DONE_BOOK_S` and
+  `UNLOCK_BOOK_CODE`, so the mechanic is real and switch-driven.
+- But **no event in the English story-16 pack reads or writes any of them**
+  (checked: zero declared switches, zero conditions, zero changers), so it is
+  not content-driven — the roll lives in compiled code.
+- The decompiled export has no recoverable reward logic for it, so the item
+  pool, the odds and the reward UI are all unknown.
+
+Implementing it would mean inventing all three. Leave it until there is
+pseudocode or a screenshot of the reward popup.
+
+### Recorded requirement: the stationery draw rolls
+
+The stationery selection screen **cycles through stationery continuously until
+the player presses a stop button** (`Stop all Stationery` in the capture) —
+it is a rolling slot-machine, not a static five-card spread. The current
+implementation deals a fixed hand. Reference:
+`references/screenshots/` (the draw captures listed in its README).
+
+---
+
+## 5e. Performance
+
+Measured, not guessed. `main.dart` installs `_logJankyFrames()` outside
+release builds: it logs any frame over 16ms with **build** and **raster**
+split out, which is the only cheap way to tell Dart cost from GPU cost.
+Read it with `adb logcat | grep JANK` on a profile build.
+
+What the numbers said on the Nord N30 while playing the loop:
+
+```
+JANK total=21.2ms build=9.4ms raster=8.3ms
+JANK total=19.2ms build=8.8ms raster=8.1ms
+```
+
+**Build is the dominant cost (7–10ms), not raster.** That is widget
+construction of a large screen, so the remaining work is reducing *how much*
+rebuilds, not how it paints. Things already done, with their measured worth:
+
+- **Decode art at display size** (`PackImage` + `ResizeImage`). The portrait
+  is 1488x1786 — 10.1 MB decoded — drawn into a ~390px box, and item icons
+  are 1024x1024 (4 MB each) drawn as thumbnails. Worth ~2.3 MB of graphics
+  memory on the game screen (62.2 → 59.9 MB measured); the win is much larger
+  on icon-heavy screens, which were not measured.
+- **Resolve image providers once.** `resolve()` used to `existsSync()` on
+  every build — a filesystem stat per image per frame.
+- **Memoise `ContentPack.booksFor`**, which filtered and sorted all 54 books
+  on every call and is now on the per-frame path.
+- **`RepaintBoundary`** around the portrait and each action card. Honest
+  result: **this barely moved the numbers**, which is itself the finding —
+  the cost is build, not paint.
+
+Do not assume images are the problem next time. Measure first; the first
+guess here (images) was wrong about the main screen.
+
+---
+
+## 5f. Panel motion
+
+Menus that sit *over* the game — Books, Score Card, Schedule, Store,
+stationery — fly up from the bottom edge (`lib/ui/transitions.dart`:
+`showFlyUpDialog`, `flyUpRoute`). The event panel keeps its own scale-and-fade
+on purpose: an event interrupts you where you are, a menu is somewhere you
+went. Curve and distance are in that one file.
+
+`showGeneralDialog` has no `reverseTransitionDuration` in this Flutter
+version; only `PageRouteBuilder` does.
+
+---
+
 ## 5b. Source control
 
 **d30mode is its own git repository**, pushed to GitHub as `d31`. It is *not*
