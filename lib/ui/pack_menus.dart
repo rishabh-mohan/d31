@@ -6,6 +6,30 @@ import '../engine/game.dart';
 import 'pack_image.dart';
 import 'theme.dart';
 
+/// Shows whatever the item just used asked to tell the player — the
+/// Promotion Exam Kit's reading, for one.
+Future<void> showItemReports(BuildContext context, Game game) async {
+  final reports = game.takeItemReports();
+  if (reports.isEmpty || !context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: D30Colors.panel,
+      content: Text(
+        reports.join('\n'),
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 18, color: D30Colors.ink),
+      ),
+      actions: [
+        D30RaisedButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+}
+
 class BooksMenu extends StatefulWidget {
   final Game game;
   const BooksMenu({super.key, required this.game});
@@ -379,9 +403,10 @@ class _BagsMenuState extends State<BagsMenu> {
                           if (item.isConsumable)
                             PressFeedback(
                               child: TextButton(
-                                onPressed: () => setState(() {
-                                  game.useItem(item.id);
-                                }),
+                                onPressed: () {
+                                  setState(() => game.useItem(item.id));
+                                  showItemReports(context, game);
+                                },
                                 child: const Text('Use'),
                               ),
                             ),

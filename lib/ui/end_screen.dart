@@ -1,8 +1,5 @@
-/// Exam day. Shows how the run finished.
-///
-/// Scoring against universities and the 57-ending table is a later milestone
-/// (`rules.exam.enabled` is false); until then this reports the run's final
-/// state and whatever ending an event set directly via END_GAME.
+/// Exam day. Shows how the run finished: the ending an END_GAME named, the
+/// CSAT result and where the student enrolled.
 library;
 
 import 'press_feedback.dart';
@@ -68,6 +65,25 @@ class EndScreen extends StatelessWidget {
                             Text('${state.totalStat.round()}'),
                           ],
                         ),
+                        if (state.csat case final csat?)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('CSAT standard score'),
+                              Text(csat.standardScore.toStringAsFixed(1)),
+                            ],
+                          ),
+                        if (state.enrolledDepartment case final id?)
+                          if (state.pack.admissions.departments[id]
+                              case final d?)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '${state.pack.admissions.universities[d.universityId]?.name ?? ''}'
+                                ' — ${d.name}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [

@@ -1,5 +1,13 @@
 # d30mode — durable notes
 
+### Current shared-tree checkpoint (2026-10-24)
+
+Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) and
+[docs/RETRY-YEAR.md](docs/RETRY-YEAR.md) before resuming older work. The newer
+edits add quizzes, admissions/endings, character-event imports, campaign
+mechanics, gender-specific scripts, and further UI fixes. Older dated notes
+below are historical checkpoints, not a list of features still missing.
+
 ### Follow-up: event chronology and stationery (2026-10-24)
 
 Retry Year chronology remains incorrect per the user's playtest. The old-project
@@ -69,9 +77,9 @@ badges and five distinct traits. No collection consumption in this prototype.
 `RunSetup` is a draft, separate from GameState. Commit grants starting effects;
 loading serialized state never grants them again. Initial selections stay separate
 from live traits. Character/badge passives use TraitEngine; work EXP now honors
-`partTimeJobExp`. Use nonzero `extraStat`, otherwise `storyStat`, matching the
-current trait engine and badge evidence; older universal-scale notes below are
-historical. Back navigation preserves draft names/selections within the session.
+`partTimeJobExp`. Study efficiency adds one stat per authored unit: prefer nonzero
+`storyStat`, otherwise `extraStat`. Genius of the Century is +3, not +9.
+Older extraStat-first and universal-scale claims below are historical. Back navigation preserves draft names/selections within the session.
 Disk presets/account slots, compiled character abilities, Elite and exact initial
 navy/goal presentation remain open; do not call TODO 4 fully done.
 
@@ -196,12 +204,13 @@ effect as `STAT_<n>`:
 180002 Worth the Wait "+3"                          extraStat 3,  storyStat 0
 ```
 
-`n == storyStat`, and `extraStat == storyStat * 3` in all 68 effects that
-carry both (a test asserts that). Three is the same story scale the items
-already use — `NORMAL_STAT_1` → +3 in the Store, checked against the
-reference. So the rule is **`storyStat * rules.traits.statScale` when
-storyStat is set, otherwise `extraStat`**, which also reads the two
-`storyStat: 0` groups right: both print their absolute number.
+Current correction (user playtest, 2026-10-24): study efficiency grants one
+stat per unit. Prefer nonzero `storyStat` without multiplying: Genius of the
+Century (extraStat 9 / storyStat 3) grants +3; Bookworm grants +1. Fall back
+to explicit `extraStat` when no story value is present. Do not add both.
+Setup labels share the engine reader. `NORMAL_STAT_n` passive items now also
+add +n; consumable stat grants retain their separate conversion. Earlier
+extraStat-first and universal x3 interpretations caused inflated payouts.
 
 The other reading that had to come from the descriptions: **`percentPlus*`
 fields are factors, not percentages.** "Workaholic: Part-Time earnings +20%"
@@ -310,7 +319,7 @@ export PATH="/c/Users/stewc/flutter/bin:$PATH"      # Flutter lives here
 export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
 
 python tools/build_pack.py && python tools/copy_assets.py   # regenerate pack
-flutter analyze && flutter test                             # 128 tests, ~35 s
+flutter analyze && flutter test                             # see CURRENT-STATE.md for validation
 flutter build apk --debug
 ```
 
@@ -327,19 +336,30 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 & $adb -s 7c2c1cc8 install -r build\app\outputs\flutter-apk\app-debug.apk
 ```
 
-**`screencap` returns a black frame** unless Impeller is off. Launch with:
+**Normal play and performance checks must use hardware rendering.** Prefer
+`flutter build apk --profile`, install the profile APK with `-r`, and cold-start
+without `--enable-software-rendering`. Software rendering was accidentally left
+on after screenshot checks and caused ~500ms raster frames across the game.
+Restarting without that flag is required; merely resuming the old activity does
+not replace its engine. See docs/PERFORMANCE-REGRESSION.md.
 
-```
-am start -n dev.d30mode.d30mode/.MainActivity `
-  --ez enable-impeller false --ez enable-software-rendering true
+If Impeller causes device capture trouble, `--ez enable-impeller false` still
+uses hardware Skia. A software-renderer screenshot workaround is diagnostic
+only: immediately restore the normal hardware launch afterwards. Do not ship
+or benchmark a session left in software rendering.
+
+**Update the editable packs after changing pack JSON**, or the app keeps its
+old disk copy even after APK installation. Push the pack directories into their
+existing parent (including new optional files such as admissions/quizzes and
+the female script), then use **Pack -> Reload from disk** or reopen the app:
+
+```powershell
+& $adb -s 7c2c1cc8 push packs/kss16 /sdcard/Android/data/dev.d30mode.d30mode/files/packs/
+& $adb -s 7c2c1cc8 push packs/kss20 /sdcard/Android/data/dev.d30mode.d30mode/files/packs/
 ```
 
-**Clear the seeded pack after changing pack JSON**, or the app keeps the old
-editable copy:
-
-```
-adb shell rm -rf /sdcard/Android/data/dev.d30mode.d30mode/files/packs
-```
+Preserve saves and image overrides; do not delete the editable packs just to
+refresh their JSON. Back up the old pack files before replacing them.
 
 The editable pack lives at
 `/sdcard/Android/data/dev.d30mode.d30mode/files/packs/kss16/`; push a file
@@ -752,7 +772,7 @@ pointing at code symbols the AST never created. Usable, not pristine.
 
 - Shared `PressFeedback` wraps menu/card/icon/Material controls throughout the
   app, preserving the child's click/focus semantics. It eases 3px down with a
-  slight scale over 70ms, resets on release/cancel/drag-out and skips disabled
+  no scale over 70ms, resets on release/cancel/drag-out and skips disabled
   controls/reduced-motion animation. Action cards retain their own shadow motion.
 - Follow-up Nord capture showed the portrait floating above the island. Its
   canvas now shifts down 76 logical pixels so the torso tucks behind the panel.
@@ -776,11 +796,11 @@ pointing at code symbols the AST never created. Usable, not pristine.
 - Calendar is the shared hub/dialog name; only that dialog uses 20px horizontal
   insets. Stationery cards clip their contents inside the rounded border and
   paint a foreground border so opaque stat rows cannot erase its bottom edge.
-- Quizmaster is event 32, named Riddle Expert in the English pack. Node 32003
-  uses `{문제}`, `{정답}`, and three `{오답}` macros; node 32005 already grants
-  `ACQUIRE_ITEM_RANDOM` from IDs 1–7. The dedicated English question bank has
-  not been recovered. The user requests that bank; do not silently substitute
-  `school_exam_problems.json`. TODO 37 remains open.
+- Quizmaster is event 32, named Riddle Expert in the English pack. Its macros
+  and authored item reward now work using the 68-question English school bank
+  in quizzes.json. The dedicated Quizmaster bank remains unrecovered: this is
+  a documented fallback, not proof that the user's requested original was found.
+  See TODO 37 and docs/CURRENT-STATE.md.
 
 ### Day lifecycle, dialogue and preparation menus (2026-10-23)
 

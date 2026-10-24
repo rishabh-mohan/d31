@@ -17,6 +17,7 @@ import '../engine/goals.dart';
 import '../engine/pack.dart';
 import '../engine/save_store.dart';
 import '../engine/state.dart';
+import 'csat_screen.dart';
 import 'dev_panel.dart';
 import 'end_screen.dart';
 import 'event_screen.dart';
@@ -69,6 +70,19 @@ class _GameScreenState extends State<GameScreen> {
     if (game.openingPending) {
       _preparing = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => _playOpening());
+      return;
+    }
+    if (state.csatPending || _endingsOpen) {
+      // A save from the middle of exam day picks the sitting back up.
+      _preparing = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        _resolving = true;
+        try {
+          await _sitCsat();
+        } finally {
+          _resolving = false;
+        }
+      });
       return;
     }
     if (state.dayEndPending) {
@@ -213,6 +227,11 @@ class _GameScreenState extends State<GameScreen> {
       }
     }
 
+    if (mounted && (state.csatPending || _endingsOpen)) {
+      await _sitCsat();
+      return;
+    }
+
     if (state.finished && mounted) {
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -243,6 +262,32 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {});
       await _autoSave();
     }
+  }
+
+  /// Enrolment has turned the endings on but none has closed the run yet.
+  bool get _endingsOpen =>
+      !state.finished && state.switchValue('ENDING_CODE') == 1;
+
+  /// The CSAT, the applications, then the ending scenes in turn until one
+  /// ends the run (or none claims it, and the admission itself is the end).
+  Future<void> _sitCsat() async {
+    if (state.csatPending) {
+      await CsatScreen.show(context, game);
+      if (!mounted) return;
+      await _autoSave();
+    }
+    for (var beats = 0; mounted && !state.finished && beats < 64; beats++) {
+      final ending = game.nextEndingEvent();
+      if (ending == null) break;
+      await _showEvent(ending);
+    }
+    if (!mounted) return;
+    game.concludeRun();
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => EndScreen(outcome: game.outcome, state: state),
+      ),
+    );
   }
 
   /// Each day is written as it begins, once the night screen has been
@@ -420,7 +465,7 @@ class _GameScreenState extends State<GameScreen> {
                                     _preparing = false;
                                   });
                                   final opening = game.beginDay();
-                                  if (opening != null) {
+                                  if (opening != null || state.csatPending) {
                                     await _runOutcome(
                                       ActionOutcome('', event: opening),
                                     );

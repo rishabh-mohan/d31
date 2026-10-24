@@ -13,6 +13,13 @@ class RunSetup {
   String firstName;
   String lastName;
 
+  /// The protagonist's gender where the campaign scripts both (Retry Year).
+  /// Null follows the chosen character.
+  bool? isMale;
+
+  bool maleFor(ContentPack pack) =>
+      isMale ?? pack.characters[characterId]?.isMale ?? true;
+
   RunSetup(ContentPack pack)
     : firstName = pack.manifest.firstName,
       lastName = pack.manifest.lastName {
@@ -26,7 +33,8 @@ class RunSetup {
       trait.setupEligible &&
       (trait.storyId == null || trait.storyId == pack.manifest.storyId);
 
-  Game commit(ContentPack pack) {
+  Game commit(ContentPack base) {
+    final pack = base.forPlayer(isMale: maleFor(base));
     if (difficulty != 'standard') {
       throw StateError('Elite gameplay rules have not been recovered.');
     }
@@ -42,7 +50,7 @@ class RunSetup {
     final state = GameState.newRun(pack);
     state.difficulty = difficulty;
     state.characterId = characterId;
-    state.isMale = pack.characters[characterId]!.isMale;
+    state.isMale = maleFor(pack);
     state.badgeIds.addAll(badges);
     state.initialTraitIds.addAll(traits);
     state.firstName = firstName;

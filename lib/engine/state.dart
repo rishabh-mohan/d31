@@ -6,8 +6,10 @@ library;
 import 'dart:convert';
 import 'dart:math';
 
+import 'admissions.dart';
 import 'game_date.dart';
 import 'goals.dart';
+import 'quiz.dart';
 import 'pack.dart';
 
 class LogEntry {
@@ -173,6 +175,20 @@ class GameState {
 
   /// The soft currency in the top bar, separate from in-run money.
   int cookies = 0;
+
+  /// The quiz question on screen, if a choice asked one. Not saved: a quiz
+  /// lives only as long as its choice.
+  QuizDraw? quiz;
+
+  /// Raised by START_SAT: the CSAT is sat as soon as the scene closes.
+  bool csatPending = false;
+  CsatResult? csat;
+
+  /// Departments applied to, the ones that accepted, and where the student
+  /// enrolled. Enrolling is what turns the endings on (`ENDING_CODE`).
+  final List<int> applications = [];
+  final List<int> admittedDepartments = [];
+  int? enrolledDepartment;
 
   final List<LogEntry> log = [];
   bool finished = false;
@@ -474,7 +490,7 @@ class GameState {
   /// (`IS_BEFORE_SAT_EXAM`) -- Procrastinator's +45 lands here. The exam
   /// days are the pack's own `specialDays`; story 16 has one, the CSAT.
   bool get isDayBeforeExam {
-    final tomorrow = date.day.add(const Duration(days: 1));
+    final tomorrow = GameDate.addDays(date.day, 1);
     for (final day in pack.manifest.specialDays) {
       final code =
           ((day['gameDate'] as Map?)?['dateCode'] ?? day['dateCode'])
@@ -616,11 +632,18 @@ class GameState {
     'finished': finished,
     'endingLabel': endingLabel,
     'endingCode': endingCode,
+    'csatPending': csatPending,
+    'csat': csat?.toJson(),
+    'applications': applications,
+    'admittedDepartments': admittedDepartments,
+    'enrolledDepartment': enrolledDepartment,
   };
 
   String toPrettyJson() => const JsonEncoder.withIndent('  ').convert(toJson());
 
-  static GameState fromJson(ContentPack pack, Map<String, dynamic> j) {
+  static GameState fromJson(ContentPack base, Map<String, dynamic> j) {
+    // A female protagonist's run continues in the female script.
+    final pack = base.forPlayer(isMale: j['isMale'] as bool? ?? true);
     final state = GameState(
       pack: pack,
       date: GameDate.tryParse(j['date'] as String?) ?? pack.manifest.startDate,
@@ -742,6 +765,15 @@ class GameState {
     state.finished = j['finished'] as bool? ?? false;
     state.endingLabel = j['endingLabel'] as String?;
     state.endingCode = (j['endingCode'] as num?)?.toInt();
+    state.csatPending = j['csatPending'] == true;
+    state.csat = CsatResult.fromJson((j['csat'] as Map?)?.cast<String, dynamic>());
+    for (final key in ['applications', 'admittedDepartments']) {
+      final list = key == 'applications'
+          ? state.applications
+          : state.admittedDepartments;
+      list.addAll((j[key] as List? ?? const []).whereType<num>().map((n) => n.toInt()));
+    }
+    state.enrolledDepartment = (j['enrolledDepartment'] as num?)?.toInt();
     return state;
   }
 }

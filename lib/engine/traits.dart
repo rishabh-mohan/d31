@@ -5,31 +5,9 @@
 /// data: which traits are in force, whether an effect's conditions hold right
 /// now, and what number it contributes.
 ///
-/// ### Two stat fields, one of which is a lie
-///
-/// Every `plusStat` carries both `extraStat` and `storyStat`, and the init
-/// doc's warning is right: do not add both. **`extraStat` is the number the
-/// game shows and uses**, and `storyStat` is some other story's base.
-///
-/// The university badges settle it, because that screen prints a generated
-/// effect line rather than authored prose:
-///
-/// ```
-/// Boryeong University    "Korean Study Efficiency +7"   extraStat 7,  storyStat 2
-/// Chwang Gung University "... +18 / Science ... +18"    extraStat 18, storyStat 6
-/// ```
-///
-/// Boryeong is the one that cannot be explained away: 7 is `extraStat`, and
-/// no multiple of `storyStat` 2 reaches it. Where a trait writes its own
-/// description as `STAT_<n>`, that `n` is the `storyStat` and the engine
-/// renders `extraStat` beside it, which is why Bookworm's `STAT_1` shows as
-/// +3. The handful of effects that ship `extraStat: 0` print their
-/// `storyStat` instead ("Western Taste: Study Efficiency for English +1",
-/// `storyStat 1`), so that is the fallback and there is no scaling anywhere.
-///
-/// Characters are the exception that proves the init doc's other warning:
-/// Siho Kang's prose says "+3" while the data says `extraStat 6`. Prose is
-/// not the mechanic; the structured effect is.
+/// Study efficiency is a flat stat bonus, one point per authored unit.
+/// Prefer nonzero `storyStat` over the alternate scaled `extraStat` field.
+/// Effects with no story value retain their explicit `extraStat` amount.
 library;
 
 import 'dart:math';
@@ -260,13 +238,8 @@ class TraitEngine {
 
   // --- reading one effect ---------------------------------------------------
 
-  /// See the library doc: `extraStat` is the live number, `storyStat` the
-  /// fallback for the effects that ship `extraStat: 0`.
-  num statValue(Map<String, dynamic> e) {
-    final extra = (e['extraStat'] as num?) ?? 0;
-    if (extra != 0) return extra;
-    return (e['storyStat'] as num?) ?? 0;
-  }
+  /// Shared with setup labels so displayed efficiency matches the payout.
+  num statValue(Map<String, dynamic> e) => studyEfficiencyValue(e);
 
   bool _subjectMatches(
     Map<String, dynamic> e,
@@ -448,4 +421,11 @@ class GameDateCodes {
     if (year == null || month == null || day == null) return null;
     return DateTime(year, month, day);
   }
+}
+
+/// One stat per efficiency unit; never add the two alternative data fields.
+num studyEfficiencyValue(Map<String, dynamic> effect) {
+  final story = (effect['storyStat'] as num?) ?? 0;
+  if (story != 0) return story;
+  return (effect['extraStat'] as num?) ?? 0;
 }

@@ -173,11 +173,11 @@ def build_items(out: Path):
         (story_normal, "normal", "story"),
     ):
         for it in src:
-            # Reference Store: CONSUME_STAT_30 -> +90 (Weird Workbook),
-            # NORMAL_STAT_1 -> +3 (Book Stand), CONSUME_STAT_150 -> +450.
-            # Resolve before parsing so UI text and applied effects agree.
-            effect_text = re.sub(r"(?:CONSUME_STAT_|NORMAL_STAT_)(\d+)",
-                lambda m: str(int(m.group(1)) * 3), it.get("effectText") or "")
+            # Passive study efficiency adds one stat per authored unit.
+            # Consumable stat grants retain their separate existing scaling.
+            effect_text = re.sub(r"(CONSUME_STAT_|NORMAL_STAT_)(\d+)",
+                lambda m: str(int(m.group(2)) * (3 if m.group(1) == "CONSUME_STAT_" else 1)),
+                it.get("effectText") or "")
             effects, raw, flavour = item_effects.parse(effect_text)
             if raw:
                 unparsed += 1
@@ -238,6 +238,9 @@ def build_items(out: Path):
 # 2 finished.
 SET_PREREQUISITES = {189: 188}
 
+# Speaker names whose first/last order the catalog gets backwards.
+SPEAKER_NAMES = {20: {21: "El Niño", 22: "La Niña"}}
+
 
 def build_events(out: Path):
     def english(obj):
@@ -252,31 +255,78 @@ def build_events(out: Path):
                 result[target] = obj[translated]
         return result
 
-    src = english(load(ENGLISH / "event/events.json"))
-    events = clean(src["events"])
-    nodes = clean(src["nodes"])
-    for e in events:
-        # Events use translatedText for the title, nodes use it for dialogue.
+    def script(name):
+        src = english(load(ENGLISH / f"event/{name}"))
+        events = clean(src["events"])
+        nodes = clean(src["nodes"])
+        for e in events:
+            # Events use translatedText for the title, nodes use it for dialogue.
+            if e.get("text"):
+                e["name"] = e.pop("text")
+            e.pop("index", None)
+            e.pop("version", None)
+        for e in events:
+            required = SET_PREREQUISITES.get(e["id"]) if STORY_ID == 16 else None
+            if required is None:
+                continue
+            e["conditionSet"]["right"]["conditions"].append({
+                "type": "defaults", "target": f"EVENT_{required}",
+                "compareType": "equal", "value": 2, "targetType": "event"})
+        return events, nodes
+
+    events, nodes = script("events.json")
+
+    # Character abilities are events too: global character_events.json holds
+    # the Beggar's begging, cookie baking, the potion and robot crafting and
+    # the rest, each listing the characters it belongs to in characterIdList.
+    # Keep the ones for characters this story can pick; the engine plays an
+    # event only for the characters it lists.
+    story_chars = {c["id"] for c in load(GLOBAL / "characters.json")["characters"]
+                   if STORY_ID in (c.get("availableStoryIds") or [])}
+    char_src = english(load(GLOBAL / "events/character_events.json"))
+    char_events = [e for e in clean(char_src["events"])
+                   if set(e.get("characterIdList") or []) & story_chars]
+    for e in char_events:
         if e.get("text"):
             e["name"] = e.pop("text")
         e.pop("index", None)
         e.pop("version", None)
-    for e in events:
-        required = SET_PREREQUISITES.get(e["id"]) if STORY_ID == 16 else None
-        if required is None:
-            continue
-        e["conditionSet"]["right"]["conditions"].append({
-            "type": "defaults", "target": f"EVENT_{required}",
-            "compareType": "equal", "value": 2, "targetType": "event"})
+    kept = {e["id"] for e in char_events}
+    char_nodes = [n for n in clean(char_src["nodes"]) if n["id"] // 1000 in kept]
+    events += char_events
+    nodes += char_nodes
+    print(f"    {len(char_events)} character events for "
+          f"{len(story_chars)} playable characters")
     npcs = {}
     for file in [GLOBAL / "npcs.json", ENGLISH / "data/npcs.json"]:
         for npc in load(file)["npcs"]:
             npcs[npc["id"]] = {"id": npc["id"], "name": " ".join(
                 filter(None, [npc.get("firstName"), npc.get("lastName")])).replace("_", " ")}
+    # First-then-last reverses these two: the dialogue says "El Niño" eight
+    # times and "Niño El" never.
+    for npc_id, name in SPEAKER_NAMES.get(STORY_ID, {}).items():
+        if npc_id in npcs:
+            npcs[npc_id]["name"] = name
     write(out, "events/events.json", {"events": events, "nodes": nodes,
         "speakers": list(npcs.values()), "source": f"1.27.4 story {STORY_ID}; authored translations where available"})
+    # Retry Year scripts a female protagonist separately: the friends'
+    # genders swap (a male Ji Suin and Jian Lee) and the lines follow.
+    if STORY_ID == 20 and (ENGLISH / "event/events_female.json").exists():
+        f_events, f_nodes = script("events_female.json")
+        f_events += char_events
+        f_nodes += char_nodes
+        write(out, "events/events_female.json", {"events": f_events,
+            "nodes": f_nodes, "speakers": list(npcs.values()),
+            "source": f"1.27.4 story {STORY_ID}, female protagonist"})
 
     switches = clean(load(ENGLISH / "event/event_switches.json"))["eventSwitches"]
+    # The character events' own counters (MEDICAL_COUNT, ROBOT_LEVEL, ...).
+    declared = {s["name"] for s in switches}
+    char_switches = load(GLOBAL / "events/character_event_switches.json")
+    for s in clean(next(v for v in char_switches.values() if isinstance(v, list))):
+        if s["name"] not in declared:
+            switches.append(s)
+            declared.add(s["name"])
     for s in switches:
         s.pop("description", None)
     write(out, "events/switches.json", {"switches": switches})
@@ -382,6 +432,85 @@ def build_badges(out: Path):
     out_badges.sort(key=lambda b: b["name"].lower())
     write(out, "badges.json", {"badges": out_badges})
     print(f"    {len(out_badges)} university badges")
+
+
+# Departments whose application has a condition the catalog only states in
+# prose (enApplyConditionDescription). The native checks each with a compiled
+# closure; these are the ones a story-16 or story-20 run can meet. A deluxe
+# purchase is treated as owned, since this build has no store.
+APPLY_REQUIREMENTS = {
+    54001: {"items": [90019]},  # Medicine: Student Recommendation (Elite)
+    54002: {"items": [90019]},  # Pharmacy: the same, plus the deluxe
+}
+
+# University types that a Korean run cannot apply to: the Retry Academy is
+# the failure outcome, and the Taiwanese and study-abroad lists belong to
+# other regions' builds.
+EXCLUDED_UNIVERSITY_TYPES = {"notUniv", "studyTw", "studyAbroad"}
+
+
+def build_admissions(out: Path):
+    """The CSAT application catalog: every university this story can apply to.
+
+    `deviation` is each department's admission cutoff on the CSAT's standard
+    score scale (25.3 .. 80.85). Story-only universities (`onlyAvailableStories`)
+    appear only in their own story.
+    """
+    unis = clean(load(GLOBAL / "university/universities.json"))["universities"]
+    depts = clean(load(GLOBAL / "university/departments.json"))["departments"]
+    keep = {}
+    for u in unis:
+        if u.get("type") in EXCLUDED_UNIVERSITY_TYPES:
+            continue
+        only = u.get("onlyAvailableStories")
+        if only and STORY_ID not in only:
+            continue
+        keep[u["id"]] = {
+            "id": u["id"],
+            "name": u.get("engName") or u.get("korName") or f"University {u['id']}",
+            "rank": u.get("rank", "none"),
+            "colorCode": u.get("colorCode"),
+            "storyOnly": bool(only),
+        }
+    out_depts = []
+    for d in depts:
+        if d["universityId"] not in keep:
+            continue
+        # Elite Mode departments cannot be entered from a standard run.
+        if "Elite Mode" in (d.get("enApplyConditionDescription") or ""):
+            continue
+        row = {
+            "id": d["id"],
+            "universityId": d["universityId"],
+            "name": d.get("engName") or d.get("name") or f"Department {d['id']}",
+            "deviation": d["deviation"],
+        }
+        if d.get("enApplyConditionDescription"):
+            row["condition"] = d["enApplyConditionDescription"]
+        if d["id"] in APPLY_REQUIREMENTS:
+            row["requires"] = APPLY_REQUIREMENTS[d["id"]]
+        out_depts.append(row)
+    write(out, "admissions.json", {"universities": list(keep.values()),
+                                   "departments": out_depts})
+    print(f"    {len(keep)} universities, {len(out_depts)} departments")
+
+
+def build_quizzes(out: Path):
+    """The question bank behind the {문제}/{정답}/{오답} choice macros."""
+    problems = []
+    for p in load(GLOBAL / "school_exam_problems.json")["problemList"]:
+        answers = [i for i, o in enumerate(p["options"]) if o.get("isAnswer")]
+        if len(answers) != 1:
+            continue
+        problems.append({
+            "id": p["id"],
+            "subject": p["subjectType"],
+            "text": p["text"],
+            "options": [o["text"] for o in p["options"]],
+            "answer": answers[0],
+        })
+    write(out, "quizzes.json", {"problems": problems})
+    print(f"    {len(problems)} quiz questions")
 
 
 def build_locations(out: Path):
@@ -660,18 +789,28 @@ def build_rules(out: Path):
             "priorityOrder": ["veryHigh", "high", "middle", "low"],
         },
         "exam": {
-            # Deferred to a later milestone; kept here so the shape is visible.
-            "enabled": False,
-            "subjectWeights": {
-                "korean": 1.0,
-                "english": 1.0,
-                "math": 1.0,
-                "science": 1.0,
-                "society": 1.0,
-            },
+            # The CSAT on the last day, then applications and the endings.
+            # Scoring is compiled in the original and NOT recovered: the
+            # standard score is 50 + 10 * (total - meanTotal) / sdTotal over
+            # the summed stats, fitted so a study-focused run reaches the top
+            # departments (cutoffs run 25.3 .. 80.85) and an idle one does not.
+            "enabled": True,
+            "meanTotal": 2600,
+            "sdTotal": 1300,
+            # How many departments one CSAT can be sent to.
+            "applications": 3,
+            # Spread of the admission draw around a cutoff, in standard-score
+            # points: a score exactly at the cutoff is a coin flip.
+            "admissionSpread": 1.5,
         },
     }
     if STORY_ID == 20:
+        # Keep the observed book baseline (power 5 -> +15 unbuffed). The prior
+        # 9x tuning tripled ordinary study to fit exam thresholds; it was not
+        # recovered and the user reported inflated beginner-book gains.
+        # Exam progression balance remains open; do not alter book payouts to
+        # conceal that gap. Recovered exam thresholds remain unchanged.
+        rules['exam'].update({'meanTotal': 8000, 'sdTotal': 4000})
         rules['school']['lessonsOnFirstDay'] = False
         rules['school']['suppressedBySwitch'] = 'DOK_BANG_ON'
         rules['events'].update({
@@ -725,6 +864,10 @@ def main() -> int:
     build_characters(out)
     print(" badges")
     build_badges(out)
+    print(" admissions")
+    build_admissions(out)
+    print(" quizzes")
+    build_quizzes(out)
     print(" rules")
     build_rules(out)
     print(" locations")

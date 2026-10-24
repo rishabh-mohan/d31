@@ -45,17 +45,28 @@ class GameDate implements Comparable<GameDate> {
     var d = day;
     while (t >= ticksPerDay) {
       t -= ticksPerDay;
-      d = d.add(const Duration(days: 1));
+      d = addDays(d, 1);
     }
     return GameDate(d, t);
   }
 
-  GameDate nextDay() => GameDate(day.add(const Duration(days: 1)), 0);
+  GameDate nextDay() => GameDate(addDays(day, 1), 0);
+
+  /// Calendar days, not 24-hour spans. `day` is local midnight, so adding a
+  /// Duration across a daylight-saving change (3 Nov 2024 and 5 Nov 2023 in
+  /// the US, both inside a run) lands on 23:00 the day before, and from then
+  /// on no `DATE_` condition matches.
+  static DateTime addDays(DateTime d, int days) =>
+      DateTime(d.year, d.month, d.day + days);
 
   bool get isWeekend =>
       day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
 
-  int daysUntil(GameDate other) => other.day.difference(day).inDays;
+  int daysUntil(GameDate other) => DateTime.utc(
+    other.day.year,
+    other.day.month,
+    other.day.day,
+  ).difference(DateTime.utc(day.year, day.month, day.day)).inDays;
 
   /// Sort key used for ordering and for `DATE_INT` style comparisons.
   int get asInt =>

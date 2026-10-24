@@ -376,6 +376,34 @@ void main() {
     },
   );
 
+  testWidgets('fast-forward stops on the last line instead of closing', (
+    tester,
+  ) async {
+    final game = Game.newRun(dialogue);
+    final run = game.events.begin(dialogue.events[1]!, game.state);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => EventScreen.show(context, run),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Fast-forward'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Choose me'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Fast-forward'));
+    await tester.pump(const Duration(seconds: 2));
+    expect(run.current!.isEnd, isTrue);
+    expect(find.byType(EventScreen), findsOneWidget);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets(
     'store and stationery screens render and purchases update wallet',
     (tester) async {

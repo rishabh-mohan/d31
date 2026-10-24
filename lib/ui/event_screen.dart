@@ -20,6 +20,9 @@ class EventScreen extends StatefulWidget {
   final EventRun run;
   const EventScreen({super.key, required this.run});
 
+  /// How far every event portrait is raised from the plain layout.
+  static const double portraitLift = 40;
+
   /// Plays the event as a panel over the game, with the screen behind it
   /// blurred and dimmed, rather than as a separate page.
   static Future<void> show(BuildContext context, EventRun run) {
@@ -120,6 +123,13 @@ class _EventScreenState extends State<EventScreen> {
       _fastForward = Timer.periodic(const Duration(milliseconds: 100), (_) {
         if (!mounted) {
           _stopFastForward();
+          return;
+        }
+        // Fast-forward stops on the last line rather than closing the scene,
+        // so it can still be read; the player closes it (TODO 60).
+        final beat = run.current;
+        if (beat == null || beat.isEnd || beat.choices.isNotEmpty) {
+          setState(_stopFastForward);
           return;
         }
         _advance();
@@ -241,7 +251,12 @@ class _EventScreenState extends State<EventScreen> {
     final hasChoices = beat != null && beat.choices.isNotEmpty;
     final actor =
         (run.pack.presentation['npcs'] as Map?)?['${run.portraitId}'] as Map?;
-    final portraitOffset = (actor?['eventOffsetY'] as num?)?.toDouble() ?? 0;
+    // Every speaker stands 40 logical pixels higher than the plain layout put
+    // them, so the torso clears the dialogue box (TODO 54); a pack can lift
+    // one NPC further with eventOffsetY (Retry Year's Mum and Ji Suin).
+    final portraitOffset =
+        -EventScreen.portraitLift +
+        ((actor?['eventOffsetY'] as num?)?.toDouble() ?? 0);
 
     return Scaffold(
       backgroundColor: Colors.transparent,

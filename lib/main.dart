@@ -187,7 +187,7 @@ class _TitleScreenState extends State<TitleScreen> {
       return;
     }
     state.saveSlot = slot;
-    await _play(Game(pack: pack, state: state), location);
+    await _play(Game(pack: state.pack, state: state), location);
   }
 
   Future<void> _start(int slot) async {
