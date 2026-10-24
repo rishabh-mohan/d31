@@ -19,6 +19,7 @@ import 'dart:math';
 import 'conditions.dart';
 import 'pack.dart';
 import 'state.dart';
+import 'game_date.dart';
 
 typedef ChangerHandler = void Function(
   GameState state,
@@ -81,7 +82,10 @@ class EffectEngine {
       unknownFuncCodes.add(code);
       return;
     }
+    final exerciseBefore = state.exerciseLevel.level;
+    final workBefore = state.partTimeLevel.level;
     handler(state, (changer['args'] as List?) ?? const [], this);
+    _recordLevelChanges(state, exerciseBefore, workBefore);
   }
 
   /// Applies one item's `effects` list. Consumables apply on use; normal
@@ -114,6 +118,8 @@ class EffectEngine {
       return v is num ? v : 0;
     }
 
+    final exerciseBefore = state.exerciseLevel.level;
+    final workBefore = state.partTimeLevel.level;
     switch (e['type'] as String?) {
       case 'stat':
         state.addStat(e['subject'] as String? ?? 'all', amount('value'));
@@ -178,6 +184,20 @@ class EffectEngine {
         break;
       default:
         break;
+    }
+    _recordLevelChanges(state, exerciseBefore, workBefore);
+  }
+
+  void _recordLevelChanges(
+    GameState state,
+    int exerciseBefore,
+    int workBefore,
+  ) {
+    if (state.exerciseLevel.level > exerciseBefore) {
+      state.setSwitch('EXERCISE_LEVEL_UP', 1);
+    }
+    if (state.partTimeLevel.level > workBefore) {
+      state.setSwitch('PART_TIME_JOB_LEVEL_UP', 1);
     }
   }
 
@@ -414,10 +434,44 @@ class EffectEngine {
     },
     'ADD_BLOCK': (s, a, e) {},
 
-    // --- todos (the task list; display-only until the exam milestone) ---
-    'ADD_TODO': (s, a, e) {},
-    'ADD_TODO_2': (s, a, e) {},
-    'REMOVE_TODO': (s, a, e) {},
+    // --- authored task deadlines ---
+    'ADD_TODO': (s, a, e) {
+      if (!s.pack.rules.flag('tasks', 'enabled', false)) return;
+      final id = _int(a, 0);
+      final raw = _str(a, 2);
+      if (id == null || raw == null) return;
+      final parts = raw.split('.');
+      final due =
+          GameDate.tryParse(raw) ??
+          (parts.length == 4
+              ? GameDate.tryParse(
+                  'DATE_${parts[0]}${parts[1].padLeft(2, '0')}${parts[2].padLeft(2, '0')}${parts[3].padLeft(2, '0')}',
+                )
+              : null);
+      if (due == null) {
+        e.unknownFuncCodes.add('ADD_TODO(invalid date)');
+        return;
+      }
+      s.taskDeadlines[id] = due;
+      s.taskTitles[id] = (_str(a, 1) ?? '').replaceAll('_', ' ');
+    },
+    'ADD_TODO_2': (s, a, e) {
+      if (!s.pack.rules.flag('tasks', 'enabled', false)) return;
+      final id = _int(a, 0);
+      final days = _int(a, 2);
+      final tick = _int(a, 3);
+      if (id == null || days == null || tick == null) return;
+      s.taskDeadlines[id] = GameDate(
+        s.date.day.add(Duration(days: days)),
+        tick,
+      );
+      s.taskTitles[id] = (_str(a, 1) ?? '').replaceAll('_', ' ');
+    },
+    'REMOVE_TODO': (s, a, e) {
+      final id = _int(a, 0);
+      s.taskDeadlines.remove(id);
+      s.taskTitles.remove(id);
+    },
 
     // --- run control ---
     'END_GAME': (s, a, e) {
@@ -426,6 +480,44 @@ class EffectEngine {
       e.endLabel = _str(a, 1);
     },
     'START_SAT': (s, a, e) {},
+    'SHOW_ENDING': (s, a, e) {
+      // Native sub_be91d0 presents an ending, then raises its second argument
+      // as a continuation switch. The opening's START does not end the run.
+      final continuation = _str(a, 1);
+      if (continuation == null || continuation.isEmpty) {
+        e.unknownFuncCodes.add('SHOW_ENDING(without continuation)');
+        return;
+      }
+      s.setSwitch(continuation, 1);
+      s.note('Ending: ${_str(a, 0) ?? ''}', 'event');
+    },
+    'SET_DOK_BANG': (s, a, e) {
+      final rules = s.pack.rules.section('reflectionRoom');
+      final room = (rules['locationId'] as num?)?.toInt();
+      if (room == null) {
+        e.unknownFuncCodes.add('SET_DOK_BANG(missing rules)');
+        return;
+      }
+      final ordinary = (rules['ordinaryLocationIds'] as List? ?? const [])
+          .whereType<num>()
+          .map((id) => id.toInt());
+      final confined = _int(a, 0) == 1;
+      s.setSwitch('DOK_BANG_ON', confined ? 1 : 0);
+      if (confined) {
+        s.unlockedLocations.removeAll(ordinary);
+        s.unlockedLocations.add(room);
+        s.locationId = room;
+        e.moveToLocation = room;
+      } else {
+        s.unlockedLocations.remove(room);
+        s.unlockedLocations.addAll(ordinary);
+        s.locationId =
+            (rules['exitLocationId'] as num?)?.toInt() ??
+            s.pack.manifest.startLocationId;
+        e.moveToLocation = s.locationId;
+      }
+      s.movementLocked = confined;
+    },
 
     // --- the special location tracks -------------------------------------
     //

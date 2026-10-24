@@ -28,6 +28,8 @@ flutter:
   assets:
     - packs/kss16/
     - packs/kss16/events/
+    - packs/kss20/
+    - packs/kss20/events/
     # Placeholder art lifted from KSS by tools/copy_assets.py. Local use
     # only; gitignored. A pack may override any of these by shipping its own
     # images/ folder.
@@ -38,3 +40,40 @@ flutter:
     - assets/images/ui/
     - assets/images/items/
     - assets/images/stationery/
+    # BEGIN import_all_images.py -- generated, do not edit
+    - assets/images/kss/images/
+    - assets/images/kss/images/cookie_parade/
+    - assets/images/kss/images/detail_image/18/
+    - assets/images/kss/images/detail_image/20/
+    - assets/images/kss/images/detail_image/68/
+    - assets/images/kss/images/modules/background/
+    - assets/images/kss/images/modules/character/
+    - assets/images/kss/images/modules/character_background/
+    - assets/images/kss/images/modules/character_card/
+    - assets/images/kss/images/modules/cookie_purchase/
+    - assets/images/kss/images/modules/custom_banner/
+    - assets/images/kss/images/modules/default_story_image/
+    - assets/images/kss/images/modules/equipment_item/
+    - assets/images/kss/images/modules/gacha/
+    - assets/images/kss/images/modules/in_app_purchase/
+    - assets/images/kss/images/modules/item/
+    - assets/images/kss/images/modules/school_exam/
+    - assets/images/kss/images/new_year_2026/
+    - assets/images/kss/images/temp/
+    - assets/images/kss/images/trait_card_background/
+    - assets/images/kss/images/trait_pack/
+    - assets/images/kss/images/university/
+    - assets/images/kss/images/wallpaper_image/
+    - assets/images/kss/images/wallpaper_thumbnail/
+    - assets/images/kss/stories/14/backgroundImgs/
+    - assets/images/kss/stories/14/npcs/
+    - assets/images/kss/stories/16/backgroundImgs/
+    - assets/images/kss/stories/16/img/
+    - assets/images/kss/stories/16/npcs/
+    - assets/images/kss/stories/18/img/
+    - assets/images/kss/stories/20/backgroundImgs/
+    - assets/images/kss/stories/20/img/
+    - assets/images/kss/stories/20/npcs/
+    - assets/images/kss/stories/3/img/
+    - assets/images/kss/stories/68/img/
+    # END import_all_images.py

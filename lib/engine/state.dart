@@ -57,7 +57,9 @@ class GameState {
       [firstName, lastName].where((part) => part.trim().isNotEmpty).join(' ');
 
   final Map<String, num> stats;
-  num hp;
+  num _hp;
+  num get hp => _hp;
+  set hp(num value) => _hp = value.clamp(pack.rules.hpMin, hpMax);
   num money;
 
   num studyExp = 0;
@@ -80,6 +82,10 @@ class GameState {
   /// `equal 2` conditions -- the four Readers' Response beats, the mining
   /// restoration, Provoked -- were dead while counts backed them.
   final Map<int, int> eventStates = {};
+  bool openingComplete = false;
+  bool dayEndPending = false;
+  final Map<int, GameDate> taskDeadlines = {};
+  final Map<int, String> taskTitles = {};
 
   /// The switch the global Out of Shape trait event (10010003) is gated on.
   /// KSS names a trait event's switch `TRAIT_EVENT_<traitId>`, and trait 7
@@ -178,14 +184,15 @@ class GameState {
     required this.date,
     required this.locationId,
     required this.stats,
-    required this.hp,
+    required num hp,
     required this.money,
     required this.switches,
     this.isMale = true,
     String? firstName,
     String? lastName,
     Random? random,
-  }) : firstName = firstName ?? pack.manifest.firstName,
+  }) : _hp = hp.clamp(pack.rules.hpMin, pack.rules.hpMax),
+       firstName = firstName ?? pack.manifest.firstName,
        lastName = lastName ?? pack.manifest.lastName,
        random = random ?? Random();
 
@@ -214,12 +221,29 @@ class GameState {
     for (final loc in pack.locations.values) {
       if (!loc.isDefaultLocked) state.unlockedLocations.add(loc.id);
     }
+    state.unlockedLocations.add(state.locationId);
+    state._seedInitialTasks();
     state.rerolls = r.number('refresh', 'initial', 0).toInt();
     state.cookies = r.number('cookies', 'initial', 0).toInt();
     state.applyStartingTraitEffects();
     state.weeklyGoal = Goals.issue(state);
     state.note('Day 1. ${pack.manifest.name} begins.', 'system');
     return state;
+  }
+
+  void _seedInitialTasks() {
+    for (final task
+        in (pack.rules.section('tasks')['initial'] as List? ?? const [])
+            .whereType<Map>()) {
+      final due = GameDate.tryParse(
+        (task['date'] as Map?)?['dateCode'] as String?,
+      );
+      if (task['id'] is num && due != null && due.compareTo(date) > 0) {
+        final id = (task['id'] as num).toInt();
+        taskDeadlines[id] = due;
+        taskTitles[id] = task['title'] as String? ?? '';
+      }
+    }
   }
 
   // --- derived ------------------------------------------------------------
@@ -243,10 +267,7 @@ class GameState {
 
   num get totalStat => stats.values.fold<num>(0, (a, b) => a + b);
 
-  num get hpMax {
-    final base = pack.rules.hpMax;
-    return base + exerciseLevel.level * pack.rules.exerciseHpPerLevel;
-  }
+  num get hpMax => pack.rules.hpMax;
 
   /// `section` on events maps the run onto six stretches. Events tagged
   /// "three" only fire in the third sixth of the calendar.
@@ -325,6 +346,10 @@ class GameState {
   };
 
   int switchValue(String name) {
+    if (name.startsWith('EVENT_')) {
+      final id = int.tryParse(name.substring(6));
+      if (id != null) return eventStates[id] ?? 0;
+    }
     switch (name) {
       case 'DATE_PROGRESS':
       case 'TICK':
@@ -345,6 +370,13 @@ class GameState {
 
   void setSwitch(String name, int value) {
     if (engineSwitches.contains(name)) return;
+    if (name.startsWith('EVENT_')) {
+      final id = int.tryParse(name.substring(6));
+      if (id != null) {
+        eventStates[id] = value;
+        return;
+      }
+    }
     if (name == outOfShapeSwitch && exerciseMaxed) {
       // A maxed-out exercise level cannot be out of shape. Holding the
       // switch at 0 is what keeps the Out of Shape trait event from firing,
@@ -544,6 +576,10 @@ class GameState {
     'switches': switches,
     'eventCounts': eventCounts.map((k, v) => MapEntry(k.toString(), v)),
     'eventStates': eventStates.map((k, v) => MapEntry(k.toString(), v)),
+    'openingComplete': openingComplete,
+    'dayEndPending': dayEndPending,
+    'taskDeadlines': taskDeadlines.map((k, v) => MapEntry('$k', v.code)),
+    'taskTitles': taskTitles.map((k, v) => MapEntry('$k', v)),
     'unlockedLocations': unlockedLocations.toList(),
     'inventory': inventory.map((k, v) => MapEntry(k.toString(), v)),
     'itemUseCounts': itemUseCounts.map((k, v) => MapEntry(k.toString(), v)),
@@ -630,6 +666,20 @@ class GameState {
 
     intMap('eventCounts', state.eventCounts);
     intMap('eventStates', state.eventStates);
+    state.openingComplete =
+        j['openingComplete'] as bool? ??
+        (state.dayIndex > 0 || state.eventStates[3] == 2);
+    state.dayEndPending = j['dayEndPending'] == true;
+    (j['taskDeadlines'] as Map? ?? const {}).forEach((key, value) {
+      final id = int.tryParse('$key');
+      final due = GameDate.tryParse(value as String?);
+      if (id != null && due != null) state.taskDeadlines[id] = due;
+    });
+    (j['taskTitles'] as Map? ?? const {}).forEach((key, value) {
+      final id = int.tryParse('$key');
+      if (id != null) state.taskTitles[id] = '$value';
+    });
+    if (!j.containsKey('taskDeadlines')) state._seedInitialTasks();
     intMap('traitDaysLeft', state.traitDaysLeft);
     if (state.eventStates.isEmpty) {
       // A save written before event progress was tracked: anything that had

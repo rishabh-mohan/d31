@@ -1,3 +1,5 @@
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -214,12 +216,14 @@ class _CommerceScreenState extends State<CommerceScreen> {
                   SizedBox(
                     width: 260,
                     height: 52,
-                    child: FilledButton(
-                      style: orangeButton,
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        'Confirm',
-                        style: TextStyle(fontSize: 19),
+                    child: PressFeedback(
+                      child: FilledButton(
+                        style: orangeButton,
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Confirm',
+                          style: TextStyle(fontSize: 19),
+                        ),
                       ),
                     ),
                   ),
@@ -268,38 +272,40 @@ class _CommerceScreenState extends State<CommerceScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Material(
-              color: D30Colors.accent,
-              borderRadius: BorderRadius.circular(20),
-              child: InkWell(
+            PressFeedback(
+              child: Material(
+                color: D30Colors.accent,
                 borderRadius: BorderRadius.circular(20),
-                onTap: () => setState(() => priceAscending = !priceAscending),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.filter_list,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'Sort by price',
-                        style: TextStyle(fontSize: 13, color: Colors.white),
-                      ),
-                      Icon(
-                        priceAscending
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward,
-                        size: 15,
-                        color: Colors.white,
-                      ),
-                    ],
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => setState(() => priceAscending = !priceAscending),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.filter_list,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Sort by price',
+                          style: TextStyle(fontSize: 13, color: Colors.white),
+                        ),
+                        Icon(
+                          priceAscending
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
+                          size: 15,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -362,20 +368,22 @@ class _CommerceScreenState extends State<CommerceScreen> {
                         const Divider(),
                         Text(item.description, textAlign: TextAlign.center),
                         const SizedBox(height: 12),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: D30Colors.alert,
-                            side: const BorderSide(
-                              color: D30Colors.alert,
-                              width: 2,
+                        PressFeedback(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: D30Colors.alert,
+                              side: const BorderSide(
+                                color: D30Colors.alert,
+                                width: 2,
+                              ),
                             ),
-                          ),
-                          key: ValueKey('buy-$id'),
-                          onPressed: stock > 0 ? () => buy(id) : null,
-                          child: Text(
-                            stock == 0
-                                ? 'Sold out'
-                                : '${offer['price']} Gold ($stock/${offer['stock']})',
+                            key: ValueKey('buy-$id'),
+                            onPressed: stock > 0 ? () => buy(id) : null,
+                            child: Text(
+                              stock == 0
+                                  ? 'Sold out'
+                                  : '${offer['price']} Gold ($stock/${offer['stock']})',
+                            ),
                           ),
                         ),
                       ],
@@ -457,21 +465,23 @@ class _CommerceScreenState extends State<CommerceScreen> {
                           SizedBox(
                             width: double.infinity,
                             height: 28,
-                            child: FilledButton(
-                              key: ValueKey('remove-material-$slot'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: D30Colors.alert,
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            child: PressFeedback(
+                              child: FilledButton(
+                                key: ValueKey('remove-material-$slot'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: D30Colors.alert,
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
+                                onPressed: () {
+                                  if (slot < materials.length) {
+                                    setState(() => materials.removeAt(slot));
+                                  }
+                                },
+                                child: const Icon(Icons.close, size: 20),
                               ),
-                              onPressed: () {
-                                if (slot < materials.length) {
-                                  setState(() => materials.removeAt(slot));
-                                }
-                              },
-                              child: const Icon(Icons.close, size: 20),
                             ),
                           ),
                         ],
@@ -486,10 +496,12 @@ class _CommerceScreenState extends State<CommerceScreen> {
             child: SizedBox(
               width: double.infinity,
               height: 46,
-              child: FilledButton(
-                style: orangeButton,
-                onPressed: combine,
-                child: const Text('Combine', style: TextStyle(fontSize: 23)),
+              child: PressFeedback(
+                child: FilledButton(
+                  style: orangeButton,
+                  onPressed: combine,
+                  child: const Text('Combine', style: TextStyle(fontSize: 23)),
+                ),
               ),
             ),
           ),
@@ -537,15 +549,17 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                 Positioned(
                                   top: 0,
                                   right: 0,
-                                  child: InkWell(
-                                    onTap: () => setState(
-                                      () => game.state.equippedStationery
-                                          .remove(type),
-                                    ),
-                                    child: const Icon(
-                                      Icons.cancel,
-                                      color: D30Colors.alert,
-                                      size: 22,
+                                  child: PressFeedback(
+                                    child: InkWell(
+                                      onTap: () => setState(
+                                        () => game.state.equippedStationery
+                                            .remove(type),
+                                      ),
+                                      child: const Icon(
+                                        Icons.cancel,
+                                        color: D30Colors.alert,
+                                        size: 22,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -608,44 +622,48 @@ class _CommerceScreenState extends State<CommerceScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     // The active category is marked by the small filled
                     // toggle inside the pill, not by tinting the whole pill.
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: D30Colors.ink,
-                        side: const BorderSide(
-                          color: D30Colors.accent,
-                          width: 2,
+                    child: PressFeedback(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: D30Colors.ink,
+                          side: const BorderSide(
+                            color: D30Colors.accent,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                      ),
-                      onPressed: () => setState(() => filter = type),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              type == 'all' ? 'All' : stationeryTypeLabel(type),
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            const SizedBox(width: 3),
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: filter == type
-                                    ? D30Colors.accent
-                                    : Colors.transparent,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: D30Colors.accent,
-                                  width: 1.5,
+                        onPressed: () => setState(() => filter = type),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                type == 'all'
+                                    ? 'All'
+                                    : stationeryTypeLabel(type),
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              const SizedBox(width: 3),
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: filter == type
+                                      ? D30Colors.accent
+                                      : Colors.transparent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: D30Colors.accent,
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -671,22 +689,26 @@ class _CommerceScreenState extends State<CommerceScreen> {
         ),
         const Divider(indent: 16, endIndent: 16),
         if (combining)
-          OutlinedButton(
-            onPressed: () => setState(() {
-              combining = false;
-              materials.clear();
-            }),
-            child: const Text('Back to Stationery'),
+          PressFeedback(
+            child: OutlinedButton(
+              onPressed: () => setState(() {
+                combining = false;
+                materials.clear();
+              }),
+              child: const Text('Back to Stationery'),
+            ),
           )
         else ...[
           const Text(
             'New stationery arrives every Thursday.',
             style: TextStyle(fontSize: 12),
           ),
-          FilledButton(
-            style: orangeButton,
-            onPressed: () => setState(() => combining = true),
-            child: const Text('Combine'),
+          PressFeedback(
+            child: FilledButton(
+              style: orangeButton,
+              onPressed: () => setState(() => combining = true),
+              child: const Text('Combine'),
+            ),
           ),
         ],
         const SizedBox(height: 10),
@@ -766,19 +788,21 @@ class _CommerceScreenState extends State<CommerceScreen> {
                           Positioned(
                             top: 0,
                             right: 0,
-                            child: IconButton.filled(
-                              tooltip: 'Close',
-                              onPressed: closeMenu,
-                              style: IconButton.styleFrom(
-                                backgroundColor: D30Colors.accent,
-                                foregroundColor: D30Colors.panel,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(10),
+                            child: PressFeedback(
+                              child: IconButton.filled(
+                                tooltip: 'Close',
+                                onPressed: closeMenu,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: D30Colors.accent,
+                                  foregroundColor: D30Colors.panel,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.only(
+                                      bottomLeft: Radius.circular(10),
+                                    ),
                                   ),
                                 ),
+                                icon: const Icon(Icons.close, size: 30),
                               ),
-                              icon: const Icon(Icons.close, size: 30),
                             ),
                           ),
                         ],
@@ -799,18 +823,20 @@ class _CommerceScreenState extends State<CommerceScreen> {
                         child: SizedBox(
                           width: double.infinity,
                           height: 45,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: D30Colors.alert,
-                              foregroundColor: D30Colors.panel,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          child: PressFeedback(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: D30Colors.alert,
+                                foregroundColor: D30Colors.panel,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                            ),
-                            onPressed: closeMenu,
-                            child: const Text(
-                              'Close',
-                              style: TextStyle(fontSize: 20),
+                              onPressed: closeMenu,
+                              child: const Text(
+                                'Close',
+                                style: TextStyle(fontSize: 20),
+                              ),
                             ),
                           ),
                         ),
@@ -823,51 +849,53 @@ class _CommerceScreenState extends State<CommerceScreen> {
                             for (final tab in PackMenu.values)
                               Expanded(
                                 flex: selectedMenu == tab ? 2 : 1,
-                                child: InkWell(
-                                  key: ValueKey('menu-tab-${tab.name}'),
-                                  onTap: () => setState(() {
-                                    selectedMenu = tab;
-                                    combining = false;
-                                    materials.clear();
-                                  }),
-                                  child: SizedBox.expand(
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          switch (tab) {
-                                            PackMenu.books => Icons.book,
-                                            PackMenu.items =>
-                                              Icons.card_giftcard,
-                                            PackMenu.shop => Icons.storefront,
-                                            PackMenu.stationery => Icons.edit,
-                                          },
-                                          color: D30Colors.panel,
-                                          size: 25,
-                                        ),
-                                        if (selectedMenu == tab) ...[
-                                          const SizedBox(width: 5),
-                                          Flexible(
-                                            child: FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              child: Text(
-                                                switch (tab) {
-                                                  PackMenu.books => 'Books',
-                                                  PackMenu.items => 'Items',
-                                                  PackMenu.shop => 'Store',
-                                                  PackMenu.stationery =>
-                                                    'Stationery',
-                                                },
-                                                style: const TextStyle(
-                                                  color: D30Colors.panel,
-                                                  fontSize: 16,
+                                child: PressFeedback(
+                                  child: InkWell(
+                                    key: ValueKey('menu-tab-${tab.name}'),
+                                    onTap: () => setState(() {
+                                      selectedMenu = tab;
+                                      combining = false;
+                                      materials.clear();
+                                    }),
+                                    child: SizedBox.expand(
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            switch (tab) {
+                                              PackMenu.books => Icons.book,
+                                              PackMenu.items =>
+                                                Icons.card_giftcard,
+                                              PackMenu.shop => Icons.storefront,
+                                              PackMenu.stationery => Icons.edit,
+                                            },
+                                            color: D30Colors.panel,
+                                            size: 25,
+                                          ),
+                                          if (selectedMenu == tab) ...[
+                                            const SizedBox(width: 5),
+                                            Flexible(
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  switch (tab) {
+                                                    PackMenu.books => 'Books',
+                                                    PackMenu.items => 'Items',
+                                                    PackMenu.shop => 'Store',
+                                                    PackMenu.stationery =>
+                                                      'Stationery',
+                                                  },
+                                                  style: const TextStyle(
+                                                    color: D30Colors.panel,
+                                                    fontSize: 16,
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),

@@ -9,6 +9,8 @@ library;
 
 import 'dart:async';
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -175,19 +177,21 @@ class _StationeryDrawState extends State<StationeryDraw> {
                         SizedBox(
                           width: 260,
                           height: 52,
-                          child: FilledButton(
-                            key: const ValueKey('stop-all-stationery'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: D30Colors.accent,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          child: PressFeedback(
+                            child: FilledButton(
+                              key: const ValueKey('stop-all-stationery'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: D30Colors.accent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                            ),
-                            onPressed: _stop,
-                            child: const Text(
-                              'Stop all Stationery',
-                              style: TextStyle(fontSize: 18),
+                              onPressed: _stop,
+                              child: const Text(
+                                'Stop all Stationery',
+                                style: TextStyle(fontSize: 18),
+                              ),
                             ),
                           ),
                         ),
@@ -234,19 +238,21 @@ class _StationeryDrawState extends State<StationeryDraw> {
                         SizedBox(
                           width: 240,
                           height: 52,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: D30Colors.accent,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          child: PressFeedback(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: D30Colors.accent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                            ),
-                            onPressed: _canRedraw ? _redraw : null,
-                            child: Text(
-                              game.state.stationeryFreeRedrawUsed
-                                  ? 'Re-draw · ${game.pack.rules.number('stationery', 'redrawCookies', 1)} Cookie'
-                                  : 'Free re-draw',
+                              onPressed: _canRedraw ? _redraw : null,
+                              child: Text(
+                                game.state.stationeryFreeRedrawUsed
+                                    ? 'Re-draw · ${game.pack.rules.number('stationery', 'redrawCookies', 1)} Cookie'
+                                    : 'Free re-draw',
+                              ),
                             ),
                           ),
                         ),
@@ -254,16 +260,18 @@ class _StationeryDrawState extends State<StationeryDraw> {
                         SizedBox(
                           width: 240,
                           height: 46,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: D30Colors.panel,
-                              foregroundColor: D30Colors.accent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          child: PressFeedback(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: D30Colors.panel,
+                                foregroundColor: D30Colors.accent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
+                              onPressed: close,
+                              child: const Text('Close'),
                             ),
-                            onPressed: close,
-                            child: const Text('Close'),
                           ),
                         ),
                       ],

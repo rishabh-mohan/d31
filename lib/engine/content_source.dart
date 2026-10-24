@@ -16,7 +16,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import 'package:path_provider/path_provider.dart';
 
 import 'pack.dart';
@@ -33,6 +33,40 @@ class PackLocation {
 
 class ContentSource {
   static const defaultPackId = 'kss16';
+
+  /// Bundled packs plus editable desktop packs. The selector is derived from
+  /// pack manifests, so adding another generated pack does not require a card.
+  static Future<List<String>> availablePackIds() async {
+    final ids = <String>{defaultPackId};
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    for (final asset in manifest.listAssets()) {
+      final match = RegExp(r'^packs/([A-Za-z0-9_-]+)/pack\.json$')
+          .firstMatch(asset);
+      if (match != null) ids.add(match[1]!);
+    }
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      final root = Directory('packs');
+      if (await root.exists()) {
+        await for (final entry in root.list()) {
+          if (entry is Directory &&
+              await File('${entry.path}/pack.json').exists()) {
+            final id = entry.uri.pathSegments.where((s) => s.isNotEmpty).last;
+            if (RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(id)) ids.add(id);
+          }
+        }
+      }
+    }
+    return ids.toList()..sort(
+      (a, b) => a == b
+          ? 0
+          : a == defaultPackId
+          ? -1
+          : b == defaultPackId
+          ? 1
+          : a.compareTo(b),
+    );
+  }
 
   /// Where an editable copy lives. Checked in order; the first that exists
   /// and holds a pack.json wins.

@@ -12,6 +12,8 @@ library;
 
 import 'dart:convert';
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -173,22 +175,28 @@ class _StateTab extends StatelessWidget {
           runSpacing: 8,
           children: [
             for (final n in const [-5, -1, 1, 5])
-              OutlinedButton(
-                onPressed: () => onChange(() => s.date = _shiftDays(game, n)),
-                child: Text('${n > 0 ? '+' : ''}$n day'),
+              PressFeedback(
+                child: OutlinedButton(
+                  onPressed: () => onChange(() => s.date = _shiftDays(game, n)),
+                  child: Text('${n > 0 ? '+' : ''}$n day'),
+                ),
               ),
-            OutlinedButton(
-              onPressed: () => onChange(() {
-                s.date = s.date.advance(1, s.ticksPerDay);
-              }),
-              child: const Text('+1 tick'),
+            PressFeedback(
+              child: OutlinedButton(
+                onPressed: () => onChange(() {
+                  s.date = s.date.advance(1, s.ticksPerDay);
+                }),
+                child: const Text('+1 tick'),
+              ),
             ),
-            OutlinedButton(
-              onPressed: () => onChange(() {
-                s.date = game.pack.manifest.endDate;
-                s.finished = true;
-              }),
-              child: const Text('Jump to exam day'),
+            PressFeedback(
+              child: OutlinedButton(
+                onPressed: () => onChange(() {
+                  s.date = game.pack.manifest.endDate;
+                  s.finished = true;
+                }),
+                child: const Text('Jump to exam day'),
+              ),
             ),
           ],
         ),
@@ -199,22 +207,24 @@ class _StateTab extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: D30Colors.alert,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () async {
-                  final slot = s.saveSlot;
-                  if (slot != null) await SaveStore.write(slot, s);
-                  if (!context.mounted) return;
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                icon: const Icon(Icons.exit_to_app),
-                label: Text(
-                  s.saveSlot == null
-                      ? 'Leave to main menu'
-                      : 'Save and leave to main menu',
+              child: PressFeedback(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: D30Colors.alert,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    final slot = s.saveSlot;
+                    if (slot != null) await SaveStore.write(slot, s);
+                    if (!context.mounted) return;
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  icon: const Icon(Icons.exit_to_app),
+                  label: Text(
+                    s.saveSlot == null
+                        ? 'Leave to main menu'
+                        : 'Save and leave to main menu',
+                  ),
                 ),
               ),
             ),
@@ -285,16 +295,18 @@ class _NumberRow extends StatelessWidget {
           for (final s in steps)
             Padding(
               padding: const EdgeInsets.only(left: 4),
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 32),
-                  visualDensity: VisualDensity.compact,
-                ),
-                onPressed: () => onChanged(value + s),
-                child: Text(
-                  s > 0 ? '+$s' : '$s',
-                  style: const TextStyle(fontSize: 11),
+              child: PressFeedback(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 32),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => onChanged(value + s),
+                  child: Text(
+                    s > 0 ? '+$s' : '$s',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ),
               ),
             ),
@@ -399,14 +411,16 @@ class _EventsTabState extends State<_EventsTab> {
                   '${e.isRandomDate ? ' · random' : ' · pinned'}'
                   '${seen > 0 ? ' · seen ${seen}x' : ''}',
                 ),
-                trailing: TextButton(
-                  onPressed: () async {
-                    final run = game.events.begin(e, game.state);
-                    if (!context.mounted) return;
-                    Navigator.of(context).pop();
-                    await widget.playEvent(run);
-                  },
-                  child: const Text('Fire'),
+                trailing: PressFeedback(
+                  child: TextButton(
+                    onPressed: () async {
+                      final run = game.events.begin(e, game.state);
+                      if (!context.mounted) return;
+                      Navigator.of(context).pop();
+                      await widget.playEvent(run);
+                    },
+                    child: const Text('Fire'),
+                  ),
                 ),
               );
             },
@@ -509,16 +523,22 @@ class _ContentTabState extends State<_ContentTab> {
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.remove, size: 16),
-                  onPressed: () => widget.onChange(() => s.addSwitch(name, -1)),
+                PressFeedback(
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.remove, size: 16),
+                    onPressed: () =>
+                        widget.onChange(() => s.addSwitch(name, -1)),
+                  ),
                 ),
                 Text('${s.switchValue(name)}'),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.add, size: 16),
-                  onPressed: () => widget.onChange(() => s.addSwitch(name, 1)),
+                PressFeedback(
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.add, size: 16),
+                    onPressed: () =>
+                        widget.onChange(() => s.addSwitch(name, 1)),
+                  ),
                 ),
               ],
             ),
@@ -671,14 +691,16 @@ class _TraitsTabState extends State<_TraitsTab> {
           children: [
             Expanded(child: _header(context, 'Held (${held.length})')),
             if (held.isNotEmpty)
-              TextButton(
-                onPressed: () => widget.onChange(() {
-                  for (final id in held) {
-                    s.removeTrait(id);
-                  }
-                  _message = 'Cleared ${held.length} traits.';
-                }),
-                child: const Text('Clear all'),
+              PressFeedback(
+                child: TextButton(
+                  onPressed: () => widget.onChange(() {
+                    for (final id in held) {
+                      s.removeTrait(id);
+                    }
+                    _message = 'Cleared ${held.length} traits.';
+                  }),
+                  child: const Text('Clear all'),
+                ),
               ),
           ],
         ),
@@ -949,10 +971,12 @@ class _RulesTabState extends State<_RulesTab> {
               ),
             ),
           const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save),
-            label: const Text('Save to pack'),
+          PressFeedback(
+            child: FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.save),
+              label: const Text('Save to pack'),
+            ),
           ),
         ],
       ),
@@ -1009,13 +1033,17 @@ class _PackTabState extends State<_PackTab> {
           'Edits you have made there will be lost.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+          PressFeedback(
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Reset'),
+          PressFeedback(
+            child: FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Reset'),
+            ),
           ),
         ],
       ),
@@ -1066,10 +1094,12 @@ class _PackTabState extends State<_PackTab> {
               icon: const Icon(Icons.refresh),
               label: const Text('Reload from disk'),
             ),
-            OutlinedButton.icon(
-              onPressed: widget.location.directory == null ? null : _reset,
-              icon: const Icon(Icons.restore),
-              label: const Text('Reset to bundled'),
+            PressFeedback(
+              child: OutlinedButton.icon(
+                onPressed: widget.location.directory == null ? null : _reset,
+                icon: const Icon(Icons.restore),
+                label: const Text('Reset to bundled'),
+              ),
             ),
           ],
         ),
@@ -1140,10 +1170,12 @@ class _CopyBlock extends StatelessWidget {
             ),
           ),
         ),
-        TextButton.icon(
-          onPressed: () => Clipboard.setData(ClipboardData(text: text)),
-          icon: const Icon(Icons.copy, size: 16),
-          label: const Text('Copy'),
+        PressFeedback(
+          child: TextButton.icon(
+            onPressed: () => Clipboard.setData(ClipboardData(text: text)),
+            icon: const Icon(Icons.copy, size: 16),
+            label: const Text('Copy'),
+          ),
         ),
       ],
     );

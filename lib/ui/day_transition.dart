@@ -5,6 +5,8 @@
 /// green play button to start the next day.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -224,18 +226,20 @@ class DayTransition extends StatelessWidget {
                     child: SizedBox(
                       width: double.infinity,
                       height: 62,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF55B14E),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      child: PressFeedback(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF55B14E),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          size: 38,
-                          color: Colors.white,
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            size: 38,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

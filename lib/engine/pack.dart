@@ -153,7 +153,6 @@ class Rules {
   num get partTimeBaseMoney => number('partTimeJob', 'baseMoney', 1000);
   num get partTimeExp => number('partTimeJob', 'expPerShift', 60);
   num get exerciseExp => number('exercise', 'expPerSession', 80);
-  num get exerciseHpPerLevel => number('exercise', 'hpMaxPerLevel', 4);
   num get randomEventChance =>
       number('events', 'randomEventChancePerTick', 0.12);
   int get maxEventsPerDay => number('events', 'maxEventsPerDay', 3).toInt();

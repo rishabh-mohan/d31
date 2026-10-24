@@ -5,6 +5,8 @@ library;
 import 'dart:ui' as ui;
 import 'dart:async';
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/event_engine.dart';
@@ -75,7 +77,10 @@ class _EventScreenState extends State<EventScreen> {
     // should not trap the player on a blank screen.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final beat = run.current;
-      if (beat != null && beat.isEnd && beat.text.trim().isEmpty) {
+      if (beat != null &&
+          beat.isEnd &&
+          beat.text.trim().isEmpty &&
+          run.acquiredItems.isEmpty) {
         if (mounted) Navigator.of(context).maybePop();
       }
     });
@@ -169,7 +174,9 @@ class _EventScreenState extends State<EventScreen> {
                             padding: const EdgeInsets.only(bottom: 6),
                             child: D30Chip(
                               text: line.speaker!,
-                              color: line.speaker == 'Me'
+                              color: line.speaker == '???'
+                                  ? const Color(0xFF3C3C3C)
+                                  : line.speaker == 'Me'
                                   ? D30Colors.accent
                                   : const Color(0xFF4FA55A),
                               textColor: Colors.white,
@@ -203,16 +210,21 @@ class _EventScreenState extends State<EventScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   height: 46,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: D30Colors.alert,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  child: PressFeedback(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: D30Colors.alert,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'Close',
+                        style: TextStyle(fontSize: 19),
                       ),
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close', style: TextStyle(fontSize: 19)),
                   ),
                 ),
               ),
@@ -227,6 +239,9 @@ class _EventScreenState extends State<EventScreen> {
   Widget build(BuildContext context) {
     final beat = run.current;
     final hasChoices = beat != null && beat.choices.isNotEmpty;
+    final actor =
+        (run.pack.presentation['npcs'] as Map?)?['${run.portraitId}'] as Map?;
+    final portraitOffset = (actor?['eventOffsetY'] as num?)?.toDouble() ?? 0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -267,6 +282,47 @@ class _EventScreenState extends State<EventScreen> {
                           ),
                         ),
                       ),
+                      if (run.acquiredItems.isNotEmpty)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 100),
+                          child: SingleChildScrollView(
+                            key: const ValueKey('event-item-receipt'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            child: Column(
+                              children: [
+                                for (final item in run.acquiredItems.entries)
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 32,
+                                        height: 32,
+                                        child: PackImage(
+                                          path: 'items/${item.key}.png',
+                                          fit: BoxFit.contain,
+                                          placeholder: const Icon(
+                                            Icons.card_giftcard,
+                                            color: D30Colors.accent,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Received: ${run.pack.items[item.key]?.name ?? 'Item ${item.key}'} x${item.value}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                       // Scene + dialogue
                       Expanded(
                         child: Padding(
@@ -288,12 +344,15 @@ class _EventScreenState extends State<EventScreen> {
                                       padding: const EdgeInsets.only(
                                         bottom: 115,
                                       ),
-                                      child: Portrait(
-                                        pack: run.pack,
-                                        id: run.portraitId,
-                                        expression: run.portraitExpression,
-                                        clothes: run.portraitClothes,
-                                        otherLayers: run.portraitOtherLayers,
+                                      child: Transform.translate(
+                                        offset: Offset(0, portraitOffset),
+                                        child: Portrait(
+                                          pack: run.pack,
+                                          id: run.portraitId,
+                                          expression: run.portraitExpression,
+                                          clothes: run.portraitClothes,
+                                          otherLayers: run.portraitOtherLayers,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -392,12 +451,14 @@ class _EventScreenState extends State<EventScreen> {
                                                 Positioned(
                                                   right: 0,
                                                   top: 0,
-                                                  child: IconButton(
-                                                    tooltip: 'Log',
-                                                    onPressed: _showLog,
-                                                    icon: const Icon(
-                                                      Icons
-                                                          .format_list_bulleted,
+                                                  child: PressFeedback(
+                                                    child: IconButton(
+                                                      tooltip: 'Log',
+                                                      onPressed: _showLog,
+                                                      icon: const Icon(
+                                                        Icons
+                                                            .format_list_bulleted,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
@@ -523,7 +584,9 @@ class _DialogueBox extends StatelessWidget {
             if (speaker != null)
               D30Chip(
                 text: speaker!,
-                color: D30Colors.accent,
+                color: speaker == '???'
+                    ? const Color(0xFF3C3C3C)
+                    : D30Colors.accent,
                 textColor: Colors.white,
                 fontSize: 12,
               ),
@@ -548,19 +611,21 @@ class _DialogueBox extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: D30Colors.ink,
-                        side: const BorderSide(
-                          color: D30Colors.accent,
-                          width: 1.5,
+                    child: PressFeedback(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: D30Colors.ink,
+                          side: const BorderSide(
+                            color: D30Colors.accent,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                        onPressed: () => onChoose(c),
+                        child: EventText(c.text, textAlign: TextAlign.center),
                       ),
-                      onPressed: () => onChoose(c),
-                      child: EventText(c.text, textAlign: TextAlign.center),
                     ),
                   ),
                 ),
@@ -630,16 +695,18 @@ class _RoundButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: Material(
-        color: filled ? color : Colors.white,
-        shape: CircleBorder(side: BorderSide(color: color, width: 2)),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(
-            width: 38,
-            height: 38,
-            child: Icon(icon, size: 20, color: filled ? Colors.white : color),
+      child: PressFeedback(
+        child: Material(
+          color: filled ? color : Colors.white,
+          shape: CircleBorder(side: BorderSide(color: color, width: 2)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+              width: 38,
+              height: 38,
+              child: Icon(icon, size: 20, color: filled ? Colors.white : color),
+            ),
           ),
         ),
       ),

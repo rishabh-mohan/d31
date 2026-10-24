@@ -167,6 +167,43 @@ void main() {
     },
   );
 
+  test(
+    'part-time level-up repeats, clears its flag and precedes exhaustion',
+    () {
+      final game = Game.newRun(pack, random: Random(13));
+      final work = pack.locations[1000]!.actions.firstWhere(
+        (a) => a.actionType == 'partTimeJob',
+      );
+      for (final level in [2, 3]) {
+        game.state.partTimeExp = pack.partTimeLevels.tiers[level - 1].exp - 1;
+        game.state.hp = level == 3 ? 1 : game.state.hpMax;
+        final outcome = game.act(work, deferExhaustion: true);
+        final run = outcome.beforeEvents.single;
+        expect(run.event.id, 10000003);
+        expect(
+          run.current!.text,
+          'A sudden burst of professionalism rushes in me…!',
+        );
+        expect(game.state.eventsFiredToday, 0);
+        run.advance();
+        expect(run.current!.text, 'GYAAAAAAAH...!');
+        run.advance();
+        expect(run.current!.text, 'Part-Time Level became Level $level!!!');
+        expect(run.current!.isEnd, isTrue);
+        expect(game.state.switches['PART_TIME_JOB_LEVEL_UP'], 0);
+        expect(game.effects.unknownFuncCodes, isEmpty);
+        if (level == 3) {
+          expect(outcome.exhausted, isTrue);
+          expect(outcome.event!.event.id, 10000000);
+        }
+      }
+      expect(
+        game.events.eligible(game.state).any((e) => e.id == 10000003),
+        isFalse,
+      );
+    },
+  );
+
   testWidgets(
     'dialogue, choices and log render formatted text without raw tags',
     (tester) async {

@@ -14,10 +14,12 @@ import 'package:d30mode/engine/save_store.dart';
 
 void main() {
   late ContentPack pack;
+  late ContentPack retry;
   late Directory temp;
 
   setUpAll(() async {
     pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
+    retry = await ContentSource.loadFromDirectory(Directory('packs/kss20'));
   });
 
   setUp(() async {
@@ -75,6 +77,28 @@ void main() {
     expect(await SaveStore.read(0, pack), isNull);
     expect((await SaveStore.summary(2))!.name.startsWith('B'), isTrue);
   });
+
+  test(
+    'campaign identity selects Retry Year and prevents loading the wrong pack',
+    () async {
+      final game = Game.newRun(retry);
+      expect(await SaveStore.write(0, game.state), isTrue);
+      expect((await SaveStore.summary(0))!.packId, 'kss20');
+      expect(await SaveStore.read(0, pack), isNull);
+      final restored = await SaveStore.read(0, retry);
+      expect(restored!.pack.manifest.storyId, 20);
+      expect(restored.date, retry.manifest.startDate);
+      expect(restored.switches, game.state.switches);
+      await SaveStore.write(1, Game.newRun(pack).state);
+      final file = File('${temp.path}/slot_1.json');
+      final legacy =
+          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      (legacy['summary'] as Map).remove('packId');
+      await file.writeAsString(jsonEncode(legacy));
+      expect((await SaveStore.summary(1))!.packId, 'kss16');
+      expect(await SaveStore.read(1, pack), isNotNull);
+    },
+  );
 
   test('a corrupt slot reads as empty instead of throwing', () async {
     await File('${temp.path}/slot_0.json').writeAsString('{not json');

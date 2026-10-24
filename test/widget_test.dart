@@ -55,7 +55,7 @@ Future<void> main() async {
         reason:
             'only the trait list scrolls inside the fitted preparation menu',
       );
-      for (final title in ['Books', 'Score Card', 'Schedule']) {
+      for (final title in ['Books', 'Score Card', 'Calendar']) {
         await tester.ensureVisible(find.text(title));
         await tester.tap(find.text(title));
         await tester.pumpAndSettle();
@@ -63,8 +63,12 @@ Future<void> main() async {
         if (title == 'Score Card') {
           expect(find.text('No Score Card yet!'), findsOneWidget);
         }
-        if (title == 'Schedule') {
-          expect(find.text('Calendar'), findsOneWidget);
+        if (title == 'Calendar') {
+          expect(find.text('Calendar'), findsNWidgets(2));
+          expect(
+            tester.getSize(find.byType(Dialog)).width,
+            greaterThan(width - 80),
+          );
           expect(
             tester.getSize(find.byType(Dialog)).height,
             greaterThan(852 * .75),
@@ -128,6 +132,34 @@ Future<void> main() async {
     );
     expect(find.text('D-${game.state.daysRemaining}'), findsOneWidget);
   });
+
+  for (final size in [const Size(320, 740), const Size(393, 873)]) {
+    testWidgets('player portrait tucks behind action panel at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final game = Game.newRun(pack);
+      game.state.date = GameDate(game.state.date.day, 1);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GameScreen(
+            game: game,
+            packLocation: PackLocation('kss16', null, false),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final portrait = tester.getRect(
+        find.byKey(const ValueKey('game-character')),
+      );
+      final panel = tester.getRect(find.byKey(const ValueKey('action-panel')));
+      expect(portrait.bottom - panel.top, closeTo(76, 1));
+      expect(portrait.height, greaterThan(120));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final (label, tick, restricted) in [
     ('between days', 0, false),

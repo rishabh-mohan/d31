@@ -1,5 +1,30 @@
 # d30mode — durable notes
 
+### Follow-up: event chronology and stationery (2026-10-24)
+
+Retry Year chronology remains incorrect per the user's playtest. The old-project
+review is logged in `docs/RETRY-YEAR-EVENT-ORDER.md`. Opening prerequisites and
+confinement effects do not prove the overall scheduler or same-tick timing.
+Do not describe the existing chain/cap/ID-sort reconstruction as recovered
+original placement. Per user instruction, move to other TODOs if no evidence.
+
+TODO 47 clarification: user explicitly chose A+C -> A (and B+C -> B), rather
+than a linear rounded average. Stationery combinations preserve the best input
+tier for 2-4 copies, with editable `stationery.combineUpgradeChance` default
+0.05; S remains S. The original percentage is unresolved. The former blended
+`combineWeights` table no longer controls combinations. See docs/STATIONERY.md.
+
+Stamina is now `ui/stamina_bar.dart`: its fill and percentage ease together over
+300ms, retarget from the displayed value, and honor reduced motion. Do not key it
+by HP or rebuild its animation state on each action. Banjang Na's NPC 7 layers
+are recovered with `presentation_assets.py --story 20 --fetch-npc 7`.
+
+Button follow-up: shared PressFeedback translates the whole face and never
+scales it. Its `travel` must match a raised button's stationary lower-face
+depth (6px on D30RaisedButton and the day-start control, 3px on HUD controls).
+Keep the dark lower face outside PressFeedback, and the painted Material and
+its contents inside. Pressed raised controls retain their 2px outline.
+
 A clean-room Flutter rebuild of Korean Student Simulator's **31-Day Mode**
 (story 16). The engine holds no content: everything is JSON in `packs/kss16/`,
 editable and reloadable without a rebuild.
@@ -565,6 +590,13 @@ Consequences to keep in mind:
 - Anything generated must stay generated: if `packs/kss16` is missing, rebuild
   it with `python tools/build_pack.py && python tools/copy_assets.py`, don't
   commit it.
+- `tools/import_all_images.py` mirrors every base-game image (asset pack and
+  base APK, all stories) plus story 16/20's streamed art into
+  `assets/images/kss/<original path minus "assets/">`, about 2,270 files. It
+  rewrites a generated block in pubspec.yaml, one entry per directory, since
+  Flutter does not bundle directories recursively. The downloads also land in
+  `build/presentation-source/`, so re-run `presentation_assets.py --story 16`
+  and `--story 20` afterwards to put the recovered art into the packs.
 - The parent repo now ignores `/d30mode/` so it does not see an embedded repo.
 - **The launcher icon is drawn, not cropped.** `android/app/src/main/res` *is*
   tracked, so anything under it derived from `assets/images/` would publish KSS
@@ -612,12 +644,15 @@ them.
 
 ### Retry Year is story 20
 
-`kss/assetpack1_dec/assets/assets/stories/20` — 218 events, 9,072 nodes, 31 MB.
-Its first event is `재수 엔딩` (Retry Year Ending) and its locations are already
-English (Lower Classroom, Dorm, Secret Mountain, Karaoke, Fitness Centre, Study
-Lounge, Arcade, Reflection Room) — but **its event text is Korean**. The
-translation project covers stories 14, 16, 42, 45 and 68 only. Importing it is
-a second pack plus a campaign choice; the engine needs nothing.
+The original English build already contains its English dialogue in
+`translatedText`, `translatedElseText` and `translatedOptionText`; do not infer
+language from the original Korean `text` field or from Korean runtime macros.
+Earlier notes claiming story 20 was Korean were incorrect. The imported pack
+has 7,350 nonempty dialogue/choice/heading fields and zero Korean prose fields
+when macros/markup are excluded. `python tools/audit_retry_english.py` verifies
+this against the old English APK, extracted tree and older mod, with source
+hashes in build/retry-english-audit.json. See docs/RETRY-YEAR.md for mechanics
+that remain unported; English dialogue does not establish mechanic coverage.
 
 ### The Calendar is content
 
@@ -694,6 +729,58 @@ pointing at code symbols the AST never created. Usable, not pristine.
 ---
 
 ## 6. Working agreements
+
+### TODO follow-up (2026-10-24)
+
+- Retry Year lifecycle repair: read docs/RETRY-YEAR-LIFECYCLE.md before altering
+  its start. English nodes plus Korean native sub_be91d0/sub_be99c0 establish
+  opening events 1 -> 169 -> 2 -> 3, SHOW_ENDING's START continuation, reflection
+  confinement and task 5's Oct 14 tick-14 deadline. The playable start location
+  is reconstructed as 20007 despite generic metadata 1000. No action is spent
+  on the prologue; save between scenes and resume the first unfinished one.
+- Retry's rules enable scheduled-event cap bypass, same-tick chaining, hidden
+  housekeeping events, tasks and delayed evening rollover. New-day events run
+  before an action. Do not roll the date while the release conversation plays.
+  EVENT_n writes now update eventStates; the hidden reset events rely on that.
+  New state fields openingComplete/dayEndPending/taskDeadlines/taskTitles save.
+  General TODO-day rounding beyond whole dates remains provisional.
+- Mum, Headmaster Kim, Suin, Dorm Master, Lower Class teacher and Taeyang art
+  were streamed into the local cache with presentation_assets.py --story 20
+  --fetch-opening. 34 additional files recovered; 142 source images remain
+  unavailable. Rendered Mum/placement test/Reflection Room before deployment.
+  Deploy Retry's pack.json, rules.json and presentation.json with the APK.
+
+- Shared `PressFeedback` wraps menu/card/icon/Material controls throughout the
+  app, preserving the child's click/focus semantics. It eases 3px down with a
+  slight scale over 70ms, resets on release/cancel/drag-out and skips disabled
+  controls/reduced-motion animation. Action cards retain their own shadow motion.
+- Follow-up Nord capture showed the portrait floating above the island. Its
+  canvas now shifts down 76 logical pixels so the torso tucks behind the panel.
+  Stationery borders reserve a real 2px inset, with separate 9px outer/7px inner
+  clipping; contents cannot paint into the border. Both were rendered for review.
+- Retry Year is now an initial selectable prototype, not a finished port. Build
+  with `python tools/build_pack.py --story 20`; read `docs/RETRY-YEAR.md` for
+  coverage and remaining mechanics. All eight original location backgrounds were
+  recovered. Bundled manifests and desktop pack directories drive the campaign
+  selector; Elite/support-pack controls are hidden. Saves select their own pack
+  via the summary's packId, with legacy saves defaulting to kss16.
+
+- Part-time level-ups use English global system event 10000003, binding
+  `partTimeLevelUp`, imported alongside exhaustion and exercise level-up.
+  `Game.act` detects the level change and queues it in `beforeEvents`, including
+  when the same action exhausts stamina. Deploy `events/system.json` along with
+  the APK to an existing editable phone pack.
+- The gameplay portrait reserves the action panel's height rather than fitting
+  to the whole background: bottom alignment behind the panel hid most of it.
+  The location art still fills the entire panel. Tests cover two phone sizes.
+- Calendar is the shared hub/dialog name; only that dialog uses 20px horizontal
+  insets. Stationery cards clip their contents inside the rounded border and
+  paint a foreground border so opaque stat rows cannot erase its bottom edge.
+- Quizmaster is event 32, named Riddle Expert in the English pack. Node 32003
+  uses `{문제}`, `{정답}`, and three `{오답}` macros; node 32005 already grants
+  `ACQUIRE_ITEM_RANDOM` from IDs 1–7. The dedicated English question bank has
+  not been recovered. The user requests that bank; do not silently substitute
+  `school_exam_problems.json`. TODO 37 remains open.
 
 ### Day lifecycle, dialogue and preparation menus (2026-10-23)
 

@@ -45,6 +45,37 @@ CAMPAIGN_SRC = (
 )
 GLOBAL = PROJECTS / "kss/assetpack1_dec/assets/assets/global_data"
 ENGLISH = GLOBAL.parent / "stories/16"
+STORY_ID = 16
+
+
+def legacy_label_pairs(relative):
+    """Reuse exact Korean -> English labels from the older localized project.
+
+    Only display strings are paired; no rules, IDs, thresholds or graph edges
+    are copied. Ambiguous translations are deliberately omitted.
+    """
+    reference = PROJECTS / 'korstu4CLAUDE/private-build/korean-base/campaign-localized-v2/story-16'
+    source = GLOBAL.parent / 'stories/16' / relative
+    localized = reference / relative
+    if not source.exists() or not localized.exists():
+        return {}
+    pairs = {}
+    def walk(a, b):
+        if isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
+            for x, y in zip(a, b):
+                walk(x, y)
+        elif isinstance(a, dict) and isinstance(b, dict):
+            if a.get('id') != b.get('id'):
+                return
+            for key in a.keys() & b.keys():
+                x, y = a[key], b[key]
+                if key in ('name', 'text') and isinstance(x, str) and isinstance(y, str):
+                    if re.search(r'[\uac00-\ud7a3]', x) and y.strip() and not re.search(r'[\uac00-\ud7a3]', y):
+                        pairs.setdefault(x, set()).add(y)
+                elif isinstance(x, (dict, list)):
+                    walk(x, y)
+    walk(load(source), load(localized))
+    return {source: next(iter(values)) for source, values in pairs.items() if len(values) == 1}
 
 # Keys that are pure plumbing for the original engine: version gates, Firebase
 # ids, CDN mirrors of local paths, and the translation bookkeeping. The d30
@@ -231,7 +262,7 @@ def build_events(out: Path):
         e.pop("index", None)
         e.pop("version", None)
     for e in events:
-        required = SET_PREREQUISITES.get(e["id"])
+        required = SET_PREREQUISITES.get(e["id"]) if STORY_ID == 16 else None
         if required is None:
             continue
         e["conditionSet"]["right"]["conditions"].append({
@@ -243,7 +274,7 @@ def build_events(out: Path):
             npcs[npc["id"]] = {"id": npc["id"], "name": " ".join(
                 filter(None, [npc.get("firstName"), npc.get("lastName")])).replace("_", " ")}
     write(out, "events/events.json", {"events": events, "nodes": nodes,
-        "speakers": list(npcs.values()), "source": "English 1.27.4 story 16"})
+        "speakers": list(npcs.values()), "source": f"1.27.4 story {STORY_ID}; authored translations where available"})
 
     switches = clean(load(ENGLISH / "event/event_switches.json"))["eventSwitches"]
     for s in switches:
@@ -254,7 +285,8 @@ def build_events(out: Path):
     write(out, "events/sets.json", {"eventSets": sets})
     # Host-triggered global dialogue is separate from random story eligibility.
     system = english(load(GLOBAL / "events/system_events.json"))
-    bindings = {"exhaustion": 10000000, "exerciseLevelUp": 10000002}
+    bindings = {"exhaustion": 10000000, "exerciseLevelUp": 10000002,
+                "partTimeLevelUp": 10000003}
     host_events = [clean(e) for e in system["events"] if e["id"] in bindings.values()]
     for event in host_events:
         event["name"] = event.pop("text", event["name"])
@@ -300,7 +332,7 @@ def build_characters(out: Path):
     chars = clean(load(GLOBAL / "characters.json"))["characters"]
     out_chars = []
     for c in chars:
-        if 16 not in (c.get("availableStoryIds") or []):
+        if STORY_ID not in (c.get("availableStoryIds") or []):
             continue
         entry = {
             "id": c["id"],
@@ -321,9 +353,9 @@ def build_characters(out: Path):
         out_chars.append(entry)
     out_chars.sort(key=lambda c: c["id"])
     write(out, "characters.json", {"characters": out_chars},
-          "Story-16 selectable characters. effectDescription is display prose; "
+          f"Story-{STORY_ID} selectable characters. effectDescription is display prose; "
           "plusEffect is the mechanic.")
-    print(f"    {len(out_chars)} of {len(chars)} characters are story 16's")
+    print(f"    {len(out_chars)} of {len(chars)} characters are story {STORY_ID}'s")
 
 
 def build_badges(out: Path):
@@ -354,9 +386,13 @@ def build_badges(out: Path):
 
 def build_locations(out: Path):
     locs = clean(load(CAMPAIGN / "data/locations.json"))["locations"]
-    image_paths = presentation_assets.location_images()
+    labels = legacy_label_pairs('data/locations.json') if STORY_ID == 20 else {}
+    image_paths = presentation_assets.location_images(STORY_ID)
     for loc in locs:
         loc["image"] = image_paths.get(loc["id"])
+        for action in loc.get('actions', []):
+            if action.get('text') in labels:
+                action['text'] = labels[action['text']]
     write(out, "locations.json", {"locations": locs})
     print(f"    {len(locs)} locations")
 
@@ -377,13 +413,18 @@ def build_levels(out: Path):
     elite = clean(load(GLOBAL / "elite_levels.json"))["levels"]
     exercise = clean(load(CAMPAIGN / "data/exercise_info.json"))
     ptj = clean(load(CAMPAIGN / "data/part_time_job_info.json"))
+    if STORY_ID == 20:
+        labels = legacy_label_pairs('data/part_time_job_info.json')
+        for level in ptj.get('levelList', []):
+            if level.get('name') in labels:
+                level['name'] = labels[level['name']]
 
     # The translation pass localised the part-time *level* names but not the
     # per-location shift names -- `textList` is not in its whitelist, so 80 of
     # 90 strings stayed Korean. The English 1.27.4 build ships those same
     # lists already translated, so lift them. (CLAUDE.md: prefer the English
     # build's own wording over a fresh translation.)
-    english_ptj = GLOBAL.parent / "stories/16/data/part_time_job_info.json"
+    english_ptj = ENGLISH / "data/part_time_job_info.json"
     if english_ptj.exists():
         by_location = {
             e["locationId"]: e.get("textList", [])
@@ -435,20 +476,22 @@ def build_books(out: Path):
 
 def build_calendar_and_manifest(out: Path):
     story = next(
-        s for s in load(GLOBAL / "stories.json")["stories"] if s.get("id") == 16
+        s for s in load(GLOBAL / "stories.json")["stories"] if s.get("id") == STORY_ID
     )
     special = clean(load(CAMPAIGN / "data/special_days.json"))["specialDays"]
     todos = clean(load(CAMPAIGN / "data/todos.json"))
 
     manifest = {
-        "id": "kss16",
+        "id": f"kss{STORY_ID}",
         # The trait catalog is global and scopes 104 of its 244 traits to a
         # story; the engine rejects the ones that are not this story's.
-        "storyId": 16,
-        "name": "31-Day Mode",
+        "storyId": STORY_ID,
+        "name": "31-Day Mode" if STORY_ID == 16 else "Retry Year",
         "description": story.get("description", ""),
         "formatVersion": 1,
-        "source": "Korean Student Simulator story 16, as reference. Local use.",
+        "source": f"Korean Student Simulator story {STORY_ID}, as reference. Local use.",
+        "portStatus": "prototype" if STORY_ID == 20 else "standard",
+        "dialogueLanguage": "en",
         "calendar": {
             "startDate": story["startDate"]["dateCode"],
             "endDate": story["endDate"]["dateCode"],
@@ -456,7 +499,9 @@ def build_calendar_and_manifest(out: Path):
             "ticksPerDay": 15,
         },
         "start": {
-            "locationId": story.get("startLocationId", 1000),
+            # The generic metadata says classroom; story 20's opening places
+            # the player in reflection (event 3 + SET_DOK_BANG native callback).
+            "locationId": 20007 if STORY_ID == 20 else story.get("startLocationId", 1000),
             "firstName": story.get("maleFirstName", "Basakan"),
             "lastName": story.get("maleLastName", "Kim"),
         },
@@ -555,17 +600,15 @@ def build_rules(out: Path):
         "exercise": {
             "expPerSession": 80,
             "hpCostMultiplier": 1.0,
-            "hpMaxPerLevel": 4,
+            "hpMaxPerLevel": 0,
         },
         # Provisional balance, NOT recovered original percentages. AOTopsy's
         # combination/draw calls are unresolved; see docs/STATIONERY.md.
         "stationery": {
             "drawWeights": {"S": 1, "A": 9, "B": 30, "C": 60},
             "redrawCookies": 1,
-            "combineWeights": {
-                "S": {"S": 100}, "A": {"A": 80, "S": 20},
-                "B": {"B": 80, "A": 20}, "C": {"C": 80, "B": 20},
-            },
+            # User-confirmed best-input tier floor; original odds unresolved.
+            "combineUpgradeChance": 0.05,
         },
         "traits": {
             # The 244-trait catalog ships its own effectList, so this is the
@@ -628,14 +671,45 @@ def build_rules(out: Path):
             },
         },
     }
+    if STORY_ID == 20:
+        rules['school']['lessonsOnFirstDay'] = False
+        rules['school']['suppressedBySwitch'] = 'DOK_BANG_ON'
+        rules['events'].update({
+            # 1's SHOW_ENDING raises START; 169 unlocks 2; 3 is the first-day
+            # reflection conversation. All occur before spending a block.
+            'openingEventIds': [1, 169, 2, 3],
+            'openingContinuationSwitches': {'1': 'START'},
+            'scheduledBypassDailyCap': True,
+            'checkAtDayStart': True,
+            'chainScheduledEvents': True,
+            'executeFakeEvents': True,
+            'deferEveningRollover': True,
+        })
+        rules['reflectionRoom'] = {
+            'locationId': 20007,
+            'exitLocationId': 1000,
+            'ordinaryLocationIds': [1000, 2000, 20002, 20003, 20004],
+        }
+        todos = load(CAMPAIGN / 'data/todos.json')
+        rules['tasks'] = {'enabled': True, 'initial': [
+            row for rows in todos.values() if isinstance(rows, list)
+            for row in rows if isinstance(row, dict) and 'id' in row and 'date' in row
+        ]}
     write(out, "rules.json", rules)
 
 
 def main() -> int:
+    global STORY_ID, CAMPAIGN, CAMPAIGN_SRC, ENGLISH
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(D30 / "packs" / "kss16"))
+    ap.add_argument("--story", type=int, choices=[16, 20], default=16)
+    ap.add_argument("--out")
     args = ap.parse_args()
-    out = Path(args.out).resolve()
+    STORY_ID = args.story
+    ENGLISH = GLOBAL.parent / f"stories/{STORY_ID}"
+    if STORY_ID != 16:
+        CAMPAIGN = ENGLISH
+        CAMPAIGN_SRC = ENGLISH
+    out = Path(args.out or D30 / "packs" / f"kss{STORY_ID}").resolve()
 
     for required in (CAMPAIGN, GLOBAL):
         if not required.exists():
@@ -666,7 +740,7 @@ def main() -> int:
     print(" events")
     build_events(out)
     build_commerce(out)
-    presentation_assets.build(out)
+    presentation_assets.build(out, story_id=STORY_ID)
     print("done")
     return 0
 

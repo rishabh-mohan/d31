@@ -588,8 +588,10 @@ void doSleep(Action a) {
 }
 ```
 
-`hpMax` rises with exercise level — *"Higher Workout Levels make your Stamina
-more efficient."*
+`hpMax` is the pack's base cap, 100 in both campaigns, and does not grow. The
+user confirmed the cap; an earlier reading that added 4 per workout level was
+wrong. *"Higher Workout Levels make your Stamina more efficient"* refers to
+the workout action-cost discount instead. See `docs/RETRY-FOLLOWUP.md`.
 
 ### 3.6 Exhaustion
 

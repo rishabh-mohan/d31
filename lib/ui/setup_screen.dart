@@ -1,3 +1,5 @@
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -11,7 +13,13 @@ import 'portrait.dart';
 class SetupScreen extends StatefulWidget {
   final ContentPack pack;
   final RunSetup draft;
-  const SetupScreen({super.key, required this.pack, required this.draft});
+  final List<ContentPack>? campaigns;
+  const SetupScreen({
+    super.key,
+    required this.pack,
+    required this.draft,
+    this.campaigns,
+  });
   @override
   State<SetupScreen> createState() => _SetupScreenState();
 }
@@ -21,8 +29,13 @@ class _SetupScreenState extends State<SetupScreen> {
   bool committed = false;
   late final first = TextEditingController(text: widget.draft.firstName);
   late final last = TextEditingController(text: widget.draft.lastName);
-  RunSetup get draft => widget.draft;
-  ContentPack get pack => widget.pack;
+  late ContentPack _pack = widget.pack;
+  late RunSetup _draft = widget.draft;
+  late final Map<String, RunSetup> _drafts = {
+    widget.pack.manifest.id: widget.draft,
+  };
+  RunSetup get draft => _draft;
+  ContentPack get pack => _pack;
 
   @override
   void dispose() {
@@ -53,114 +66,100 @@ class _SetupScreenState extends State<SetupScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 65),
-            setupTitle('Select Difficulty', size: 30),
-            const SizedBox(height: 22),
-            for (final elite in [false, true])
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 44,
-                    vertical: 16,
-                  ),
-                  child: Material(
-                    color: elite
-                        ? const Color(0xFFD94642)
-                        : const Color(0xFFF6C4C3),
-                    elevation: 5,
-                    borderRadius: BorderRadius.circular(18),
-                    child: InkWell(
-                      onTap: elite
-                          ? () => showDialog<void>(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('Elite Mode'),
-                                content: const Text(
-                                  'Elite Mode and its support pack are coming soon.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Close'),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : () => setState(() {
-                              draft.difficulty = 'standard';
-                              step++;
-                            }),
-                      child: Container(
-                        decoration: BoxDecoration(
+            const SizedBox(height: 32),
+            setupTitle('Select Game Mode', size: 30),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 34,
+                  vertical: 12,
+                ),
+                children: [
+                  for (final campaign in widget.campaigns ?? [widget.pack])
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 22),
+                      child: PressFeedback(
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: elite
-                                ? const Color(0xFFC42626)
-                                : const Color(0xFFE78692),
-                            width: 4,
+                          onTap: () => setState(() {
+                            _pack = campaign;
+                            _draft = _drafts.putIfAbsent(
+                              campaign.manifest.id,
+                              () => RunSetup(campaign),
+                            );
+                            first.text = draft.firstName;
+                            last.text = draft.lastName;
+                            draft.difficulty = 'standard';
+                            step = 1;
+                          }),
+                          child: Container(
+                            height: 174,
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: campaign.manifest.storyId == 16
+                                  ? const Color(0xFFF6C4C3)
+                                  : HSLColor.fromAHSL(
+                                      1,
+                                      (campaign.manifest.id.codeUnits.fold<int>(
+                                                0,
+                                                (a, b) => a * 31 + b,
+                                              ) %
+                                              360)
+                                          .toDouble(),
+                                      .52,
+                                      .72,
+                                    ).toColor(),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: setupInk.withValues(alpha: .35),
+                                width: 3,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  offset: Offset(0, 7),
+                                ),
+                              ],
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: SizedBox(
+                                width: 280,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      campaign.manifest.name,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 28,
+                                        color: setupInk,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      campaign.manifest.storyId == 16
+                                          ? 'Standard Mode'
+                                          : campaign.manifest.storyId == 20
+                                          ? 'Prototype - English dialogue'
+                                          : 'Standard Mode',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: setupInk,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: elite
-                                  ? const Color(0xFF9E2725)
-                                  : const Color(0xFFCC646A),
-                              offset: const Offset(0, 7),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              Icons.directions_run,
-                              size: 140,
-                              color: Colors.white.withValues(alpha: .18),
-                            ),
-                            Text(
-                              elite ? 'Elite Mode' : 'Standard Mode',
-                              style: TextStyle(
-                                fontSize: 32,
-                                color: elite ? Colors.white : setupInk,
-                              ),
-                            ),
-                            if (elite)
-                              const Positioned(
-                                top: 12,
-                                right: 12,
-                                child: Icon(Icons.help, color: Colors.white),
-                              ),
-                          ],
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(50, 18, 50, 55),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: D30Colors.panel.withValues(alpha: .7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFD85D60), width: 2),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.directions_run,
-                      color: Color(0xFFD85D60),
-                      size: 32,
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        '[Elite Support Pack]\nComing soon',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           ],
@@ -251,15 +250,17 @@ class _SetupScreenState extends State<SetupScreen> {
           child: SizedBox(height: 3, width: double.infinity),
         ),
       ),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          if (step == 0) {
-            Navigator.pop(context);
-          } else {
-            setState(() => step--);
-          }
-        },
+      leading: PressFeedback(
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (step == 0) {
+              Navigator.pop(context);
+            } else {
+              setState(() => step--);
+            }
+          },
+        ),
       ),
     ),
     // The step's artwork is a fixed 390-wide canvas scaled to fit, but the

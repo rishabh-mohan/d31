@@ -1,3 +1,5 @@
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import 'pack_image.dart';
@@ -92,143 +94,161 @@ class StationeryCard extends StatelessWidget {
     };
     return Semantics(
       label: '$rank tier ${item['name']}${equipped ? ', equipped' : ''}',
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: D30Colors.panel,
-            border: Border.all(
+      child: PressFeedback(
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
               color: selected ? D30Colors.accent : Colors.black87,
-              width: 2,
+              borderRadius: BorderRadius.circular(9),
             ),
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                color: Colors.black87,
-                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    stationeryTypeLabel(item['type'] as String),
-                    style: const TextStyle(color: Colors.white, fontSize: 11),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: colors,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: FractionallySizedBox(
-                          widthFactor: .64,
-                          heightFactor: .64,
-                          child: PackImage(
-                            path: 'stationery/$id.png',
-                            fit: BoxFit.contain,
-                            placeholder: const Icon(Icons.edit, size: 24),
-                          ),
-                        ),
+            // A real inset reserves the border: no image/blank placeholder or
+            // colored stat row can paint into it, even at the rounded corners.
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: ColoredBox(
+                color: D30Colors.panel,
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      color: Colors.black87,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 3,
+                        horizontal: 2,
                       ),
-                      Positioned(
-                        top: 3,
-                        left: 4,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
                         child: Text(
-                          rank,
+                          stationeryTypeLabel(item['type'] as String),
                           style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 11,
                           ),
                         ),
                       ),
-                      if (count != null)
-                        Positioned(
-                          bottom: 2,
-                          right: 4,
-                          child: Text(
-                            '×$count',
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                        ),
-                      if (equipped)
-                        const Positioned(
-                          top: 2,
-                          right: 2,
-                          child: Icon(
-                            Icons.backpack,
-                            color: Colors.black54,
-                            size: 20,
-                          ),
-                        ),
-                      if (locked)
-                        Positioned.fill(
-                          child: ColoredBox(
-                            color: Colors.black38,
-                            child: const Icon(
-                              Icons.lock,
-                              color: Colors.black,
-                              size: 42,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                child: nameLines == 1
-                    ? Text(
-                        item['name'] as String,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10),
-                      )
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          final size = _fittedSize(
-                            item['name'] as String,
-                            constraints.maxWidth,
-                            nameLines,
-                            Directionality.of(context),
-                            MediaQuery.textScalerOf(context),
-                          );
-                          return Text(
-                            item['name'] as String,
-                            maxLines: nameLines,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: size),
-                          );
-                        },
-                      ),
-              ),
-              for (final row in rows)
-                Container(
-                  width: double.infinity,
-                  color: D30Colors.subject(row['subjectType'] as String? ?? ''),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 1,
-                  ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${row['isAll'] == true ? 'All' : subjectLabel(row['subjectType'] as String? ?? '')} +${row['stat']}',
-                      style: const TextStyle(fontSize: 11),
                     ),
-                  ),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: colors,
+                          ),
+                        ),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: FractionallySizedBox(
+                                widthFactor: .64,
+                                heightFactor: .64,
+                                child: PackImage(
+                                  path: 'stationery/$id.png',
+                                  fit: BoxFit.contain,
+                                  placeholder: const Icon(Icons.edit, size: 24),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 3,
+                              left: 4,
+                              child: Text(
+                                rank,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (count != null)
+                              Positioned(
+                                bottom: 2,
+                                right: 4,
+                                child: Text(
+                                  '×$count',
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ),
+                            if (equipped)
+                              const Positioned(
+                                top: 2,
+                                right: 2,
+                                child: Icon(
+                                  Icons.backpack,
+                                  color: Colors.black54,
+                                  size: 20,
+                                ),
+                              ),
+                            if (locked)
+                              Positioned.fill(
+                                child: ColoredBox(
+                                  color: Colors.black38,
+                                  child: const Icon(
+                                    Icons.lock,
+                                    color: Colors.black,
+                                    size: 42,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 2,
+                      ),
+                      child: nameLines == 1
+                          ? Text(
+                              item['name'] as String,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 10),
+                            )
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                final size = _fittedSize(
+                                  item['name'] as String,
+                                  constraints.maxWidth,
+                                  nameLines,
+                                  Directionality.of(context),
+                                  MediaQuery.textScalerOf(context),
+                                );
+                                return Text(
+                                  item['name'] as String,
+                                  maxLines: nameLines,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: size),
+                                );
+                              },
+                            ),
+                    ),
+                    for (final row in rows)
+                      Container(
+                        width: double.infinity,
+                        color: D30Colors.subject(
+                          row['subjectType'] as String? ?? '',
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 1,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${row['isAll'] == true ? 'All' : subjectLabel(row['subjectType'] as String? ?? '')} +${row['stat']}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),

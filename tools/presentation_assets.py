@@ -42,12 +42,12 @@ def art_path(path):
     return f'scene/{Path(path).name}' if path else None
 
 
-def location_images():
+def location_images(story_id=16):
     return {row['id']: art_path(location_source(row))
-            for row in read('stories/16/data/locations.json', 'locations')}
+            for row in read(f'stories/{story_id}/data/locations.json', 'locations')}
 
 
-def build(out, copy_images=True):
+def build(out, copy_images=True, story_id=16):
     missing = []
     images = ROOT / 'assets/images'
 
@@ -74,18 +74,23 @@ def build(out, copy_images=True):
         }
 
     npcs = {}
-    for filename in ['global_data/npcs.json', 'stories/16/data/npcs.json']:
+    for filename in ['global_data/npcs.json', f'stories/{story_id}/data/npcs.json']:
         for row in read(filename, 'npcs'):
             npcs[str(row['id'])] = actor(row)
+    if story_id == 20:
+        # User-requested event-only lift for Mum and Ji Suin.
+        for npc_id in ('1', '3'):
+            if npc_id in npcs:
+                npcs[npc_id]['eventOffsetY'] = -24
     characters = {str(row['id']): actor(row)
                   for row in read('global_data/characters.json', 'characters')
-                  if 16 in row.get('availableStoryIds', [])}
+                  if story_id in row.get('availableStoryIds', [])}
     backgrounds = {}
-    for row in read('stories/16/data/backgroundImgs.json', 'backgroundImgs'):
+    for row in read(f'stories/{story_id}/data/backgroundImgs.json', 'backgroundImgs'):
         path = asset(row.get('imgPath'))
         if path:
             backgrounds[row['imgPath']] = path
-    for row in read('stories/16/data/locations.json', 'locations'):
+    for row in read(f'stories/{story_id}/data/locations.json', 'locations'):
         path = asset(location_source(row))
         if path:
             backgrounds[row['imgPath']] = path
@@ -96,33 +101,77 @@ def build(out, copy_images=True):
         if path:
             badges[str(row['id'])] = path
     data = {'npcs': npcs, 'characters': characters, 'backgrounds': backgrounds, 'badges': badges}
+    # Story rewards also need their catalog art in receipts and the bag.
+    for kind in ('consume', 'normal'):
+        for row in read(f'stories/{story_id}/item/story_{kind}_items.json', 'items'):
+            source = source_for(row.get('imgPath') or '')
+            if source is not None and copy_images:
+                dest = images / 'items' / f"{row['id']}.png"
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, dest)
     out.mkdir(parents=True, exist_ok=True)
     (out / 'presentation.json').write_text(json.dumps(data, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     (ROOT / 'build').mkdir(exist_ok=True)
-    (ROOT / 'build/presentation-assets-report.json').write_text(json.dumps({'missing': sorted(set(missing)),
+    report_name = 'presentation-assets-report.json' if story_id == 16 else f'presentation-assets-report-{story_id}.json'
+    (ROOT / 'build' / report_name).write_text(json.dumps({'missing': sorted(set(missing)),
         'npcs': len(npcs), 'characters': len(characters), 'crests': len(badges)}, indent=2), encoding='utf-8')
     print(f'Presentation: {len(npcs)} NPCs, {len(characters)} characters, {len(badges)} crests; '
-          f'{len(set(missing))} unavailable source files (see build/presentation-assets-report.json)')
+          f'{len(set(missing))} unavailable source files (see build/{report_name})')
     return data
 
 
 if __name__ == '__main__':
-    import sys
-    if '--fetch-locations' in sys.argv:
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--story', type=int, choices=[16, 20], default=16)
+    parser.add_argument('--fetch-locations', action='store_true')
+    parser.add_argument('--fetch-opening', action='store_true')
+    parser.add_argument('--fetch-npc', type=int, action='append', default=[],
+                        help='Recover every portrait layer for these story NPC IDs')
+    args = parser.parse_args()
+    if args.fetch_locations or args.fetch_opening or args.fetch_npc:
         from PIL import Image
+        from concurrent.futures import ThreadPoolExecutor
         CACHE.mkdir(parents=True, exist_ok=True)
-        for row in read('stories/16/data/locations.json', 'locations'):
+        def fetch(row):
             relative = row['imgPath'].removeprefix('assets/')
             target = CACHE / Path(relative).name
             if (SOURCE / relative).exists() or target.exists():
-                continue
+                return
             try:
-                payload = urllib.request.urlopen(row['imgPathFromHttp'], timeout=30).read()
+                payload = urllib.request.urlopen(row['imgPathFromHttp'], timeout=12).read()
                 import io
                 with Image.open(io.BytesIO(payload)) as image:
                     image.verify()
                 target.write_bytes(payload)
-                print(f"Recovered location art {row['id']}")
+                print(f"Recovered art {row.get('id', target.name)}")
             except Exception as error:
-                print(f"Location {row['id']} unavailable: {type(error).__name__}")
-    build(ROOT / 'packs/kss16')
+                print(f"Art {row.get('id', target.name)} unavailable: {type(error).__name__}")
+        rows = read(f'stories/{args.story}/data/locations.json', 'locations') if args.fetch_locations else []
+        def image_rows(value):
+            if isinstance(value, dict):
+                if value.get('imgPath') and value.get('imgPathFromHttp'):
+                    yield value
+                for child in value.values():
+                    yield from image_rows(child)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from image_rows(child)
+        for actor in read(f'stories/{args.story}/data/npcs.json', 'npcs'):
+            if actor['id'] in args.fetch_npc:
+                rows.extend(image_rows(actor))
+        if args.fetch_opening:
+            if args.story != 20:
+                parser.error('--fetch-opening currently requires --story 20')
+            nodes = read('stories/20/event/events.json', 'nodes')
+            opening = [node for node in nodes if node['id'] // 1000 in [1, 169, 2, 3, 4, 211, 6, 7]]
+            actors = {node.get('standingId') for node in opening if node.get('standingId')}
+            for actor in read('stories/20/data/npcs.json', 'npcs'):
+                if actor['id'] in actors:
+                    rows.extend(image_rows(actor))
+            backgrounds = {node.get('backgroundImg') for node in opening if isinstance(node.get('backgroundImg'), str)}
+            rows.extend(row for row in read('stories/20/data/backgroundImgs.json', 'backgroundImgs') if row.get('imgPath') in backgrounds)
+        rows = list({row['imgPath']: row for row in rows}.values())
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            list(pool.map(fetch, rows))
+    build(ROOT / f'packs/kss{args.story}', story_id=args.story)

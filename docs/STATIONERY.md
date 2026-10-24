@@ -51,15 +51,15 @@ contains explicitly provisional balance:
   item within that rank. The number of catalog items cannot increase S's odds.
 - Redraw: the same weights with C removed and the rest normalized (S 2.5%,
   A 22.5%, B 75%). Kept cards are unchanged.
-- Combine: each ingredient contributes an 80% weight to its own rank and 20%
-  to the next higher rank. S contributes 100% S. Contributions are added and
-  normalized, so four C yield 80% C / 20% B, four A yield 80% A / 20% S,
-  and mixed inputs blend those distributions. This replaces the temporary
-  guaranteed upgrade from the lowest input rank. It is not a recovered formula.
+- Combine: preserve the highest input tier, with a provisional 5% chance of
+  the next tier (S stays S). The user explicitly confirmed B+C -> B and A+C -> A
+  rather than a linear tier average. This applies to two, three or four copies;
+  adding lower-tier inputs cannot lower the result. It is a user-directed rule,
+  not a recovered original formula. `combineUpgradeChance` is editable in rules.
 
-The same normalized ingredient distributions apply to two, three, or four
-inputs; the percentages are still provisional, regardless of input count.
-The entire table is editable without engine changes. Invalid selections or an
+The original upgrade percentage remains unresolved: the recovered PXb result
+controller contains presentation callbacks and unresolved stubs, not a usable
+probability branch. Invalid selections or an
 empty output pool do not consume materials. The random result is determined
 before inventory changes. UI callbacks cannot bypass the engine's copy checks.
 
