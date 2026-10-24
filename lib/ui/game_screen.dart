@@ -68,6 +68,9 @@ class _GameScreenState extends State<GameScreen> {
           await StationeryDraw.show(context, game);
           if (mounted) setState(() {});
         }
+        // The first day of a run reaches the hub this way rather than
+        // through the rollover, so it is saved here instead.
+        await _autoSave();
       });
     }
     if (state.exhaustionPending) {
@@ -155,7 +158,17 @@ class _GameScreenState extends State<GameScreen> {
       _preparing = true;
       _exhaustionPresentation = false;
       setState(() {});
+      await _autoSave();
     }
+  }
+
+  /// Each day is written as it begins, once the night screen has been
+  /// acknowledged, so a run is never more than one day from where it was.
+  /// A run with no slot — a dev-panel run, say — simply has nowhere to go.
+  Future<void> _autoSave() async {
+    final slot = state.saveSlot;
+    if (slot == null) return;
+    await SaveStore.write(slot, state);
   }
 
   void _refresh() {
@@ -254,10 +267,6 @@ class _GameScreenState extends State<GameScreen> {
               width: (MediaQuery.sizeOf(context).width * .75).clamp(260, 400),
               child: _MenuSheet(
                 game: game,
-                onMove: () {
-                  Navigator.of(context).pop();
-                  _pickLocation();
-                },
                 onInventory: () {
                   Navigator.of(context).pop();
                   _openInventory();
@@ -384,130 +393,127 @@ class _TopBar extends StatelessWidget {
         Expanded(
           flex: 4,
           child: _WhitePill(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: FittedBox(
-                    key: const ValueKey('header-countdown'),
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'D-${state.daysRemaining}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        color: D30Colors.ink,
-                      ),
-                    ),
-                  ),
+            children: [
+              _PillCell(
+                flex: 3,
+                cellKey: const ValueKey('header-countdown'),
+                child: Text(
+                  'D-${state.daysRemaining}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 19, color: D30Colors.ink),
                 ),
-                const _PillDivider(),
-                Expanded(
-                  flex: 2,
-                  child: FittedBox(
-                    key: const ValueKey('header-weekday'),
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      weekday,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: D30Colors.ink,
-                      ),
-                    ),
-                  ),
+              ),
+              _PillCell(
+                flex: 2,
+                cellKey: const ValueKey('header-weekday'),
+                child: Text(
+                  weekday,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: const TextStyle(fontSize: 15, color: D30Colors.ink),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 6),
+        // Gold, cookies and the info button share one bar, as the reference
+        // does: the dividers run the full height and the button is part of it.
         Expanded(
-          flex: 5,
+          flex: 6,
           child: _WhitePill(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: FittedBox(
-                    key: const ValueKey('header-gold'),
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${state.money.round()} Gold',
-                      textAlign: TextAlign.center,
+            children: [
+              _PillCell(
+                flex: 5,
+                cellKey: const ValueKey('header-gold'),
+                child: Text(
+                  '${state.money.round()} Gold',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, color: D30Colors.ink),
+                ),
+              ),
+              _PillCell(
+                flex: 4,
+                cellKey: const ValueKey('header-cookies'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _CookieIcon(size: 17),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${state.cookies}',
                       style: const TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
                         color: D30Colors.ink,
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const _PillDivider(),
-                Expanded(
-                  flex: 4,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: PackImage(
-                            path: 'ui/cookie.png',
-                            fit: BoxFit.contain,
-                            placeholder: const Icon(
-                              Icons.cookie,
-                              size: 15,
-                              color: D30Colors.coin,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${state.cookies}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: D30Colors.ink,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              _PillButton(
+                icon: Icons.info_outline,
+                onTap: onInfo,
+                tooltip: 'My Info',
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 6),
-        _SquareButton(icon: Icons.info_outline, onTap: onInfo, circular: true),
       ],
     );
   }
 }
 
+/// A simple drawn cookie, so the bar does not depend on pack art for a piece
+/// of permanent chrome.
+class _CookieIcon extends StatelessWidget {
+  final double size;
+  const _CookieIcon({required this.size});
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size.square(size), painter: const _CookiePainter());
+}
+
+class _CookiePainter extends CustomPainter {
+  const _CookiePainter();
+
+  static const _dough = Color(0xFFD9A066);
+  static const _chip = Color(0xFF5B3A21);
+
+  // Chip positions as fractions of the radius, so they scale with the icon.
+  static const _chips = [
+    (-0.35, -0.30, 0.17),
+    (0.32, -0.12, 0.15),
+    (-0.10, 0.12, 0.19),
+    (0.18, 0.42, 0.14),
+    (-0.42, 0.38, 0.13),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2;
+    final centre = Offset(r, r);
+    canvas.drawCircle(centre, r, Paint()..color = _dough);
+    final chip = Paint()..color = _chip;
+    for (final (dx, dy, radius) in _chips) {
+      canvas.drawCircle(centre + Offset(dx * r, dy * r), radius * r, chip);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CookiePainter oldDelegate) => false;
+}
+
 class _SquareButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final bool circular;
 
-  const _SquareButton({
-    required this.icon,
-    required this.onTap,
-    this.circular = false,
-  });
+  const _SquareButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(circular ? 24 : 12);
+    final radius = BorderRadius.circular(12);
     return Material(
       color: D30Colors.accent,
       elevation: 3,
@@ -526,16 +532,21 @@ class _SquareButton extends StatelessWidget {
   }
 }
 
+/// One bar of the top HUD.
+///
+/// The cells butt up against each other and the dividers run edge to edge: the
+/// bar used to pad itself, which both left a gap above and below each divider
+/// and pushed every cell's contents off the centre of its visible section.
+/// Padding therefore belongs to the cells, never to the bar.
 class _WhitePill extends StatelessWidget {
-  final Widget child;
-  const _WhitePill({required this.child});
+  final List<Widget> children;
+  const _WhitePill({required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -544,16 +555,71 @@ class _WhitePill extends StatelessWidget {
           BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 4)),
         ],
       ),
-      child: child,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const _PillDivider(),
+            children[i],
+          ],
+        ],
+      ),
     );
   }
+}
+
+/// A section of a bar. Its contents are centred on the section itself.
+class _PillCell extends StatelessWidget {
+  final int flex;
+  final Widget child;
+  final Key? cellKey;
+  const _PillCell({required this.flex, required this.child, this.cellKey});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    flex: flex,
+    child: Padding(
+      key: cellKey,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Center(
+        child: FittedBox(fit: BoxFit.scaleDown, child: child),
+      ),
+    ),
+  );
+}
+
+/// The info button, built into the right end of its bar.
+class _PillButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+  const _PillButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: D30Colors.accent,
+    child: InkWell(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: SizedBox(
+          width: 44,
+          child: Icon(icon, color: D30Colors.onAccent, size: 24),
+        ),
+      ),
+    ),
+  );
 }
 
 class _PillDivider extends StatelessWidget {
   const _PillDivider();
   @override
   Widget build(BuildContext context) =>
-      Container(width: 2, height: 40, color: D30Colors.accent);
+      Container(width: 2, color: D30Colors.accent);
 }
 
 // ---------------------------------------------------------------------------
@@ -615,55 +681,71 @@ class _MainPanel extends StatelessWidget {
                   : null,
             ),
             const SizedBox(height: 6),
+            // The location art runs the full height of the panel, and the
+            // cream island of goals, stats, status and blocks sits over its
+            // lower half rather than below it.
             Expanded(
-              child: RepaintBoundary(child: _Portrait(state: state)),
-            ),
-            const SizedBox(height: 6),
-            SizedBox(
-              height: constraints.maxHeight * .55,
-              child: FittedBox(
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomCenter,
-                child: SizedBox(
-                  width: 480,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: D30Colors.panel,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: D30Colors.accent, width: 2),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 5,
-                          offset: Offset(0, 7),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    RepaintBoundary(child: _Portrait(state: state)),
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox(
+                        height: constraints.maxHeight * .55,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomCenter,
+                          child: SizedBox(
+                            width: 480,
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: D30Colors.panel,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: D30Colors.accent,
+                                  width: 2,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black54,
+                                    blurRadius: 5,
+                                    offset: Offset(0, 7),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  if (weekly != null) ...[
+                                    _GoalStrip(goal: weekly, state: state),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  _SubjectChips(state: state),
+                                  const SizedBox(height: 4),
+                                  _StatusBar(
+                                    state: state,
+                                    actionTicks: game.actionTicksPerDay,
+                                    onRefresh: onRefresh,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _ActionGrid(
+                                    game: game,
+                                    exhausted: exhausted,
+                                    actions: actions,
+                                    bookFor: bookFor,
+                                    onAct: onAct,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        if (weekly != null) ...[
-                          _GoalStrip(goal: weekly, state: state),
-                          const SizedBox(height: 4),
-                        ],
-                        _SubjectChips(state: state),
-                        const SizedBox(height: 4),
-                        _StatusBar(
-                          state: state,
-                          actionTicks: game.actionTicksPerDay,
-                          onRefresh: onRefresh,
-                        ),
-                        const SizedBox(height: 6),
-                        _ActionGrid(
-                          game: game,
-                          exhausted: exhausted,
-                          actions: actions,
-                          bookFor: bookFor,
-                          onAct: onAct,
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -765,7 +847,9 @@ class _Portrait extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: D30Colors.levelBox.withValues(alpha: 0.88),
+                  // A quieter, greyer card: the reference's is translucent
+                  // slate that the scene reads through, not a solid block.
+                  color: const Color(0xFF4A4F57).withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Column(
@@ -1241,24 +1325,17 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final onFill = _filled ? Colors.white : D30Colors.ink;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: _filled
-                ? Color.lerp(_fill, Colors.black, .28)!
-                : const Color(0xFFF7D4A3),
-            offset: const Offset(0, 7),
-          ),
-        ],
-      ),
+    return _PressDown(
+      onTap: onTap,
+      radius: 12,
+      edgeColor: _filled
+          ? Color.lerp(_fill, Colors.black, .28)!
+          : const Color(0xFFF7D4A3),
       child: Material(
         color: _fill,
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
+        child: Semantics(
+          button: true,
           child: Container(
             padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
             decoration: BoxDecoration(
@@ -1523,7 +1600,6 @@ class _ActionCard extends StatelessWidget {
 /// are session-local and say so in their semantics rather than pretending.
 class _MenuSheet extends StatefulWidget {
   final Game game;
-  final VoidCallback onMove;
   final VoidCallback onInventory;
   final VoidCallback onDevPanel;
   final VoidCallback onStore;
@@ -1532,13 +1608,16 @@ class _MenuSheet extends StatefulWidget {
 
   const _MenuSheet({
     required this.game,
-    required this.onMove,
     required this.onInventory,
     required this.onDevPanel,
     required this.onStore,
     required this.onStationery,
     required this.onReset,
   });
+
+  /// Whether the drawer offers Store, Stationery and Bags. The 31-Day
+  /// campaign reaches all three from the preparation hub instead.
+  static const bool campaignShortcuts = false;
 
   /// Kept outside the widget so a reopened drawer shows the same positions.
   static final Map<String, bool> settings = {
@@ -1625,23 +1704,19 @@ class _MenuSheetState extends State<_MenuSheet> {
                       : null,
                 ),
                 for (final name in _MenuSheet.settings.keys) _toggleRow(name),
-                _destination(Icons.card_giftcard, 'Store', widget.onStore),
-                _destination(Icons.edit, 'Stationery', widget.onStationery),
-                _destination(
-                  Icons.map_outlined,
-                  'Go to${game.state.location == null ? '' : ' · ${game.state.location!.name}'}',
-                  game.inClass || game.state.movementLocked
-                      ? null
-                      : widget.onMove,
-                  note: game.inClass || game.state.movementLocked
-                      ? 'You cannot leave right now.'
-                      : null,
-                ),
-                _destination(
-                  Icons.backpack_outlined,
-                  'Bags',
-                  widget.onInventory,
-                ),
+                // The original's drawer has no Store, Stationery or Bags
+                // entry — they are reached from the preparation hub — and no
+                // location picker at all. Kept behind a flag because another
+                // campaign may well want them.
+                if (_MenuSheet.campaignShortcuts) ...[
+                  _destination(Icons.card_giftcard, 'Store', widget.onStore),
+                  _destination(Icons.edit, 'Stationery', widget.onStationery),
+                  _destination(
+                    Icons.backpack_outlined,
+                    'Bags',
+                    widget.onInventory,
+                  ),
+                ],
                 _destination(Icons.tune, 'Dev panel', widget.onDevPanel),
                 const SizedBox(height: 14),
                 Container(
@@ -1828,4 +1903,66 @@ class _ToggleCircle extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// A block that physically presses down.
+///
+/// At rest the card sits [depth] above its own shadow. While held it moves
+/// down by exactly that much and the shadow closes up, so the bottom edge
+/// matches the sides and the top never gains a shadow of its own. The
+/// movement is instant in both directions: releasing over the block pops it
+/// up on the same frame the hand is dealt again.
+class _PressDown extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final Color edgeColor;
+  final double radius;
+
+  /// How far the block sits above its shadow at rest.
+  static const double depth = 7;
+
+  const _PressDown({
+    required this.child,
+    required this.onTap,
+    required this.edgeColor,
+    this.radius = 12,
+  });
+
+  @override
+  State<_PressDown> createState() => _PressDownState();
+}
+
+class _PressDownState extends State<_PressDown> {
+  bool _down = false;
+
+  void _set(bool down) {
+    if (_down != down) setState(() => _down = down);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final drop = _down ? _PressDown.depth : 0.0;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _set(true),
+      onTapUp: (_) => _set(false),
+      onTapCancel: () => _set(false),
+      onTap: widget.onTap,
+      child: Transform.translate(
+        offset: Offset(0, drop),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            boxShadow: [
+              BoxShadow(
+                color: widget.edgeColor,
+                offset: Offset(0, _PressDown.depth - drop),
+              ),
+            ],
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
 }

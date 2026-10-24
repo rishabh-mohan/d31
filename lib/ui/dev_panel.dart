@@ -20,8 +20,10 @@ import '../engine/event_engine.dart';
 import '../engine/game_date.dart';
 import '../engine/game.dart';
 import '../engine/pack.dart';
+import '../engine/save_store.dart';
 import '../engine/state.dart';
 import 'game_screen.dart';
+import 'theme.dart';
 
 class DevPanel extends StatefulWidget {
   final Game game;
@@ -132,6 +134,18 @@ class _StateTab extends StatelessWidget {
           onChanged: (v) => onChange(() => s.money = v < 0 ? 0 : v),
           steps: const [-10000, -1000, 1000, 10000],
         ),
+        _NumberRow(
+          label: 'Cookies',
+          value: s.cookies,
+          onChanged: (v) => onChange(() => s.cookies = v < 0 ? 0 : v.round()),
+          steps: const [-50, -5, 5, 50],
+        ),
+        _NumberRow(
+          label: 'Refresh tickets',
+          value: s.rerolls,
+          onChanged: (v) => onChange(() => s.rerolls = v < 0 ? 0 : v.round()),
+          steps: const [-50, -5, 5, 50],
+        ),
         const Divider(height: 28),
         _header(context, 'Experience'),
         _NumberRow(
@@ -175,6 +189,34 @@ class _StateTab extends StatelessWidget {
                 s.finished = true;
               }),
               child: const Text('Jump to exam day'),
+            ),
+          ],
+        ),
+        const Divider(height: 28),
+        _header(context, 'Run'),
+        // The in-game drawer only lets you leave between days; the dev panel
+        // deliberately does not care.
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: D30Colors.alert,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  final slot = s.saveSlot;
+                  if (slot != null) await SaveStore.write(slot, s);
+                  if (!context.mounted) return;
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                icon: const Icon(Icons.exit_to_app),
+                label: Text(
+                  s.saveSlot == null
+                      ? 'Leave to main menu'
+                      : 'Save and leave to main menu',
+                ),
+              ),
             ),
           ],
         ),

@@ -99,6 +99,62 @@ class _DayMenuState extends State<DayMenu> {
 
   void _books() => _commerce(menu: PackMenu.books);
 
+  /// Tapping a trait explains it: the trait's own plate above its description,
+  /// and one Confirm. See references/screenshots/trait tap example.jpg.
+  Future<void> _explainTrait(int id) {
+    final trait = game.pack.traits[id];
+    return showFlyUpDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: cream,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: orange, width: 4),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                D30Chip(
+                  text: trait?.name ?? 'Trait $id',
+                  color: traitColor(trait?.type),
+                  textColor: Colors.white,
+                  fontSize: 19,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 8,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  trait?.description.trim().isNotEmpty == true
+                      ? trait!.description
+                      : 'No description.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 17, height: 1.35),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: 170,
+                  child: D30RaisedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Confirm',
+                      style: TextStyle(fontSize: 17),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// The weekly-goal announcement.
   ///
   /// Two separate inset cards — the objective as `start → target` tiles either
@@ -224,7 +280,11 @@ class _DayMenuState extends State<DayMenu> {
 
   /// One agenda row: an orange date segment and a peach title segment that
   /// share a single rounded, shadowed rectangle.
-  Widget _agendaRow({double height = 76, double titleSize = 22}) => Container(
+  Widget _agendaRow(
+    ScheduledEntry entry, {
+    double height = 76,
+    double titleSize = 22,
+  }) => Container(
     height: height,
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
@@ -245,7 +305,7 @@ class _DayMenuState extends State<DayMenu> {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              'D-${game.state.daysRemaining}',
+              'D-${game.state.date.daysUntil(entry.date)}',
               style: const TextStyle(fontSize: 20, color: cream),
             ),
           ),
@@ -254,10 +314,7 @@ class _DayMenuState extends State<DayMenu> {
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(
-                'Graduation Exam',
-                style: TextStyle(fontSize: titleSize),
-              ),
+              child: Text(entry.name, style: TextStyle(fontSize: titleSize)),
             ),
           ),
         ),
@@ -265,11 +322,20 @@ class _DayMenuState extends State<DayMenu> {
     ),
   );
 
-  void _schedule() => _panel(
-    'Calendar',
-    Align(alignment: Alignment.topCenter, child: _agendaRow()),
-    fullHeight: true,
-  );
+  void _schedule() {
+    final entries = game.schedule();
+    _panel(
+      'Calendar',
+      // An agenda, not a month grid, and it keeps its height with one entry.
+      ListView.separated(
+        padding: EdgeInsets.zero,
+        itemCount: entries.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, i) => _agendaRow(entries[i]),
+      ),
+      fullHeight: true,
+    );
+  }
 
   Future<void> _commerce({
     bool stationery = false,
@@ -414,11 +480,17 @@ class _DayMenuState extends State<DayMenu> {
               ),
             ),
             const SizedBox(height: 8),
+            // The strip shows whatever is next on the calendar, which is the
+            // exam until a storyline pins something sooner.
             SizedBox(
               height: 35,
               child: InkWell(
                 onTap: _schedule,
-                child: _agendaRow(height: 35, titleSize: 14),
+                child: _agendaRow(
+                  game.schedule().first,
+                  height: 35,
+                  titleSize: 14,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -444,15 +516,19 @@ class _DayMenuState extends State<DayMenu> {
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 2,
                                       ),
-                                      child: D30Chip(
-                                        text:
-                                            game.pack.traits[id]?.name ??
-                                            'Trait $id',
-                                        color: traitColor(
-                                          game.pack.traits[id]?.type,
+                                      child: InkWell(
+                                        key: ValueKey('hub-trait-$id'),
+                                        onTap: () => _explainTrait(id),
+                                        child: D30Chip(
+                                          text:
+                                              game.pack.traits[id]?.name ??
+                                              'Trait $id',
+                                          color: traitColor(
+                                            game.pack.traits[id]?.type,
+                                          ),
+                                          textColor: Colors.white,
+                                          fontSize: 12,
                                         ),
-                                        textColor: Colors.white,
-                                        fontSize: 12,
                                       ),
                                     ),
                                 ],

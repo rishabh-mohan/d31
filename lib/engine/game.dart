@@ -796,6 +796,67 @@ class Game {
     return configured.clamp(1, pack.manifest.ticksPerDay);
   }
 
+  /// What the Calendar shows: every date-pinned event still ahead of the run.
+  ///
+  /// The spine is content, not code — 23 of the English campaign's events
+  /// carry a `date` condition (docs/D30-MODE-SPEC.md §6.6), the Graduation
+  /// Exam among them — so nothing here is hardcoded and a storyline that adds
+  /// a National Cooking Contest shows up on its own.
+  ///
+  /// Which of them to list is our rule, not a recovered one: an event that
+  /// belongs to a storyline set only appears once the run has actually met
+  /// that storyline, otherwise day one would advertise every career at once.
+  List<ScheduledEntry> schedule() {
+    final seenSets = <int>{
+      for (final entry in state.eventStates.entries)
+        if (entry.value > 0)
+          if (pack.events[entry.key]?.eventSetId case final int set) set,
+    };
+
+    final entries = <ScheduledEntry>[];
+    for (final event in pack.events.values) {
+      if (event.isFake || event.isRandomDate) continue;
+      if ((state.eventStates[event.id] ?? 0) >= 2) continue;
+      final set = event.eventSetId;
+      if (set != null && !seenSets.contains(set)) continue;
+      final date = _pinnedDate(event.conditionSet);
+      if (date == null || date.day.isBefore(state.date.day)) continue;
+      entries.add(ScheduledEntry(date: date, name: event.name, event: event));
+    }
+
+    // The exam is in the spine, but a pack that drops it should still show the
+    // day the run ends on.
+    if (!entries.any((e) => e.date.day == pack.manifest.endDate.day)) {
+      entries.add(
+        ScheduledEntry(date: pack.manifest.endDate, name: 'Graduation Exam'),
+      );
+    }
+    entries.sort((a, b) => a.date.compareTo(b.date));
+    return entries;
+  }
+
+  /// The first `date` condition anywhere in a condition tree.
+  GameDate? _pinnedDate(Map<String, dynamic>? set) {
+    if (set == null) return null;
+    final conditions = set['conditions'];
+    if (conditions is List) {
+      for (final c in conditions) {
+        if (c is Map<String, dynamic> && c['targetType'] == 'date') {
+          final date = GameDate.tryParse(c['target'] as String?);
+          if (date != null) return date;
+        }
+      }
+    }
+    for (final side in ['left', 'right']) {
+      final branch = set[side];
+      if (branch is Map<String, dynamic>) {
+        final found = _pinnedDate(branch);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
   /// Runs the evening slot, then advances to the next day.
   ActionOutcome _endDay() {
     // Park the clock on the evening tick so the tick-14 content is eligible.
@@ -1112,4 +1173,15 @@ class Game {
       ...effects.conditions.unknownTargets,
     },
   };
+}
+
+/// One row of the Calendar: a day something is pinned to, and its name.
+class ScheduledEntry {
+  final GameDate date;
+  final String name;
+
+  /// The event it came from, or null for the fallback exam row.
+  final GameEvent? event;
+
+  const ScheduledEntry({required this.date, required this.name, this.event});
 }

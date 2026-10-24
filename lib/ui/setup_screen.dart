@@ -147,10 +147,18 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.directions_run, color: Color(0xFFD85D60), size: 32),
+                    Icon(
+                      Icons.directions_run,
+                      color: Color(0xFFD85D60),
+                      size: 32,
+                    ),
                     SizedBox(width: 10),
-                    Expanded(child: Text('[Elite Support Pack]\nComing soon',
-                      textAlign: TextAlign.center)),
+                    Expanded(
+                      child: Text(
+                        '[Elite Support Pack]\nComing soon',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -254,60 +262,64 @@ class _SetupScreenState extends State<SetupScreen> {
         },
       ),
     ),
+    // The step's artwork is a fixed 390-wide canvas scaled to fit, but the
+    // footer button is **not** inside it: scaled along with everything else it
+    // ended up clipped against the bottom of a real device. It is laid out at
+    // device scale under the canvas, where nothing can crop it.
     body: SafeArea(
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: SizedBox(
-            width: 390,
-            height: 750,
-            child: DefaultTextStyle.merge(
-              style: const TextStyle(color: setupInk, fontSize: 14),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  const PackImage(path: 'scene/default_background.jpg'),
-                  ColoredBox(color: D30Colors.page.withValues(alpha: .91)),
-                  Column(
-                    children: [
-                      Expanded(child: content()),
-                      if (step != 0) Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 45,
-                          vertical: 18,
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: step == 4 ? 70 : 46,
-                          child: D30RaisedButton(
-                            onPressed: committed || draft.characterId == null
-                                ? null
-                                : () {
-                                    if (step < 4) {
-                                      setState(() => step++);
-                                      return;
-                                    }
-                                    final Game game = draft.commit(pack);
-                                    setState(() => committed = true);
-                                    Navigator.pop(context, game);
-                                  },
-                            child: Text(
-                              step == 4
-                                  ? 'Start Game'
-                                  : step == 1
-                                  ? 'Select'
-                                  : 'Next',
-                              style: const TextStyle(fontSize: 24),
-                            ),
-                          ),
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(color: setupInk, fontSize: 14),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const PackImage(path: 'scene/default_background.jpg'),
+            ColoredBox(color: D30Colors.page.withValues(alpha: .91)),
+            Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: 390,
+                        height: 670,
+                        child: content(),
+                      ),
+                    ),
+                  ),
+                ),
+                if (step != 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(45, 6, 45, 14),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: step == 4 ? 64 : 48,
+                      child: D30RaisedButton(
+                        onPressed: committed || draft.characterId == null
+                            ? null
+                            : () {
+                                if (step < 4) {
+                                  setState(() => step++);
+                                  return;
+                                }
+                                final Game game = draft.commit(pack);
+                                setState(() => committed = true);
+                                Navigator.pop(context, game);
+                              },
+                        child: Text(
+                          step == 4
+                              ? 'Start Game'
+                              : step == 1
+                              ? 'Select'
+                              : 'Next',
+                          style: const TextStyle(fontSize: 24),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
-          ),
+          ],
         ),
       ),
     ),
