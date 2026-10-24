@@ -102,8 +102,8 @@ class Game {
   final ContentPack pack;
   final GameState state;
   final ConditionEvaluator conditions;
-  final EffectEngine effects;
-  final EventEngine events;
+  late final EffectEngine effects;
+  late final EventEngine events;
 
   /// Reads the trait catalog's own `effectList`. See `traits.dart` for which
   /// of the two stat fields is the real one.
@@ -111,9 +111,9 @@ class Game {
 
   Game({required this.pack, required this.state})
     : conditions = ConditionEvaluator(),
-      effects = EffectEngine(),
-      events = EventEngine(pack: pack),
       traits = TraitEngine(pack: pack) {
+    effects = EffectEngine(conditions: conditions);
+    events = EventEngine(pack: pack, conditions: conditions, effects: effects);
     // One evaluator and one effect engine across the whole run, so the
     // "unknown verb" sets accumulate somewhere the dev panel can read.
     effects.conditions.unknownTargets.addAll(conditions.unknownTargets);
@@ -124,9 +124,106 @@ class Game {
     return Game(pack: pack, state: state);
   }
 
+  List<int> get openingEventIds =>
+      (pack.rules.section('events')['openingEventIds'] as List? ?? const [])
+          .whereType<num>()
+          .map((id) => id.toInt())
+          .toList();
+
+  bool get openingPending =>
+      !state.openingComplete && openingEventIds.isNotEmpty;
+
+  /// Host-driven prologue beats do not spend time or consume random-event caps.
+  /// Resume at the first unfinished beat rather than granting rewards twice.
+  EventRun? beginOpeningEvent() {
+    if (!openingPending) return null;
+    for (final id in openingEventIds) {
+      if (state.eventStates[id] == 2) {
+        // Old prototype saves completed event 1 while SHOW_ENDING was a no-op.
+        // Reconcile its continuation without replaying the ending/rewards.
+        final continuations =
+            pack.rules.section('events')['openingContinuationSwitches'] as Map?;
+        final name = continuations?['$id'];
+        if (name is String && state.switchValue(name) == 0) {
+          state.setSwitch(name, 1);
+        }
+        continue;
+      }
+      final event = pack.events[id];
+      if (event == null) throw StateError('Opening event $id is missing');
+      final dailyCount = state.eventsFiredToday;
+      effects.resetTransient();
+      final run = events.begin(event, state);
+      state.eventsFiredToday = dailyCount;
+      state.note('Prologue: ${event.name}', 'event');
+      invalidateHand();
+      return run;
+    }
+    state.openingComplete = true;
+    invalidateHand();
+    return null;
+  }
+
+  /// Tick-zero scheduled dialogue runs before the first action of a day.
+  EventRun? beginDay() => pack.rules.flag('events', 'checkAtDayStart', false)
+      ? nextScheduledEvent()
+      : null;
+
+  EventRun? nextScheduledEvent() {
+    if (openingPending ||
+        !pack.rules.flag('events', 'chainScheduledEvents', false)) {
+      return null;
+    }
+    _processAutomaticEvents();
+    final event = events.pick(state, scheduledOnly: true);
+    if (event == null) return null;
+    effects.resetTransient();
+    return events.begin(event, state);
+  }
+
+  void _processAutomaticEvents() {
+    if (pack.rules.flag('tasks', 'enabled', false)) {
+      final expired = state.taskDeadlines.entries
+          .where((task) => task.value.compareTo(state.date) <= 0)
+          .map((task) => task.key)
+          .toList();
+      for (final id in expired) {
+        state.taskDeadlines.remove(id);
+        state.taskTitles.remove(id);
+      }
+    }
+    if (!pack.rules.flag('events', 'executeFakeEvents', false)) return;
+    final processed = <int>{};
+    for (var steps = 0; steps < 100; steps++) {
+      final event = events
+          .eligible(state, includeFake: true)
+          .where((event) => event.isFake && !processed.contains(event.id))
+          .firstOrNull;
+      if (event == null) return;
+      processed.add(event.id);
+      final dailyCount = state.eventsFiredToday;
+      final run = events.begin(event, state);
+      state.eventsFiredToday = dailyCount;
+      while (run.current != null && !run.current!.isEnd) {
+        if (run.current!.choices.isNotEmpty) {
+          state.note(
+            'Automatic event ${event.id} unexpectedly needs a choice.',
+            'system',
+          );
+          return;
+        }
+        run.advance();
+      }
+    }
+  }
+
   // --- what the player may do right now -----------------------------------
 
   List<GameLocation> availableLocations() {
+    if (openingPending) {
+      final here = state.location;
+      return here == null ? [] : [here];
+    }
     if (inClass) {
       final school = pack.locations[schoolLocationId];
       return school == null ? const [] : [school];
@@ -146,6 +243,7 @@ class Game {
   /// Every action at the current location that is not blocked right now.
   /// This is the pool the hand is drawn from, not what the player sees.
   List<LocationAction> availableActions() {
+    if (openingPending || state.dayEndPending) return const [];
     final here = state.location;
     if (here == null) return const [];
     return here.actions.where((a) {
@@ -224,6 +322,11 @@ class Game {
 
   /// True while the player is in class and cannot leave.
   bool get inClass {
+    final suppression =
+        pack.rules.section('school')['suppressedBySwitch'] as String?;
+    if (suppression != null && state.switchValue(suppression) != 0) {
+      return false;
+    }
     if (!pack.rules.flag('school', 'lessonsEnabled', true)) return false;
     if (state.date.isWeekend) return false;
     if (state.date.tick >= classTicks) return false;
@@ -406,6 +509,7 @@ class Game {
   /// Spend a Refresh Ticket to redeal the hand. Returns false when there is
   /// no ticket, which the original surfaces as "Refresh unavailable!".
   bool refreshHand() {
+    if (openingPending || state.dayEndPending) return false;
     if (state.exhaustionPending) return false;
     if (state.rerolls <= 0) return false;
     state.rerolls--;
@@ -415,6 +519,7 @@ class Game {
   }
 
   bool move(int locationId) {
+    if (openingPending || state.dayEndPending) return false;
     if (state.exhaustionPending) return false;
     if (inClass) return false;
     if (state.movementLocked) return false;
@@ -536,6 +641,9 @@ class Game {
     bool deferExhaustion = false,
   }) {
     if (state.finished) return ActionOutcome('The run is over.');
+    if (openingPending || state.dayEndPending) {
+      return ActionOutcome('Finish the current story first.');
+    }
     if (state.exhaustionPending) {
       return ActionOutcome('Too tired to act.', exhausted: true);
     }
@@ -543,6 +651,7 @@ class Game {
     effects.resetTransient();
     final parts = <String>[];
     final exerciseBefore = state.exerciseLevel.level;
+    final partTimeBefore = state.partTimeLevel.level;
 
     switch (action.actionType) {
       case 'study':
@@ -576,6 +685,12 @@ class Game {
       // TRAIT_EVENT_7 again while the level is maxed.
       clearOutOfShape();
       final levelUp = beginSystemEvent('exerciseLevelUp');
+      if (levelUp != null) beforeEvents.add(levelUp);
+    }
+
+    if (state.partTimeLevel.level > partTimeBefore) {
+      state.switches['PART_TIME_JOB_LEVEL_UP'] = 1;
+      final levelUp = beginSystemEvent('partTimeLevelUp');
       if (levelUp != null) beforeEvents.add(levelUp);
     }
 
@@ -890,13 +1005,28 @@ class Game {
     state.date = GameDate(state.date.day, pack.manifest.ticksPerDay - 1);
     final eveningEvent = _maybeEvent();
 
+    if (pack.rules.flag('events', 'deferEveningRollover', false)) {
+      state.dayEndPending = true;
+      return ActionOutcome('', dayEnded: true, event: eveningEvent);
+    }
+    return _rollToNextDay(eveningEvent);
+  }
+
+  ActionOutcome finishPendingDay() {
+    if (!state.dayEndPending) return ActionOutcome('No day is pending.');
+    state.dayEndPending = false;
+    return _rollToNextDay(null);
+  }
+
+  ActionOutcome _rollToNextDay(EventRun? eveningEvent) {
     state.date = state.date.nextDay();
     state.exhaustionPending = false;
     state.hp = state.hpMax;
     state.lastStudySubject = null;
     state.studyCombo = 0;
-    state.movementLocked = false;
-    if (!state.date.isWeekend) state.locationId = schoolLocationId;
+    final confined = state.switchValue('DOK_BANG_ON') == 1;
+    state.movementLocked = confined;
+    if (!confined && !state.date.isWeekend) state.locationId = schoolLocationId;
     state.usedActionKeysToday.clear();
     state.eventsFiredToday = 0;
     // Temporary traits age overnight: Flu lasts 4 days, Fever Time 2.
@@ -923,7 +1053,9 @@ class Game {
     }
 
     state.note('Day ${state.dayNumber}.', 'system');
-    final morningEvent = _maybeEvent();
+    final morningEvent = pack.rules.flag('events', 'checkAtDayStart', false)
+        ? null
+        : _maybeEvent();
     return ActionOutcome(
       '',
       dayEnded: true,
@@ -932,6 +1064,7 @@ class Game {
   }
 
   EventRun? _maybeEvent() {
+    _processAutomaticEvents();
     final event = events.pick(state);
     if (event == null) return null;
     final run = events.begin(event, state);
@@ -943,6 +1076,19 @@ class Game {
 
   /// Global failure dialogue bypasses the random-event cap and repeat gates.
   EventRun? beginExhaustionEvent() => beginSystemEvent('exhaustion');
+
+  /// Event/item XP can level up outside an action. Present the existing global
+  /// graph after that scene; its final node clears the pending switch.
+  EventRun? beginPendingLevelUpEvent() {
+    if (state.switchValue('EXERCISE_LEVEL_UP') == 1) {
+      clearOutOfShape();
+      return beginSystemEvent('exerciseLevelUp');
+    }
+    if (state.switchValue('PART_TIME_JOB_LEVEL_UP') == 1) {
+      return beginSystemEvent('partTimeLevelUp');
+    }
+    return null;
+  }
 
   EventRun? beginSystemEvent(String binding) {
     final event = pack.systemEvents[pack.systemEventBindings[binding]];
@@ -1121,27 +1267,26 @@ class Game {
         (state.equippedStationery.values.contains(id) ? 1 : 0),
   );
 
-  /// Temporary editable odds: the recovered combination call is a stub.
-  /// Each ingredient contributes its rank's distribution to the result pool.
+  /// Preserve the best ingredient tier, per the user's A+C -> A rule.
+  /// Original odds remain unresolved; the upgrade chance is editable.
   Map<String, num> stationeryCombinationWeights(List<int> materials) {
-    final result = <String, num>{};
-    final configured = pack.rules.raw['stationery']?['combineWeights'] as Map?;
+    var best = stationeryRanks.length;
     for (final id in materials) {
       final rank = pack.stationery[id]?['rank'] as String?;
       if (rank == null) continue;
       final index = stationeryRanks.indexOf(rank);
       if (index < 0) continue;
-      final row =
-          configured?[rank] as Map? ??
-          (index == 0
-              ? {'S': 100}
-              : {rank: 80, stationeryRanks[index - 1]: 20});
-      for (final entry in row.entries) {
-        result[entry.key as String] =
-            (result[entry.key] ?? 0) + (entry.value as num);
-      }
+      best = min(best, index);
     }
-    return result;
+    if (best == stationeryRanks.length) return {};
+    if (best == 0) return {'S': 100};
+    final upgrade = pack.rules
+        .number('stationery', 'combineUpgradeChance', 0.05)
+        .clamp(0, 1);
+    return {
+      stationeryRanks[best]: 1 - upgrade,
+      stationeryRanks[best - 1]: upgrade,
+    };
   }
 
   int? combineStationery(List<int> materials) {

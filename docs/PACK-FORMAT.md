@@ -451,9 +451,11 @@ when absent; the name selection UI remains on the character-selection to-do.
 
 Stationery catalogs and four-piece sets live in `commerce.json`. The
 `rules.json.stationery` section controls `drawWeights` by S/A/B/C rank,
-`redrawCookies`, and `combineWeights` (one output-weight map per input rank).
-Draws pick a rank before an item. Combination adds the two to four input maps before
-sampling. These probability values are provisional, not recovered original odds;
+`redrawCookies`, and `combineUpgradeChance` (default 0.05, clamped to 0-1).
+Draws pick a rank before an item. Combination preserves the best of two to four
+input tiers, with that chance of upgrading one tier; S stays S. Legacy
+`combineWeights` tables are ignored. These probability values are provisional,
+not recovered original odds;
 see [STATIONERY.md](STATIONERY.md). The weekly Thursday award is free.
 
 
@@ -463,6 +465,8 @@ Generated locally by `tools/presentation_assets.py`; loaded by ContentPack when
 present. `characters` and `npcs` map string IDs to `skeleton`, named `expressions`,
 named `clothes`, and named `otherLayers` paths. `backgrounds` maps original event
 asset paths to pack-relative art paths, and `badges` maps university IDs to crests.
+NPC entries may include `eventOffsetY` in logical pixels (negative moves up).
+It affects event portraits only, with all body/clothing/expression layers together.
 Paths resolve under pack `images/` first and bundled `assets/images/` second.
 This catalog is independent of gameplay data. Event nodes retain `standingId`,
 `standingOff`, `standingExpression`, `standingClothes` and `otherLayerList`.

@@ -1,3 +1,5 @@
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/pack.dart';
@@ -74,11 +76,11 @@ class _CharacterCarouselState extends State<CharacterCarousel> {
             colors: [Color(0xFFFF7974), Color(0xFFFFD5A3)],
           ),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
-            '31-Day Mode\nChoose your character',
+            '${widget.pack.manifest.name}\nChoose your character',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -126,12 +128,15 @@ class _CharacterCarouselState extends State<CharacterCarousel> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(10),
                           color: const Color(0xFFF6C4BC),
-                          child: Text(
-                            '${'★' * c.stars}  Student ID Card',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${'★' * c.stars}  Student ID Card',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -149,12 +154,15 @@ class _CharacterCarouselState extends State<CharacterCarousel> {
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8),
-                          child: Text(
-                            c.name,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.bold,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              c.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 23,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -183,21 +191,23 @@ class _CharacterCarouselState extends State<CharacterCarousel> {
                 alignment: forward
                     ? Alignment.centerRight
                     : Alignment.centerLeft,
-                child: IconButton.filled(
-                  style: IconButton.styleFrom(backgroundColor: setupOrange),
-                  tooltip: forward ? 'Next character' : 'Previous character',
-                  icon: Icon(
-                    forward
-                        ? Icons.keyboard_double_arrow_right
-                        : Icons.keyboard_double_arrow_left,
-                  ),
-                  onPressed: () => pages.animateToPage(
-                    (selected + (forward ? 1 : -1)).clamp(
-                      0,
-                      characters.length - 1,
+                child: PressFeedback(
+                  child: IconButton.filled(
+                    style: IconButton.styleFrom(backgroundColor: setupOrange),
+                    tooltip: forward ? 'Next character' : 'Previous character',
+                    icon: Icon(
+                      forward
+                          ? Icons.keyboard_double_arrow_right
+                          : Icons.keyboard_double_arrow_left,
                     ),
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
+                    onPressed: () => pages.animateToPage(
+                      (selected + (forward ? 1 : -1)).clamp(
+                        0,
+                        characters.length - 1,
+                      ),
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                    ),
                   ),
                 ),
               ),
@@ -250,39 +260,44 @@ class SetupBadgeList extends StatelessWidget {
               final color = badgeColor(b);
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Material(
-                  color: Color.lerp(Colors.white, color, .09),
-                  borderRadius: BorderRadius.circular(15),
-                  child: InkWell(
-                    key: ValueKey('badge-${b.universityId}'),
-                    onTap: () => onToggle(b.universityId),
-                    child: Container(
-                      height: 96,
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: color, width: chosen ? 4 : 2),
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 84,
-                            child: UniversityBadgeView(
-                              pack: pack,
-                              id: b.universityId,
-                            ),
+                child: PressFeedback(
+                  child: Material(
+                    color: Color.lerp(Colors.white, color, .09),
+                    borderRadius: BorderRadius.circular(15),
+                    child: InkWell(
+                      key: ValueKey('badge-${b.universityId}'),
+                      onTap: () => onToggle(b.universityId),
+                      child: Container(
+                        height: 96,
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: color,
+                            width: chosen ? 4 : 2,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              b.effects.map(describe).join('\n'),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: color),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 84,
+                              child: UniversityBadgeView(
+                                pack: pack,
+                                id: b.universityId,
+                              ),
                             ),
-                          ),
-                          if (chosen)
-                            Icon(Icons.check_circle, color: color, size: 18),
-                        ],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                b.effects.map(describe).join('\n'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 14, color: color),
+                              ),
+                            ),
+                            if (chosen)
+                              Icon(Icons.check_circle, color: color, size: 18),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -340,30 +355,32 @@ class SetupTraitList extends StatelessWidget {
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: InkWell(
-                              onTap: i < selected.length
-                                  ? () => onToggle(selected[i])
-                                  : null,
-                              child: Container(
-                                width: double.infinity,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: i < selected.length
-                                      ? const Color(0xFF3CB52F)
-                                      : D30Colors.panel,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: setupOrange),
-                                ),
-                                child: Text(
-                                  i < selected.length
-                                      ? pack.traits[selected[i]]!.name
-                                      : '—',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
+                            child: PressFeedback(
+                              child: InkWell(
+                                onTap: i < selected.length
+                                    ? () => onToggle(selected[i])
+                                    : null,
+                                child: Container(
+                                  width: double.infinity,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
                                     color: i < selected.length
-                                        ? Colors.white
-                                        : setupOrange,
-                                    fontSize: 12,
+                                        ? const Color(0xFF3CB52F)
+                                        : D30Colors.panel,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: setupOrange),
+                                  ),
+                                  child: Text(
+                                    i < selected.length
+                                        ? pack.traits[selected[i]]!.name
+                                        : '—',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: i < selected.length
+                                          ? Colors.white
+                                          : setupOrange,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -402,81 +419,86 @@ class SetupTraitList extends StatelessWidget {
                           : t.rank == 'A'
                           ? const Color(0xFFBDB44D)
                           : const Color(0xFF9B9B9B);
-                      return InkWell(
-                        key: ValueKey('setup-trait-${t.id}'),
-                        onTap: () => onToggle(t.id),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                clipBehavior: Clip.antiAlias,
-                                decoration: BoxDecoration(
-                                  color: D30Colors.panel,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: setupInk, width: 2),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      color: tier,
-                                      padding: const EdgeInsets.all(4),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            ' ${t.rank}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          const Text(
-                                            '×1',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                      return PressFeedback(
+                        child: InkWell(
+                          key: ValueKey('setup-trait-${t.id}'),
+                          onTap: () => onToggle(t.id),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    color: D30Colors.panel,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: setupInk,
+                                      width: 2,
                                     ),
-                                    Expanded(
-                                      child: SingleChildScrollView(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8),
-                                          child: Column(
-                                            children: [
-                                              Text(
-                                                t.name,
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        color: tier,
+                                        padding: const EdgeInsets.all(4),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              ' ${t.rank}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                t.description,
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.brown,
-                                                ),
+                                            ),
+                                            const Text(
+                                              '×1',
+                                              style: TextStyle(
+                                                color: Colors.white,
                                               ),
-                                            ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8),
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  t.name,
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  t.description,
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.brown,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            Icon(
-                              chosen
-                                  ? Icons.check_box
-                                  : Icons.check_box_outline_blank,
-                              color: setupOrange,
-                            ),
-                          ],
+                              Icon(
+                                chosen
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                color: setupOrange,
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

@@ -7,6 +7,9 @@
 library;
 
 import 'package:flutter/foundation.dart';
+
+import 'ui/press_feedback.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -109,6 +112,7 @@ class _TitleScreenState extends State<TitleScreen> {
   StackTrace? _stack;
   bool _loading = true;
   RunSetup? _setup;
+  final Map<String, (ContentPack, PackLocation)> _campaigns = {};
 
   @override
   void initState() {
@@ -123,6 +127,12 @@ class _TitleScreenState extends State<TitleScreen> {
     });
     try {
       final (pack, location) = await ContentSource.load();
+      _campaigns[pack.manifest.id] = (pack, location);
+      for (final id in await ContentSource.availablePackIds()) {
+        if (id != pack.manifest.id) {
+          _campaigns[id] = await ContentSource.load(packId: id);
+        }
+      }
       if (!mounted) return;
       setState(() {
         _pack = pack;
@@ -157,9 +167,15 @@ class _TitleScreenState extends State<TitleScreen> {
   /// Opens a saved run. A slot that cannot be read is reported rather than
   /// silently starting a new game over the top of it.
   Future<void> _continue(int slot) async {
-    final pack = _pack;
-    final location = _location;
-    if (pack == null || location == null) return;
+    final id = _saves[slot]?.packId ?? ContentSource.defaultPackId;
+    final campaign = _campaigns[id];
+    if (campaign == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('The saved campaign "$id" is unavailable.')),
+      );
+      return;
+    }
+    final (pack, location) = campaign;
     PackImages.use(location);
     final state = await SaveStore.read(slot, pack);
     if (!mounted) return;
@@ -181,8 +197,11 @@ class _TitleScreenState extends State<TitleScreen> {
     PackImages.use(location);
     final game = await Navigator.of(context).push<Game>(
       MaterialPageRoute(
-        builder: (_) =>
-            SetupScreen(pack: pack, draft: _setup ??= RunSetup(pack)),
+        builder: (_) => SetupScreen(
+          pack: pack,
+          draft: _setup ??= RunSetup(pack),
+          campaigns: _campaigns.values.map((entry) => entry.$1).toList(),
+        ),
       ),
     );
     if (game == null || !mounted) return;
@@ -190,14 +209,18 @@ class _TitleScreenState extends State<TitleScreen> {
     // The reference hands off from setup through the navy D-31 screen, with a
     // dash where the goal goes; the objective is announced over the hub after
     // it. See docs/ui-reference UIR-08 and UIR-09.
-    await DayTransition.show(
-      context,
-      game: game,
-      before: DayTransition.snapshot(game.state),
-      initial: true,
-    );
+    if (!game.openingPending) {
+      await DayTransition.show(
+        context,
+        game: game,
+        before: DayTransition.snapshot(game.state),
+        initial: true,
+      );
+    }
     if (!mounted) return;
-    await _play(game, location);
+    final selectedLocation = _campaigns[game.pack.manifest.id]?.$2 ?? location;
+    PackImages.use(selectedLocation);
+    await _play(game, selectedLocation);
   }
 
   /// Runs the game, then refreshes the slot list: whatever the run saved is
@@ -209,8 +232,12 @@ class _TitleScreenState extends State<TitleScreen> {
           game: game,
           packLocation: location,
           onPackReloaded: (p, l) => setState(() {
-            _pack = p;
-            _location = l;
+            _campaigns[p.manifest.id] = (p, l);
+            if (_pack?.manifest.id == p.manifest.id) {
+              _pack = p;
+              _location = l;
+              _setup = RunSetup(p);
+            }
           }),
         ),
       ),
@@ -261,10 +288,12 @@ class _TitleScreenState extends State<TitleScreen> {
                     ),
                   const SizedBox(height: 18),
                   _PackSummary(pack: _pack!, location: _location!),
-                  TextButton.icon(
-                    onPressed: _load,
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Reload pack'),
+                  PressFeedback(
+                    child: TextButton.icon(
+                      onPressed: _load,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Reload pack'),
+                    ),
                   ),
                 ],
               ],
@@ -341,9 +370,11 @@ class _ErrorCard extends StatelessWidget {
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Retry'),
+              child: PressFeedback(
+                child: FilledButton.tonal(
+                  onPressed: onRetry,
+                  child: const Text('Retry'),
+                ),
               ),
             ),
           ],
@@ -415,21 +446,27 @@ class _SlotCard extends StatelessWidget {
             ),
           ),
           if (save == null)
-            FilledButton(
-              key: ValueKey('new-run-$slot'),
-              onPressed: onStart,
-              child: const Text('New run'),
+            PressFeedback(
+              child: FilledButton(
+                key: ValueKey('new-run-$slot'),
+                onPressed: onStart,
+                child: const Text('New run'),
+              ),
             )
           else ...[
-            FilledButton(
-              key: ValueKey('continue-$slot'),
-              onPressed: onContinue,
-              child: const Text('Continue'),
+            PressFeedback(
+              child: FilledButton(
+                key: ValueKey('continue-$slot'),
+                onPressed: onContinue,
+                child: const Text('Continue'),
+              ),
             ),
-            IconButton(
-              tooltip: 'Delete slot ${slot + 1}',
-              onPressed: () => _confirmDelete(context),
-              icon: const Icon(Icons.delete_outline),
+            PressFeedback(
+              child: IconButton(
+                tooltip: 'Delete slot ${slot + 1}',
+                onPressed: () => _confirmDelete(context),
+                icon: const Icon(Icons.delete_outline),
+              ),
             ),
           ],
         ],
@@ -444,13 +481,17 @@ class _SlotCard extends StatelessWidget {
         title: Text('Delete slot ${slot + 1}?'),
         content: const Text('The saved run is removed for good.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep'),
+          PressFeedback(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Keep'),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+          PressFeedback(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
           ),
         ],
       ),

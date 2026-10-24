@@ -1,6 +1,8 @@
 /// Preparation screen between the night recap and the next day's actions.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -49,11 +51,15 @@ class _DayMenuState extends State<DayMenu> {
     Widget child, {
     bool fullHeight = false,
     double? heightFactor,
+    EdgeInsets? insetPadding,
   }) => showFlyUpDialog<void>(
     context: context,
     builder: (context) {
       final factor = heightFactor ?? (fullHeight ? .86 : null);
       return Dialog(
+        insetPadding:
+            insetPadding ??
+            const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         backgroundColor: cream,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -334,6 +340,7 @@ class _DayMenuState extends State<DayMenu> {
         itemBuilder: (_, i) => _agendaRow(entries[i]),
       ),
       fullHeight: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
     );
   }
 
@@ -373,23 +380,25 @@ class _DayMenuState extends State<DayMenu> {
   Widget _tile(String text, IconData icon, VoidCallback onTap) => Expanded(
     child: Padding(
       padding: const EdgeInsets.all(5),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: orange,
-          foregroundColor: cream,
-          padding: const EdgeInsets.all(4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      child: PressFeedback(
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: orange,
+            foregroundColor: cream,
+            padding: const EdgeInsets.all(4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        onPressed: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 28),
-            const SizedBox(height: 8),
-            FittedBox(child: Text(text)),
-          ],
+          onPressed: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 28),
+              const SizedBox(height: 8),
+              FittedBox(child: Text(text)),
+            ],
+          ),
         ),
       ),
     ),
@@ -423,36 +432,41 @@ class _DayMenuState extends State<DayMenu> {
               child: _box(
                 child: Column(
                   children: [
-                    InkWell(
-                      onTap: _announceGoal,
-                      child: FittedBox(
-                        child: Row(
-                          children: [
-                            const Icon(Icons.track_changes, color: Colors.red),
-                            const Text(' Weekly Goals  '),
-                            if (goal == null)
-                              const Text('-')
-                            else ...[
-                              _tag(
-                                '${subjectLabel(goal.targetSubject)} Reach ${goal.targetValue}',
-                                D30Colors.subject(goal.targetSubject),
-                              ),
+                    PressFeedback(
+                      child: InkWell(
+                        onTap: _announceGoal,
+                        child: FittedBox(
+                          child: Row(
+                            children: [
                               const Icon(
-                                Icons.arrow_forward,
-                                color: orange,
-                                size: 18,
+                                Icons.track_changes,
+                                color: Colors.red,
                               ),
-                              _tag(
-                                '${subjectLabel(goal.rewardSubject)} Reward ${goal.rewardValue}',
-                                D30Colors.subject(goal.rewardSubject),
-                              ),
-                              if (goal.met)
-                                const Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
+                              const Text(' Weekly Goals  '),
+                              if (goal == null)
+                                const Text('-')
+                              else ...[
+                                _tag(
+                                  '${subjectLabel(goal.targetSubject)} Reach ${goal.targetValue}',
+                                  D30Colors.subject(goal.targetSubject),
                                 ),
+                                const Icon(
+                                  Icons.arrow_forward,
+                                  color: orange,
+                                  size: 18,
+                                ),
+                                _tag(
+                                  '${subjectLabel(goal.rewardSubject)} Reward ${goal.rewardValue}',
+                                  D30Colors.subject(goal.rewardSubject),
+                                ),
+                                if (goal.met)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -484,12 +498,14 @@ class _DayMenuState extends State<DayMenu> {
             // exam until a storyline pins something sooner.
             SizedBox(
               height: 35,
-              child: InkWell(
-                onTap: _schedule,
-                child: _agendaRow(
-                  game.schedule().first,
-                  height: 35,
-                  titleSize: 14,
+              child: PressFeedback(
+                child: InkWell(
+                  onTap: _schedule,
+                  child: _agendaRow(
+                    game.schedule().first,
+                    height: 35,
+                    titleSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -516,18 +532,20 @@ class _DayMenuState extends State<DayMenu> {
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 2,
                                       ),
-                                      child: InkWell(
-                                        key: ValueKey('hub-trait-$id'),
-                                        onTap: () => _explainTrait(id),
-                                        child: D30Chip(
-                                          text:
-                                              game.pack.traits[id]?.name ??
-                                              'Trait $id',
-                                          color: traitColor(
-                                            game.pack.traits[id]?.type,
+                                      child: PressFeedback(
+                                        child: InkWell(
+                                          key: ValueKey('hub-trait-$id'),
+                                          onTap: () => _explainTrait(id),
+                                          child: D30Chip(
+                                            text:
+                                                game.pack.traits[id]?.name ??
+                                                'Trait $id',
+                                            color: traitColor(
+                                              game.pack.traits[id]?.type,
+                                            ),
+                                            textColor: Colors.white,
+                                            fontSize: 12,
                                           ),
-                                          textColor: Colors.white,
-                                          fontSize: 12,
                                         ),
                                       ),
                                     ),
@@ -541,87 +559,94 @@ class _DayMenuState extends State<DayMenu> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: InkWell(
-                      key: const ValueKey('open-store'),
-                      onTap: () => _commerce(),
-                      child: _box(
-                        child: Column(
-                          children: [
-                            const Text('Store', style: TextStyle(fontSize: 23)),
-                            const SizedBox(height: 6),
-                            for (final offer in game.pack.shop.values.take(4))
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 3,
-                                  ),
-                                  child: Container(
+                    child: PressFeedback(
+                      child: InkWell(
+                        key: const ValueKey('open-store'),
+                        onTap: () => _commerce(),
+                        child: _box(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Store',
+                                style: TextStyle(fontSize: 23),
+                              ),
+                              const SizedBox(height: 6),
+                              for (final offer in game.pack.shop.values.take(4))
+                                Expanded(
+                                  child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 2,
+                                      vertical: 3,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: cream,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: orange),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 48,
-                                          child: PackImage(
-                                            path:
-                                                'items/${offer['itemId']}.png',
-                                            fit: BoxFit.contain,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: cream,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: orange),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 48,
+                                            child: PackImage(
+                                              path:
+                                                  'items/${offer['itemId']}.png',
+                                              fit: BoxFit.contain,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                game
-                                                        .pack
-                                                        .items[offer['itemId']]
-                                                        ?.name ??
-                                                    'Item',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  height: 1.1,
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  game
+                                                          .pack
+                                                          .items[offer['itemId']]
+                                                          ?.name ??
+                                                      'Item',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    height: 1.1,
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                game
-                                                        .pack
-                                                        .items[offer['itemId']]
-                                                        ?.effectText ??
-                                                    '',
-                                                key: ValueKey(
-                                                  'store-preview-${offer['itemId']}',
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  game
+                                                          .pack
+                                                          .items[offer['itemId']]
+                                                          ?.effectText ??
+                                                      '',
+                                                  key: ValueKey(
+                                                    'store-preview-${offer['itemId']}',
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 8,
+                                                    height: 1.1,
+                                                  ),
                                                 ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 8,
-                                                  height: 1.1,
-                                                ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -636,107 +661,111 @@ class _DayMenuState extends State<DayMenu> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    child: InkWell(
-                      key: const ValueKey('open-stationery'),
-                      onTap: () => _commerce(stationery: true),
-                      child: _box(
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Stationery',
-                              style: TextStyle(fontSize: 22),
-                            ),
-                            const SizedBox(height: 6),
-                            for (var row = 0; row < 2; row++)
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Row(
-                                    children: [
-                                      for (final type
-                                          in row == 0
-                                              ? ['pencil', 'eraser']
-                                              : ['note', 'markingPen'])
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                            ),
-                                            child:
-                                                state.equippedStationery[type] ==
-                                                    null
-                                                ? Container(
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                        0xFFD9D9D9,
-                                                      ),
-                                                      border: Border.all(
-                                                        color: Colors.black87,
-                                                        width: 2,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                    ),
-                                                    child: Column(
-                                                      children: [
-                                                        Container(
-                                                          width:
-                                                              double.infinity,
+                    child: PressFeedback(
+                      child: InkWell(
+                        key: const ValueKey('open-stationery'),
+                        onTap: () => _commerce(stationery: true),
+                        child: _box(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Stationery',
+                                style: TextStyle(fontSize: 22),
+                              ),
+                              const SizedBox(height: 6),
+                              for (var row = 0; row < 2; row++)
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Row(
+                                      children: [
+                                        for (final type
+                                            in row == 0
+                                                ? ['pencil', 'eraser']
+                                                : ['note', 'markingPen'])
+                                          Expanded(
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                  ),
+                                              child:
+                                                  state.equippedStationery[type] ==
+                                                      null
+                                                  ? Container(
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                          0xFFD9D9D9,
+                                                        ),
+                                                        border: Border.all(
                                                           color: Colors.black87,
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                vertical: 3,
+                                                          width: 2,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                      child: Column(
+                                                        children: [
+                                                          Container(
+                                                            width:
+                                                                double.infinity,
+                                                            color:
+                                                                Colors.black87,
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  vertical: 3,
+                                                                ),
+                                                            child: FittedBox(
+                                                              fit: BoxFit
+                                                                  .scaleDown,
+                                                              child: Text(
+                                                                stationeryTypeLabel(
+                                                                  type,
+                                                                ),
+                                                                style:
+                                                                    const TextStyle(
+                                                                      color:
+                                                                          cream,
+                                                                      fontSize:
+                                                                          10,
+                                                                    ),
                                                               ),
-                                                          child: FittedBox(
-                                                            fit: BoxFit
-                                                                .scaleDown,
-                                                            child: Text(
-                                                              stationeryTypeLabel(
-                                                                type,
-                                                              ),
-                                                              style:
-                                                                  const TextStyle(
-                                                                    color:
-                                                                        cream,
-                                                                    fontSize:
-                                                                        10,
-                                                                  ),
                                                             ),
                                                           ),
-                                                        ),
-                                                        const Expanded(
-                                                          child: SizedBox(),
-                                                        ),
-                                                        const SizedBox(
-                                                          width:
-                                                              double.infinity,
-                                                          height: 25,
-                                                          child: ColoredBox(
-                                                            color: cream,
+                                                          const Expanded(
+                                                            child: SizedBox(),
                                                           ),
-                                                        ),
-                                                      ],
+                                                          const SizedBox(
+                                                            width:
+                                                                double.infinity,
+                                                            height: 25,
+                                                            child: ColoredBox(
+                                                              color: cream,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : StationeryCard(
+                                                      id: state
+                                                          .equippedStationery[type]!,
+                                                      item:
+                                                          game
+                                                              .pack
+                                                              .stationery[state
+                                                              .equippedStationery[type]]!,
+                                                      nameLines: 2,
                                                     ),
-                                                  )
-                                                : StationeryCard(
-                                                    id: state
-                                                        .equippedStationery[type]!,
-                                                    item:
-                                                        game
-                                                            .pack
-                                                            .stationery[state
-                                                            .equippedStationery[type]]!,
-                                                    nameLines: 2,
-                                                  ),
+                                            ),
                                           ),
-                                        ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -781,7 +810,7 @@ class _DayMenuState extends State<DayMenu> {
                                   ),
                                 ),
                                 _tile(
-                                  'Schedule',
+                                  'Calendar',
                                   Icons.calendar_today,
                                   _schedule,
                                 ),
@@ -806,19 +835,26 @@ class _DayMenuState extends State<DayMenu> {
               ),
               child: SizedBox(
                 height: 60,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3CB52F),
-                    foregroundColor: cream,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                child: PressFeedback(
+                  travel: 6,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3CB52F),
+                      foregroundColor: cream,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(
+                          color: Color(0xFF2B8422),
+                          width: 2,
+                        ),
+                      ),
                     ),
-                  ),
-                  onPressed: widget.onStart,
-                  child: Semantics(
-                    label: 'Start day',
-                    child: const Icon(Icons.play_arrow, size: 42),
+                    onPressed: widget.onStart,
+                    child: Semantics(
+                      label: 'Start day',
+                      child: const Icon(Icons.play_arrow, size: 42),
+                    ),
                   ),
                 ),
               ),
@@ -837,19 +873,21 @@ class _CornerClose extends StatelessWidget {
   const _CornerClose({required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: D30Colors.accent,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12)),
-    ),
-    child: InkWell(
-      onTap: onTap,
-      child: const Tooltip(
-        message: 'Close',
-        child: SizedBox(
-          width: 44,
-          height: 40,
-          child: Icon(Icons.close, color: Colors.white, size: 26),
+  Widget build(BuildContext context) => PressFeedback(
+    child: Material(
+      color: D30Colors.accent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: const Tooltip(
+          message: 'Close',
+          child: SizedBox(
+            width: 44,
+            height: 40,
+            child: Icon(Icons.close, color: Colors.white, size: 26),
+          ),
         ),
       ),
     ),

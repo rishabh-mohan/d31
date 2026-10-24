@@ -57,6 +57,9 @@ class EventRun {
   String portraitClothes = 'defaults';
   List<String> portraitOtherLayers = const [];
 
+  /// Actual inventory increases from this event, for its reward receipt.
+  final Map<int, int> acquiredItems = {};
+
   void _updatePortrait(EventNode node) {
     if (node.standingOff) {
       portraitId = null;
@@ -169,7 +172,23 @@ class EventRun {
 
       if (gateOk) {
         _updatePortrait(node);
+        final before = node.changer == null
+            ? null
+            : Map<int, int>.of(state.inventory);
         effects.applyChanger(node.changer, state);
+        if (before != null) {
+          for (final entry in state.inventory.entries) {
+            final gained = entry.value - (before[entry.key] ?? 0);
+            if (gained <= 0) continue;
+            acquiredItems.update(
+              entry.key,
+              (count) => count + gained,
+              ifAbsent: () => gained,
+            );
+            final name = pack.items[entry.key]?.name ?? 'Item ${entry.key}';
+            state.note('Received $name x$gained.', 'effect');
+          }
+        }
         if (effects.endRequested) {
           state.finished = true;
           state.endingLabel = effects.endLabel;
@@ -254,9 +273,10 @@ class EventRun {
   }
 
   String? _speakerName(EventNode node) {
-    if (node.isHideSpeakerName) return null;
+    if (node.isHideSpeakerName) return node.speakerId > 0 ? '???' : null;
     if (node.speakerId <= 0) return 'Me';
-    return pack.speakers[node.speakerId] ?? 'Speaker ${node.speakerId}';
+    final name = pack.speakers[node.speakerId];
+    return name == null || name.trim().isEmpty ? '???' : name;
   }
 
   /// Every way out of the graph lands here, so this is the one place that
@@ -327,10 +347,10 @@ class EventEngine {
   }
 
   /// Every event whose conditions hold right now.
-  List<GameEvent> eligible(GameState state) {
+  List<GameEvent> eligible(GameState state, {bool includeFake = false}) {
     final section = state.currentSection;
     return pack.events.values.where((e) {
-      if (e.isFake) return false;
+      if (e.isFake && !includeFake) return false;
       if (e.rootNodeId < 0 || !pack.nodes.containsKey(e.rootNodeId)) {
         return false;
       }
@@ -344,11 +364,14 @@ class EventEngine {
   /// Date-pinned events (`isRandomDate == false`) are scheduled content and
   /// fire as soon as they are eligible. Random-date ones are a weighted draw,
   /// gated by `rules.events.randomEventChancePerTick` and the daily cap.
-  GameEvent? pick(GameState state) {
+  GameEvent? pick(GameState state, {bool scheduledOnly = false}) {
     // The daily cap applies to everything, scheduled content included.
     // Without this, a date-pinned event fires on every tick it is eligible
     // for, which buries the loop in dialogue.
-    if (state.eventsFiredToday >= pack.rules.maxEventsPerDay) return null;
+    final atCap = state.eventsFiredToday >= pack.rules.maxEventsPerDay;
+    if (atCap && !pack.rules.flag('events', 'scheduledBypassDailyCap', false)) {
+      return null;
+    }
 
     final candidates = eligible(state);
     if (candidates.isEmpty) return null;
@@ -372,6 +395,7 @@ class EventEngine {
       return pinned.first;
     }
 
+    if (scheduledOnly || atCap) return null;
     if (state.random.nextDouble() >= pack.rules.randomEventChance) return null;
 
     final weights = pack.rules.rankWeights;

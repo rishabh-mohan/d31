@@ -5,6 +5,8 @@
 /// land.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 class D30Colors {
@@ -87,15 +89,24 @@ class D30RaisedButton extends StatelessWidget {
           ),
         ],
       ),
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: PressFeedback(
+        travel: 6,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: color,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: edgeColor ?? Color.lerp(color, Colors.black, .22)!,
+                width: 2,
+              ),
+            ),
+          ),
+          child: child,
         ),
-        child: child,
       ),
     ),
   );

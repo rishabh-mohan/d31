@@ -1,6 +1,8 @@
 /// Fixed reference-sized My Info panel, fitted to the available viewport.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -54,14 +56,16 @@ class MyInfoPanel extends StatelessWidget {
                             style: TextStyle(fontSize: 26),
                           ),
                         ),
-                        IconButton(
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.pop(context),
-                          style: IconButton.styleFrom(
-                            backgroundColor: D30Colors.accent,
-                            foregroundColor: Colors.white,
+                        PressFeedback(
+                          child: IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(context),
+                            style: IconButton.styleFrom(
+                              backgroundColor: D30Colors.accent,
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.close),
                           ),
-                          icon: const Icon(Icons.close),
                         ),
                       ],
                     ),

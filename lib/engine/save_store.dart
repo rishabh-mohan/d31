@@ -28,6 +28,7 @@ class SaveSummary {
   final int daysRemaining;
   final DateTime savedAt;
   final Map<String, num> stats;
+  final String packId;
 
   const SaveSummary({
     required this.slot,
@@ -35,18 +36,21 @@ class SaveSummary {
     required this.daysRemaining,
     required this.savedAt,
     required this.stats,
+    this.packId = 'kss16',
   });
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'daysRemaining': daysRemaining,
     'stats': stats,
+    'packId': packId,
   };
 
   static SaveSummary? fromJson(int slot, Map<String, dynamic>? j, DateTime at) {
     if (j == null) return null;
     return SaveSummary(
       slot: slot,
+      packId: j['packId'] as String? ?? 'kss16',
       name: j['name'] as String? ?? '',
       daysRemaining: (j['daysRemaining'] as num?)?.toInt() ?? 0,
       savedAt: at,
@@ -120,6 +124,7 @@ class SaveStore {
         daysRemaining: state.daysRemaining,
         savedAt: DateTime.now(),
         stats: Map<String, num>.from(state.stats),
+        packId: state.pack.manifest.id,
       );
       // Written to a neighbour first: a kill mid-write must not destroy the
       // save that was already there.
@@ -146,6 +151,7 @@ class SaveStore {
       final j = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final state = (j['state'] as Map?)?.cast<String, dynamic>();
       if (state == null) return null;
+      if ((state['packId'] ?? 'kss16') != pack.manifest.id) return null;
       return GameState.fromJson(pack, state);
     } catch (_) {
       return null;

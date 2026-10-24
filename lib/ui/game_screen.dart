@@ -6,10 +6,13 @@
 /// and the action card grid.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/content_source.dart';
 import '../engine/game.dart';
+import '../engine/event_engine.dart';
 import '../engine/goals.dart';
 import '../engine/pack.dart';
 import '../engine/save_store.dart';
@@ -25,6 +28,7 @@ import 'my_info.dart';
 import 'location_picker.dart';
 import 'pack_image.dart';
 import 'portrait.dart';
+import 'stamina_bar.dart';
 import 'theme.dart';
 
 typedef PackReloaded = void Function(ContentPack pack, PackLocation location);
@@ -62,6 +66,23 @@ class _GameScreenState extends State<GameScreen> {
     _dayStartStats = DayTransition.snapshot(state);
     _dayStartDate = state.date.day;
     _dayStartCountdown = state.daysRemaining;
+    if (game.openingPending) {
+      _preparing = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _playOpening());
+      return;
+    }
+    if (state.dayEndPending) {
+      _preparing = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        _resolving = true;
+        try {
+          await _runOutcome(ActionOutcome('', dayEnded: true));
+        } finally {
+          _resolving = false;
+        }
+      });
+      return;
+    }
     if (!state.exhaustionPending && state.date.tick == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted && game.beginWeeklyStationeryDraw()) {
@@ -95,18 +116,70 @@ class _GameScreenState extends State<GameScreen> {
   GameBook? _bookFor(int index, LocationAction action) =>
       game.bookForSlot(index);
 
+  Future<void> _playOpening() async {
+    _resolving = true;
+    try {
+      await _autoSave();
+      while (mounted) {
+        final event = game.beginOpeningEvent();
+        if (event == null) break;
+        if (!mounted) return;
+        await _showEvent(event);
+        if (!mounted) return;
+        await _autoSave();
+      }
+      if (!mounted) return;
+      await DayTransition.show(
+        context,
+        game: game,
+        before: DayTransition.snapshot(state),
+        initial: true,
+      );
+      if (!mounted) return;
+      _dayStartStats = DayTransition.snapshot(state);
+      _dayStartDate = state.date.day;
+      _dayStartCountdown = state.daysRemaining;
+      setState(() => _preparing = true);
+      await _autoSave();
+    } finally {
+      _resolving = false;
+    }
+  }
+
+  Future<void> _showEvent(EventRun event) async {
+    await EventScreen.show(context, event);
+    while (mounted && !state.finished) {
+      final levelUp = game.beginPendingLevelUpEvent();
+      if (levelUp == null) break;
+      if (!mounted) return;
+      await EventScreen.show(context, levelUp);
+    }
+  }
+
+  Future<void> _drainScheduledEvents() async {
+    for (var beats = 0; mounted && beats < 256; beats++) {
+      final event = game.nextScheduledEvent();
+      if (event == null) break;
+      await _showEvent(event);
+      if (mounted) setState(() {});
+    }
+    game.invalidateHand();
+  }
+
   /// Stats as the current day started, for the night screen'"'"'s deltas.
   Map<String, num> _dayStartStats = {};
 
   Future<void> _runOutcome(ActionOutcome outcome) async {
     for (final event in outcome.beforeEvents) {
+      // These level-up runs were already constructed by act(), so draining
+      // another pending level here would duplicate a later entry in this list.
       await EventScreen.show(context, event);
       if (!mounted) return;
     }
     if (outcome.exhausted && state.exhaustionPending) {
       setState(() => _exhaustionPresentation = true);
       if (outcome.event != null) {
-        await EventScreen.show(context, outcome.event!);
+        await _showEvent(outcome.event!);
       }
       if (!mounted) return;
       while (state.date.tick < game.actionTicksPerDay) {
@@ -125,9 +198,19 @@ class _GameScreenState extends State<GameScreen> {
 
     final event = outcome.event;
     if (event != null) {
-      await EventScreen.show(context, event);
+      await _showEvent(event);
       if (!mounted) return;
       setState(() {});
+    }
+
+    await _drainScheduledEvents();
+    if (!mounted) return;
+    if (state.dayEndPending) {
+      if (state.finished) {
+        state.dayEndPending = false;
+      } else {
+        outcome = game.finishPendingDay();
+      }
     }
 
     if (state.finished && mounted) {
@@ -226,7 +309,7 @@ class _GameScreenState extends State<GameScreen> {
         onPackReloaded: widget.onPackReloaded,
         onStateChanged: () => setState(() {}),
         playEvent: (run) async {
-          await EventScreen.show(context, run);
+          await _showEvent(run);
           if (mounted) setState(() {});
         },
       ),
@@ -325,18 +408,32 @@ class _GameScreenState extends State<GameScreen> {
                           ? DayMenu(
                               game: game,
                               onStart: () async {
-                                setState(() {
-                                  _dayStartStats = DayTransition.snapshot(
-                                    state,
-                                  );
-                                  _dayStartDate = state.date.day;
-                                  _dayStartCountdown = state.daysRemaining;
-                                  _preparing = false;
-                                });
-                                if (state.date.isWeekend) {
-                                  await _pickLocation(
-                                    title: 'Where do I go today?',
-                                  );
+                                if (_resolving) return;
+                                _resolving = true;
+                                try {
+                                  setState(() {
+                                    _dayStartStats = DayTransition.snapshot(
+                                      state,
+                                    );
+                                    _dayStartDate = state.date.day;
+                                    _dayStartCountdown = state.daysRemaining;
+                                    _preparing = false;
+                                  });
+                                  final opening = game.beginDay();
+                                  if (opening != null) {
+                                    await _runOutcome(
+                                      ActionOutcome('', event: opening),
+                                    );
+                                  }
+                                  if (!mounted) return;
+                                  if (state.date.isWeekend &&
+                                      !state.movementLocked) {
+                                    await _pickLocation(
+                                      title: 'Where do I go today?',
+                                    );
+                                  }
+                                } finally {
+                                  _resolving = false;
                                 }
                               },
                             )
@@ -514,18 +611,29 @@ class _SquareButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(12);
-    return Material(
-      color: D30Colors.accent,
-      elevation: 3,
-      shadowColor: const Color(0x554A2B10),
-      borderRadius: radius,
-      child: InkWell(
+    return DecoratedBox(
+      decoration: BoxDecoration(
         borderRadius: radius,
-        onTap: onTap,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, color: D30Colors.onAccent, size: 22),
+        boxShadow: const [
+          BoxShadow(color: D30Colors.accentDark, offset: Offset(0, 3)),
+        ],
+      ),
+      child: PressFeedback(
+        child: Material(
+          color: D30Colors.accent,
+          shape: RoundedRectangleBorder(
+            borderRadius: radius,
+            side: const BorderSide(color: D30Colors.accentDark, width: 2),
+          ),
+          child: InkWell(
+            borderRadius: radius,
+            onTap: onTap,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(icon, color: D30Colors.onAccent, size: 22),
+            ),
+          ),
         ),
       ),
     );
@@ -600,15 +708,17 @@ class _PillButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: D30Colors.accent,
-    child: InkWell(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip,
-        child: SizedBox(
-          width: 44,
-          child: Icon(icon, color: D30Colors.onAccent, size: 24),
+  Widget build(BuildContext context) => PressFeedback(
+    child: Material(
+      color: D30Colors.accent,
+      child: InkWell(
+        onTap: onTap,
+        child: Tooltip(
+          message: tooltip,
+          child: SizedBox(
+            width: 44,
+            child: Icon(icon, color: D30Colors.onAccent, size: 24),
+          ),
         ),
       ),
     ),
@@ -690,10 +800,16 @@ class _MainPanel extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    RepaintBoundary(child: _Portrait(state: state)),
+                    RepaintBoundary(
+                      child: _Portrait(
+                        state: state,
+                        panelHeight: constraints.maxHeight * .55,
+                      ),
+                    ),
                     Align(
                       alignment: Alignment.bottomCenter,
                       child: SizedBox(
+                        key: const ValueKey('action-panel'),
                         height: constraints.maxHeight * .55,
                         child: FittedBox(
                           fit: BoxFit.contain,
@@ -807,7 +923,8 @@ class _TickDots extends StatelessWidget {
 /// Location background, character, level box, and the satiety pips.
 class _Portrait extends StatelessWidget {
   final GameState state;
-  const _Portrait({required this.state});
+  final double panelHeight;
+  const _Portrait({required this.state, required this.panelHeight});
 
   @override
   Widget build(BuildContext context) {
@@ -826,15 +943,21 @@ class _Portrait extends StatelessWidget {
               path: here?.image,
               placeholder: const ColoredBox(color: Color(0xFFBFD4E6)),
             ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: FractionallySizedBox(
-                heightFactor: 0.92,
-                child: Portrait(
-                  pack: state.pack,
-                  id: state.characterId,
-                  character: true,
-                  fallback: state.portrait,
+            Positioned.fill(
+              bottom: panelHeight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                // The portrait canvas has transparent space beneath the torso.
+                // Let that lower edge tuck behind the island instead of float.
+                child: Transform.translate(
+                  offset: const Offset(0, 76),
+                  child: Portrait(
+                    key: const ValueKey('game-character'),
+                    pack: state.pack,
+                    id: state.characterId,
+                    character: true,
+                    fallback: state.portrait,
+                  ),
                 ),
               ),
             ),
@@ -1057,98 +1180,42 @@ class _StatusBar extends StatelessWidget {
           const SizedBox(width: 8),
           const Icon(Icons.favorite, size: 15, color: Color(0xFF3A2E24)),
           const SizedBox(width: 6),
-          Expanded(child: _HpBar(pct: pct)),
+          Expanded(child: StaminaBar(pct: pct)),
           const SizedBox(width: 8),
-          Material(
-            color: D30Colors.accent,
-            child: InkWell(
-              onTap: state.rerolls > 0 ? onRefresh : null,
-              child: Container(
-                height: 34,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                alignment: Alignment.center,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.refresh,
-                      size: 15,
-                      color: state.rerolls > 0 ? Colors.white : Colors.white70,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${state.rerolls}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+          PressFeedback(
+            child: Material(
+              color: D30Colors.accent,
+              child: InkWell(
+                onTap: state.rerolls > 0 ? onRefresh : null,
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.refresh,
+                        size: 15,
+                        color: state.rerolls > 0
+                            ? Colors.white
+                            : Colors.white70,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '${state.rerolls}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// The outlined stamina bar.
-///
-/// The reference prints the percentage *inside* the bar, centred on the filled
-/// part: at 100% it sits in the middle of the bar, at 6% it has slid to the
-/// left edge and turned red. It is never hidden, however little is left.
-class _HpBar extends StatelessWidget {
-  final double pct;
-  const _HpBar({required this.pct});
-
-  static const _labelWidth = 36.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final low = pct <= .25;
-    return Container(
-      height: 16,
-      decoration: BoxDecoration(
-        color: D30Colors.hpTrack,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: D30Colors.ink, width: 2),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final left = (width * pct / 2 - _labelWidth / 2).clamp(
-            0.0,
-            (width - _labelWidth).clamp(0.0, double.infinity),
-          );
-          return Stack(
-            children: [
-              FractionallySizedBox(
-                widthFactor: pct,
-                child: Container(color: D30Colors.hpGreen),
-              ),
-              Positioned(
-                left: left,
-                top: 0,
-                bottom: 0,
-                width: _labelWidth,
-                child: Center(
-                  child: Text(
-                    '${(pct * 100).round()}%',
-                    key: const ValueKey('hp-percent'),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: low ? D30Colors.alert : D30Colors.ink,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }
@@ -1644,13 +1711,17 @@ class _MenuSheetState extends State<_MenuSheet> {
         title: const Text('Leave to the main menu?'),
         content: const Text('Anything since your last save is lost.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Stay'),
+          PressFeedback(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Stay'),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Leave'),
+          PressFeedback(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Leave'),
+            ),
           ),
         ],
       ),
@@ -1740,19 +1811,21 @@ class _MenuSheetState extends State<_MenuSheet> {
         Positioned(
           left: 0,
           top: 0,
-          child: Material(
-            color: D30Colors.alert,
-            borderRadius: BorderRadius.circular(10),
-            elevation: 3,
-            child: InkWell(
+          child: PressFeedback(
+            child: Material(
+              color: D30Colors.alert,
               borderRadius: BorderRadius.circular(10),
-              onTap: () => Navigator.pop(context),
-              child: const Tooltip(
-                message: 'Close menu',
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(Icons.close, color: Colors.white, size: 26),
+              elevation: 3,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => Navigator.pop(context),
+                child: const Tooltip(
+                  message: 'Close menu',
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Icon(Icons.close, color: Colors.white, size: 26),
+                  ),
                 ),
               ),
             ),
@@ -1778,31 +1851,33 @@ class _MenuSheetState extends State<_MenuSheet> {
   }) {
     final blocked = unavailable != null || !_dayOver;
     return _row(
-      child: InkWell(
-        onTap: blocked ? null : onTap,
-        child: Row(
-          children: [
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 17,
-                  color: blocked ? D30Colors.inkSoft : D30Colors.ink,
+      child: PressFeedback(
+        child: InkWell(
+          onTap: blocked ? null : onTap,
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 17,
+                    color: blocked ? D30Colors.inkSoft : D30Colors.ink,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: Text(
-                blocked ? (unavailable ?? reason) : '',
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  blocked ? (unavailable ?? reason) : '',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1837,32 +1912,34 @@ class _MenuSheetState extends State<_MenuSheet> {
     VoidCallback? onTap, {
     String? note,
   }) => _row(
-    child: InkWell(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, size: 22, color: D30Colors.accentDark),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 17,
-                color: onTap == null ? D30Colors.inkSoft : D30Colors.ink,
-              ),
-            ),
-          ),
-          if (note != null)
-            Flexible(
+    child: PressFeedback(
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: D30Colors.accentDark),
+            const SizedBox(width: 12),
+            Expanded(
               child: Text(
-                note,
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 17,
+                  color: onTap == null ? D30Colors.inkSoft : D30Colors.ink,
+                ),
               ),
             ),
-        ],
+            if (note != null)
+              Flexible(
+                child: Text(
+                  note,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+                ),
+              ),
+          ],
+        ),
       ),
     ),
   );
@@ -1881,24 +1958,26 @@ class _ToggleCircle extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    customBorder: const CircleBorder(),
-    onTap: onTap,
-    child: Container(
-      width: 42,
-      height: 42,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: selected ? D30Colors.accent : D30Colors.panel,
-        shape: BoxShape.circle,
-        border: Border.all(color: D30Colors.accent, width: 2),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: selected ? Colors.white : D30Colors.accent,
+  Widget build(BuildContext context) => PressFeedback(
+    child: InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? D30Colors.accent : D30Colors.panel,
+          shape: BoxShape.circle,
+          border: Border.all(color: D30Colors.accent, width: 2),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : D30Colors.accent,
+          ),
         ),
       ),
     ),
@@ -1910,8 +1989,7 @@ class _ToggleCircle extends StatelessWidget {
 /// At rest the card sits [depth] above its own shadow. While held it moves
 /// down by exactly that much and the shadow closes up, so the bottom edge
 /// matches the sides and the top never gains a shadow of its own. The
-/// movement is instant in both directions: releasing over the block pops it
-/// up on the same frame the hand is dealt again.
+/// movement eases over 70ms in both directions, without scaling the face.
 class _PressDown extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;

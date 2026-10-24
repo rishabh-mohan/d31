@@ -218,8 +218,14 @@ class ConditionEvaluator {
         _b(!a.whereType<num>().any((n) => n.toInt() == s.locationId)),
     'FUNC_START_LOCATION_COUNT': (s, a) => s.locationId,
 
-    'FUNC_TODO_DAY': (s, a) => s.daysRemaining,
-    'FUNC_ROUGH_TODO_DAY': (s, a) => (s.daysRemaining / 7).floor(),
+    'FUNC_TODO_HAVE': (s, a) => _b(s.taskDeadlines.containsKey(_intArg(a, 0))),
+    'FUNC_TODO_DAY': (s, a) => s.pack.rules.flag('tasks', 'enabled', false)
+        ? _taskDays(s, a)
+        : s.daysRemaining,
+    'FUNC_ROUGH_TODO_DAY': (s, a) =>
+        s.pack.rules.flag('tasks', 'enabled', false)
+        ? _b(s.taskDeadlines[_intArg(a, 0)]?.day == s.date.day)
+        : (s.daysRemaining / 7).floor(),
     'FUNC_AFTER_DAY_V2': (s, a) => s.dayIndex,
     'FUNC_GET_GAME_COUNT': (s, a) => 1,
     'FUNC_STUDY_COUNT': (s, a) =>
@@ -248,6 +254,13 @@ class ConditionEvaluator {
     'FUNC_GET_PREMIUM_LEVEL': (s, a) => 0,
     'FUNC_IS_PLAYED_JP': (s, a) => 0,
   };
+
+  static int _taskDays(GameState state, List<dynamic> args) {
+    // Whole-day view of the authored task deadline. Native partial-day
+    // rounding is unresolved; the normal confinement exit uses TODO_HAVE.
+    final due = state.taskDeadlines[_intArg(args, 0)];
+    return due == null ? 0 : state.date.daysUntil(due);
+  }
 
   static int? _intArg(List<dynamic> a, int i) {
     if (i >= a.length) return null;

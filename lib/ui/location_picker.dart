@@ -6,6 +6,8 @@
 /// that apply there.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -45,10 +47,11 @@ class LocationPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = game.pack.locations.values
-        .where((l) => game.state.unlockedLocations.contains(l.id))
-        .toList()
-      ..sort((a, b) => a.id.compareTo(b.id));
+    final options =
+        game.pack.locations.values
+            .where((l) => game.state.unlockedLocations.contains(l.id))
+            .toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
 
     return FractionallySizedBox(
       heightFactor: 0.92,
@@ -79,11 +82,11 @@ class LocationPicker extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.72,
-                    ),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.72,
+                        ),
                     itemCount: options.length,
                     itemBuilder: (context, i) => _LocationCard(
                       location: options[i],
@@ -138,112 +141,121 @@ class _LocationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final badge = locationTypeLabel(location.type);
 
-    return Material(
-      color: const Color(0xFFFFEFDC),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
+    return PressFeedback(
+      child: Material(
+        color: const Color(0xFFFFEFDC),
         borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: current ? D30Colors.accentDark : D30Colors.panelBorder,
-              width: current ? 2.5 : 1.5,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: current ? D30Colors.accentDark : D30Colors.panelBorder,
+                width: current ? 2.5 : 1.5,
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 5,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: D30Colors.accent, width: 1.5),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(9),
-                            child: PackImage(
-                              path: location.image,
-                              placeholder: const ColoredBox(
-                                  color: Color(0xFFD9C7B4)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: D30Colors.accent,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(9),
+                              child: PackImage(
+                                path: location.image,
+                                placeholder: const ColoredBox(
+                                  color: Color(0xFFD9C7B4),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    if (badge != null)
-                      Positioned(
-                        top: -4,
-                        left: -4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: locationTypeColor(location.type),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            badge,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                      if (badge != null)
+                        Positioned(
+                          top: -4,
+                          left: -4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: locationTypeColor(location.type),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              badge,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                location.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: D30Colors.ink,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                location.description,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: D30Colors.ink),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: D30Colors.accent, width: 1.5),
-                ),
-                child: Text(
-                  '$relatedEffects Related Effect(s)',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: D30Colors.accentDark,
-                    fontWeight: FontWeight.w600,
+                    ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  location.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: D30Colors.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  location.description,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10, color: D30Colors.ink),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: D30Colors.accent, width: 1.5),
+                  ),
+                  child: Text(
+                    '$relatedEffects Related Effect(s)',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: D30Colors.accentDark,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

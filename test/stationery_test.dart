@@ -96,24 +96,55 @@ void main() {
     expect(game.state.stationeryInventory, after);
   });
 
-  test(
-    'combine uses editable distributions rather than guaranteed upgrade',
-    () {
-      final game = Game.newRun(pack, random: Random(99));
-      final id = pack.stationery.entries
-          .firstWhere((e) => e.value['rank'] == 'C')
-          .key;
-      game.state.stationeryInventory[id] = 4000;
-      final counts = <String, int>{};
-      for (var i = 0; i < 1000; i++) {
-        final result = game.combineStationery([id, id, id, id])!;
-        final rank = pack.stationery[result]!['rank'] as String;
-        counts[rank] = (counts[rank] ?? 0) + 1;
+  test('combine rarely upgrades instead of downgrading the best input', () {
+    final game = Game.newRun(pack, random: Random(99));
+    final id = pack.stationery.entries
+        .firstWhere((e) => e.value['rank'] == 'C')
+        .key;
+    game.state.stationeryInventory[id] = 4000;
+    final counts = <String, int>{};
+    for (var i = 0; i < 1000; i++) {
+      final result = game.combineStationery([id, id, id, id])!;
+      final rank = pack.stationery[result]!['rank'] as String;
+      counts[rank] = (counts[rank] ?? 0) + 1;
+    }
+    expect(counts['B'], inInclusiveRange(30, 75));
+    expect(counts.keys, unorderedEquals(['B', 'C']));
+  });
+
+  test('mixed combinations preserve the confirmed best-input tier floor', () {
+    final game = Game.newRun(pack, random: Random(31));
+    final ids = {
+      for (final rank in Game.stationeryRanks)
+        rank: pack.stationery.entries
+            .firstWhere((entry) => entry.value['rank'] == rank)
+            .key,
+    };
+    for (final ranks in [
+      ['B', 'C'],
+      ['A', 'C'],
+      ['A', 'C', 'C'],
+      ['B', 'C', 'C', 'C'],
+      ['S', 'C'],
+    ]) {
+      final materials = ranks.map((rank) => ids[rank]!).toList();
+      final floor = Game.stationeryRanks.indexOf(ranks.first);
+      for (var attempt = 0; attempt < 100; attempt++) {
+        for (final id in ids.values) {
+          game.state.stationeryInventory[id] = 10;
+        }
+        final result = game.combineStationery(materials)!;
+        final tier = Game.stationeryRanks.indexOf(
+          pack.stationery[result]!['rank'] as String,
+        );
+        expect(tier, inInclusiveRange(max(0, floor - 1), floor));
       }
-      expect(counts['B'], inInclusiveRange(150, 250));
-      expect(counts.keys, unorderedEquals(['B', 'C']));
-    },
-  );
+    }
+    expect(game.stationeryCombinationWeights([ids['A']!, ids['C']!]), {
+      'A': 0.95,
+      'S': 0.05,
+    });
+  });
 
   test('four-piece set bonus is applied once and removed with a piece', () {
     final game = Game.newRun(pack);

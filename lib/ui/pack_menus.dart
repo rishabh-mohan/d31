@@ -1,3 +1,5 @@
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
@@ -27,44 +29,46 @@ class _BooksMenuState extends State<BooksMenu> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(3),
-                    child: InkWell(
-                      key: ValueKey('book-subject-$subject'),
-                      onTap: () => setState(() => selected = subject),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 9),
-                            decoration: BoxDecoration(
-                              color: D30Colors.subject(subject),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    subjectLabel(subject),
-                                    style: const TextStyle(fontSize: 12),
+                    child: PressFeedback(
+                      child: InkWell(
+                        key: ValueKey('book-subject-$subject'),
+                        onTap: () => setState(() => selected = subject),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: D30Colors.subject(subject),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      subjectLabel(subject),
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '${game.state.stats[subject]?.round() ?? 0}',
-                                ),
-                              ],
+                                  Text(
+                                    '${game.state.stats[subject]?.round() ?? 0}',
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 5),
-                          Container(
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: selected == subject
-                                  ? D30Colors.accent
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(4),
+                            const SizedBox(height: 5),
+                            Container(
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: selected == subject
+                                    ? D30Colors.accent
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -239,35 +243,37 @@ class _BagsMenuState extends State<BagsMenu> {
   Widget filterButton(String label, bool selected, VoidCallback onTap) =>
       SizedBox(
         width: 135,
-        child: OutlinedButton(
-          onPressed: onTap,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: D30Colors.ink,
-            side: const BorderSide(color: D30Colors.accent, width: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        child: PressFeedback(
+          child: OutlinedButton(
+            onPressed: onTap,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: D30Colors.ink,
+              side: const BorderSide(color: D30Colors.accent, width: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(label, style: const TextStyle(fontSize: 12)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(label, style: const TextStyle(fontSize: 12)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 12,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: selected ? D30Colors.accent : Colors.transparent,
-                  border: Border.all(color: D30Colors.accent),
-                  borderRadius: BorderRadius.circular(8),
+                const SizedBox(width: 8),
+                Container(
+                  width: 12,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: selected ? D30Colors.accent : Colors.transparent,
+                    border: Border.all(color: D30Colors.accent),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -307,19 +313,21 @@ class _BagsMenuState extends State<BagsMenu> {
           alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.only(right: 26),
-            child: TextButton.icon(
-              style: TextButton.styleFrom(
-                backgroundColor: D30Colors.accent,
-                foregroundColor: D30Colors.panel,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
+            child: PressFeedback(
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  backgroundColor: D30Colors.accent,
+                  foregroundColor: D30Colors.panel,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                  ),
                 ),
+                onPressed: () => setState(() => newestFirst = !newestFirst),
+                icon: Icon(
+                  newestFirst ? Icons.arrow_upward : Icons.arrow_downward,
+                ),
+                label: const Text('Sort by recency'),
               ),
-              onPressed: () => setState(() => newestFirst = !newestFirst),
-              icon: Icon(
-                newestFirst ? Icons.arrow_upward : Icons.arrow_downward,
-              ),
-              label: const Text('Sort by recency'),
             ),
           ),
         ),
@@ -369,11 +377,13 @@ class _BagsMenuState extends State<BagsMenu> {
                           const Divider(),
                           Text(item.effectText, textAlign: TextAlign.center),
                           if (item.isConsumable)
-                            TextButton(
-                              onPressed: () => setState(() {
-                                game.useItem(item.id);
-                              }),
-                              child: const Text('Use'),
+                            PressFeedback(
+                              child: TextButton(
+                                onPressed: () => setState(() {
+                                  game.useItem(item.id);
+                                }),
+                                child: const Text('Use'),
+                              ),
                             ),
                         ],
                       ),

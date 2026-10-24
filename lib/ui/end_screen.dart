@@ -5,6 +5,8 @@
 /// state and whatever ending an event set directly via END_GAME.
 library;
 
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/state.dart';
@@ -30,13 +32,17 @@ class EndScreen extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               shrinkWrap: true,
               children: [
-                Text('Exam day',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium),
+                Text(
+                  'Exam day',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 12),
-                Text(outcome,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium),
+                Text(
+                  outcome,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 28),
                 Card(
                   child: Padding(
@@ -47,8 +53,7 @@ class EndScreen extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 2),
                             child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(_cap(e.key)),
                                 Text('${e.value.round()}'),
@@ -82,10 +87,13 @@ class EndScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: () => Navigator.of(context)
-                      .popUntil((route) => route.isFirst),
-                  child: const Text('Back to title'),
+                PressFeedback(
+                  child: FilledButton(
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst),
+                    child: const Text('Back to title'),
+                  ),
                 ),
               ],
             ),

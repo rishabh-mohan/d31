@@ -1,3 +1,5 @@
+import 'press_feedback.dart';
+
 import 'package:flutter/material.dart';
 
 import '../engine/pack.dart';
@@ -27,64 +29,66 @@ class UniversityBadgeView extends StatelessWidget {
     return Semantics(
       label: badge?.name ?? 'Empty university badge',
       button: onTap != null,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color.lerp(Colors.white, color, .08),
-            border: Border.all(color: color, width: 2.5),
-          ),
+      child: PressFeedback(
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
           child: Container(
-            padding: const EdgeInsets.all(5),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: color),
+              color: Color.lerp(Colors.white, color, .08),
+              border: Border.all(color: color, width: 2.5),
             ),
-            child: badge == null
-                ? Center(
-                    child: Text(
-                      '—',
-                      style: TextStyle(color: color, fontSize: 26),
-                    ),
-                  )
-                : Column(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: path == null
-                            ? id == 2
-                                  ? const CustomPaint(
-                                      painter: _DreamCrest(),
-                                      child: SizedBox.expand(),
-                                    )
-                                  : Icon(Icons.shield, color: color, size: 28)
-                            : PackImage(path: path, fit: BoxFit.contain),
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: color),
+              ),
+              child: badge == null
+                  ? Center(
+                      child: Text(
+                        '—',
+                        style: TextStyle(color: color, fontSize: 26),
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: SizedBox(
-                              width: 95,
-                              child: Text(
-                                badge.name,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 13,
-                                  height: 1.05,
+                    )
+                  : Column(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: path == null
+                              ? id == 2
+                                    ? const CustomPaint(
+                                        painter: _DreamCrest(),
+                                        child: SizedBox.expand(),
+                                      )
+                                    : Icon(Icons.shield, color: color, size: 28)
+                              : PackImage(path: path, fit: BoxFit.contain),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: SizedBox(
+                                width: 95,
+                                child: Text(
+                                  badge.name,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: color,
+                                    fontSize: 13,
+                                    height: 1.05,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+            ),
           ),
         ),
       ),
