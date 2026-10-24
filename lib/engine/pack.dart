@@ -7,7 +7,11 @@ library;
 
 import 'dart:convert';
 
+import 'admissions.dart';
 import 'game_date.dart';
+import 'quiz.dart';
+
+export 'admissions.dart' show AdmissionsCatalog, University, Department;
 
 /// Thin wrapper so hand-edited JSON yields a useful message instead of a cast
 /// error ten frames deep.
@@ -322,6 +326,11 @@ class EventNode {
   final Map<String, dynamic>? conditionSet;
   final Map<String, dynamic>? eventSound;
 
+  /// Raised to 1 when the scene closes on this node, so the next scene that
+  /// waits on it plays straight after. Retry Year's Sing-Off (219) hands the
+  /// battle to its results (220) this way, through `GOGO_SING`.
+  final String? continueTargetSwitch;
+
   EventNode({
     this.standingId,
     this.standingOff = false,
@@ -346,6 +355,7 @@ class EventNode {
     required this.actionChanger,
     required this.conditionSet,
     required this.eventSound,
+    this.continueTargetSwitch,
   });
 
   factory EventNode.fromJson(Map<String, dynamic> j) => EventNode(
@@ -377,6 +387,7 @@ class EventNode {
     actionChanger: (j['actionChanger'] as Map?)?.cast<String, dynamic>(),
     conditionSet: (j['conditionSet'] as Map?)?.cast<String, dynamic>(),
     eventSound: (j['eventSound'] as Map?)?.cast<String, dynamic>(),
+    continueTargetSwitch: j['continueTargetSwitch'] as String?,
   );
 
   bool get isTerminal => type == 'last';
@@ -394,6 +405,10 @@ class GameEvent {
   final bool isFake;
   final Map<String, dynamic>? conditionSet;
 
+  /// A character's ability scene plays only for the characters it lists
+  /// (global character_events.json). Empty for ordinary story events.
+  final List<int> characterIds;
+
   GameEvent({
     required this.id,
     required this.name,
@@ -405,7 +420,10 @@ class GameEvent {
     required this.isRandomDate,
     required this.isFake,
     required this.conditionSet,
+    this.characterIds = const [],
   });
+
+  bool get isCharacterEvent => characterIds.isNotEmpty;
 
   factory GameEvent.fromJson(Map<String, dynamic> j) => GameEvent(
     id: (j['id'] as num).toInt(),
@@ -418,6 +436,10 @@ class GameEvent {
     isRandomDate: j['isRandomDate'] as bool? ?? false,
     isFake: j['isFake'] as bool? ?? false,
     conditionSet: (j['conditionSet'] as Map?)?.cast<String, dynamic>(),
+    characterIds: (j['characterIdList'] as List? ?? const [])
+        .whereType<num>()
+        .map((n) => n.toInt())
+        .toList(),
   );
 }
 
@@ -733,6 +755,38 @@ class ContentPack {
   /// University badges, keyed by `universityId` and already in the
   /// alphabetical order the badge screen lists them in.
   final Map<int, UniversityBadge> badges;
+
+  /// The universities and departments the CSAT can be sent to.
+  final AdmissionsCatalog admissions;
+
+  /// Questions for the quiz choice macros.
+  final List<QuizProblem> quizzes;
+
+  /// The files this pack was read from, kept so the female script can be
+  /// built from the same sources (see [forPlayer]).
+  final Map<String, String> sourceFiles;
+
+  ContentPack? _femaleScript;
+  ContentPack? _maleScript;
+
+  /// Retry Year ships a second script for a female protagonist
+  /// (`events_female.json`): the same story with the friends' genders
+  /// swapped -- a male Ji Suin and Jian Lee, for one -- and lines to match.
+  bool get hasFemaleScript =>
+      _maleScript != null || sourceFiles.containsKey('events/events_female.json');
+
+  /// This pack with the script a protagonist of that gender plays. Built
+  /// once and shared; a pack without a female script returns itself.
+  ContentPack forPlayer({required bool isMale}) {
+    if (isMale) return _maleScript ?? this;
+    if (_maleScript != null) return this;
+    final female = sourceFiles['events/events_female.json'];
+    if (female == null) return this;
+    return _femaleScript ??= ContentPack.fromFiles({
+      ...sourceFiles,
+      'events/events.json': female,
+    }).._maleScript = this;
+  }
   final LevelTable studyLevels;
   final LevelTable exerciseLevels;
   final LevelTable partTimeLevels;
@@ -766,6 +820,9 @@ class ContentPack {
     required this.books,
     this.characters = const {},
     this.badges = const {},
+    this.admissions = const AdmissionsCatalog(),
+    this.sourceFiles = const {},
+    this.quizzes = const [],
     required this.studyLevels,
     required this.exerciseLevels,
     required this.partTimeLevels,
@@ -936,6 +993,19 @@ class ContentPack {
                   ))
           (j['universityId'] as num).toInt(): UniversityBadge.fromJson(j),
       },
+      sourceFiles: Map.unmodifiable(files),
+      quizzes: opt('quizzes.json') == null
+          ? const []
+          : _list(
+              'quizzes.json',
+              _obj('quizzes.json', opt('quizzes.json')!),
+              'problems',
+            ).map(QuizProblem.fromJson).toList(),
+      admissions: opt('admissions.json') == null
+          ? const AdmissionsCatalog()
+          : AdmissionsCatalog.fromJson(
+              _obj('admissions.json', opt('admissions.json')!),
+            ),
       shop: indexed('commerce.json', 'offers', (j) => j),
       stationery: indexed('commerce.json', 'stationery', (j) => j),
       stationerySets: opt('commerce.json') == null
@@ -967,6 +1037,9 @@ class ContentPack {
     'commerce.json',
     'characters.json',
     'badges.json',
+    'admissions.json',
+    'events/events_female.json',
+    'quizzes.json',
   ];
   static List<String> get allFiles => [...requiredFiles, ...optionalFiles];
 

@@ -14,6 +14,7 @@
 library;
 
 import 'game_date.dart';
+import 'pack.dart';
 import 'state.dart';
 
 typedef FuncHandler = num Function(GameState state, List<dynamic> args);
@@ -186,6 +187,11 @@ class ConditionEvaluator {
     },
     'FUNC_IS_TRAIT_LIST': (s, a) =>
         _b(a.whereType<num>().any((n) => s.traits.contains(n.toInt()))),
+    'FUNC_TRAIT_HAVE_LIST': (s, a) =>
+        _b(a.whereType<num>().any((n) => s.traits.contains(n.toInt()))),
+    // Is the current place of this kind ("partTimeJob", "sleep", ...)?
+    'FUNC_IS_LOCATION_TYPE': (s, a) =>
+        _b(a.isNotEmpty && s.location?.type == '${a[0]}'),
 
     'FUNC_RANDOM_TRUE': (s, a) {
       // args is a percentage when given, otherwise a coin flip.
@@ -230,21 +236,86 @@ class ConditionEvaluator {
     'FUNC_GET_GAME_COUNT': (s, a) => 1,
     'FUNC_STUDY_COUNT': (s, a) =>
         s.bookReadCounts.values.fold<int>(0, (x, y) => x + y),
-    'FUNC_GET_SUCCESS_LENGTH': (s, a) => s.studyCombo,
+    // How many departments accepted the CSAT. Retry Year's "Second Retake"
+    // (160) and story 16's "Second Try" both fire on 0, the failed year.
+    'FUNC_GET_SUCCESS_LENGTH': (s, a) => s.admittedDepartments.length,
     'FUNC_GOOD_DRAW_VALUE': (s, a) => s.drawValue,
+
+    // --- Retry Year predicates, from the Korean native's FUNC table --------
+
+    // vtl: has today passed the given 'yyyy.MM.dd'?
+    'FUNC_AFTER_DAY': (s, a) {
+      final parts = (a.isNotEmpty ? '${a[0]}' : '').split('.');
+      if (parts.length < 3) return 0;
+      final day = DateTime(
+        int.tryParse(parts[0]) ?? 0,
+        int.tryParse(parts[1]) ?? 1,
+        int.tryParse(parts[2]) ?? 1,
+      );
+      return _b(s.date.day.isAfter(day));
+    },
+    // qtl (0xadfef0): the mock exam's mark is the current stat total against
+    // that exam's two thresholds -- 1 below the first, 2 between, 3 above.
+    'FUNC_MOCK_EXAM_GOOD': (s, a) {
+      const thresholds = {
+        1: [1500, 1750],
+        2: [3500, 4250],
+        3: [8500, 9500],
+      };
+      final bands = thresholds[_intArg(a, 0)];
+      if (bands == null) return 0;
+      final total = s.totalStat;
+      var grade = 1;
+      for (final t in bands) {
+        if (total < t) return grade;
+        grade++;
+      }
+      return grade;
+    },
+    // rtl (0xadfc04): beat Taeyang's mark in the bet subject. His marks for
+    // bets 1-3 are fixed in the binary.
+    'FUNC_IS_GOLD_WIN': (s, a) {
+      const marks = {1: 370, 2: 1180, 3: 2450};
+      final mark = marks[s.switchValue('GOLD_ORDER')];
+      final subjects = s.pack.manifest.subjects;
+      final index = s.switchValue('GOLD_SUN_SUBJECT');
+      if (mark == null || index < 0 || index >= subjects.length) return 0;
+      return _b((s.stats[subjects[index]] ?? 0) >= mark);
+    },
+    // ttl (0xadf8a4): enough practice for the opponent SET_SING_TARGET drew.
+    // Character 67's ability is a guaranteed win.
+    'FUNC_SING_TARGET': (s, a) => _b(
+      s.characterId == 67 ||
+          s.switchValue('SING_COUNT') >= s.switchValue('SING_TARGET'),
+    ),
 
     'FUNC_COMPARE_SWITCH': (s, a) {
       final name = a.isNotEmpty ? a[0]?.toString() : null;
       return name == null ? 0 : s.switchValue(name);
     },
 
-    // Exam-time predicates. The exam milestone is not built yet, so these
-    // report "not yet" rather than pretending to a result. Overriding them is
-    // how the exam feature will hook in.
-    'FUNC_GET_CURRENT_EXAM_GRADE': (s, a) => 0,
-    'FUNC_IS_ENTER_UNIV_THAT_RATE': (s, a) => 0,
-    'FUNC_IS_ENTER_DEPART_LIST': (s, a) => 0,
-    'FUNC_IS_ENTER_UNIV_WITH_DEPART': (s, a) => 0,
+    // After the CSAT: the grade per subject (1 best .. 9, 0 before the exam)
+    // and where the student enrolled.
+    'FUNC_GET_CURRENT_EXAM_GRADE': (s, a) {
+      final subjects = s.pack.manifest.subjects;
+      final i = _intArg(a, 0) ?? 0;
+      if (s.csat == null || i < 0 || i >= subjects.length) return 0;
+      return s.csat!.grades[subjects[i]] ?? 0;
+    },
+    'FUNC_IS_ENTER_UNIV': (s, a) =>
+        _b(_enrolled(s)?.universityId == _intArg(a, 0)),
+    'FUNC_IS_ENTER_UNIV_WITH_DEPART': (s, a) =>
+        _b(_enrolled(s)?.universityId == _intArg(a, 0) &&
+            s.enrolledDepartment == _intArg(a, 1)),
+    'FUNC_IS_ENTER_DEPART_LIST': (s, a) => _b(
+      a.whereType<num>().any((n) => n.toInt() == s.enrolledDepartment),
+    ),
+    // Enrolled somewhere whose cutoff is at or above this percentile.
+    'FUNC_IS_ENTER_UNIV_THAT_RATE': (s, a) {
+      final department = _enrolled(s);
+      final rate = _numArg(a, 0) ?? 100;
+      return _b(department != null && department.percentile >= rate);
+    },
     'FUNC_IS_ENTER_UNIV_WITH_DEPART_TYPE': (s, a) => 0,
     'FUNC_IS_IN_CHARACTER_LIST': (s, a) => 0,
 
@@ -261,6 +332,10 @@ class ConditionEvaluator {
     final due = state.taskDeadlines[_intArg(args, 0)];
     return due == null ? 0 : state.date.daysUntil(due);
   }
+
+  static Department? _enrolled(GameState s) => s.enrolledDepartment == null
+      ? null
+      : s.pack.admissions.departments[s.enrolledDepartment];
 
   static int? _intArg(List<dynamic> a, int i) {
     if (i >= a.length) return null;

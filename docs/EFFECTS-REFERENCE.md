@@ -24,9 +24,11 @@ guide are tracked; do not publish the generated catalog.
 - `firstPlusStat`, `firstPlusMoney`, `firstExerciseLevel` and
   `firstPlusPartTimeJobLevel` apply at setup commit. Loading JSON does not apply
   them again. Live trait acquisition does not retroactively award starting bonuses.
-- `plusStat` uses nonzero `extraStat`, falling back to `storyStat`; never add both.
-  This is the current engine contract, supported by badge display evidence in
-  `traits.dart`. Older CLAUDE notes describing universal multiplication are stale.
+- Study efficiency adds one stat per authored unit. `plusStat` prefers nonzero
+  `storyStat`, falling back to `extraStat` for effects with no story value.
+  Genius of the Century is +3, not the alternate scaled +9. Setup labels use
+  the same reader. Passive-item `NORMAL_STAT_n` also resolves to +n;
+  consumable stat scaling is separate and unchanged.
 - `percentPlusMoney`, `percentPlusExp` and `percentPlusReward` are factors:
   1.2 means 20% more. Character and badge structured effects use the same reader.
   Work-EXP factors now apply to work blocks as well as workout-EXP factors to workouts.

@@ -44,6 +44,17 @@ class EffectEngine {
   /// Set by MOVE_LOCATION so the loop can follow.
   int? moveToLocation;
 
+  /// Switches a block raised only for this action's event check. The native
+  /// writes 1, checks events, and writes 0 again (doGather, doMakeFood,
+  /// doSingKing); Game clears these once the action's event has been picked.
+  /// Deliberately not cleared by [resetTransient], which starting an event
+  /// calls.
+  final Set<String> pulsedSwitches = {};
+
+  /// Messages an item asked to show the player, such as the Promotion Exam
+  /// Kit's reading. The UI drains these after using an item.
+  final List<String> reports = [];
+
   EffectEngine({
     ConditionEvaluator? conditions,
     Map<String, ChangerHandler>? extra,
@@ -158,6 +169,17 @@ class EffectEngine {
       case 'unlockLocation':
         final id = (e['locationId'] as num?)?.toInt();
         if (id != null) state.unlockedLocations.add(id);
+      case 'switchAdd':
+        final name = e['switch'] as String?;
+        if (name != null) state.addSwitch(name, amount('value').toInt());
+      case 'report':
+        final name = e['switch'] as String?;
+        if (name != null) {
+          reports.add(
+            '${e['label'] ?? name}: ${state.switchValue(name)}'
+            '${e['suffix'] ?? ''}',
+          );
+        }
       case 'removeTraits':
         final kind = e['traitType'] as String? ?? 'bad';
         for (final id in state.traits.toList()) {
@@ -257,14 +279,19 @@ class EffectEngine {
     return subs[index.clamp(0, subs.length - 1)];
   }
 
-  /// Advances one of the special side tracks. The switch name is the track's
-  /// own `<NAME>_ACTION_COUNT`; the step comes from
-  /// `rules.specialTracks.stepPerSession` so it can be retuned.
-  static void _advanceTrack(GameState s, String track) {
+  /// Advances one of the special side tracks: [counter] is the switch its
+  /// storyline reads. The step comes from `rules.specialTracks.stepPerSession`
+  /// (1, as the native) so it can be retuned.
+  static void _advanceTrack(GameState s, String counter) {
     final step = s.pack.rules
         .number('specialTracks', 'stepPerSession', 1)
         .toInt();
-    s.addSwitch('${track}_ACTION_COUNT', step);
+    s.addSwitch(counter, step);
+  }
+
+  static void _pulse(GameState s, EffectEngine e, String name) {
+    s.setSwitch(name, 1);
+    e.pulsedSwitches.add(name);
   }
 
   static final Map<String, ChangerHandler> defaultHandlers = {
@@ -356,6 +383,20 @@ class EffectEngine {
       if (id != null && s.grantTrait(id)) {
         final trait = s.pack.traits[id];
         if (trait != null) s.note('Gained trait: ${trait.name}.', 'effect');
+      }
+    },
+    // One trait from the list that the player does not hold yet (Hyunho's
+    // robots, the Gifted draws).
+    'ACQUIRE_TRAIT_RANDOM': (s, a, e) {
+      final pool = a
+          .whereType<num>()
+          .map((n) => n.toInt())
+          .where((id) => !s.traits.contains(id) && s.pack.traits[id] != null)
+          .toList();
+      if (pool.isEmpty) return;
+      final id = pool[s.random.nextInt(pool.length)];
+      if (s.grantTrait(id)) {
+        s.note('Gained trait: ${s.pack.traits[id]!.name}.', 'effect');
       }
     },
     'REMOVE_TRAIT': (s, a, e) {
@@ -462,7 +503,7 @@ class EffectEngine {
       final tick = _int(a, 3);
       if (id == null || days == null || tick == null) return;
       s.taskDeadlines[id] = GameDate(
-        s.date.day.add(Duration(days: days)),
+        GameDate.addDays(s.date.day, days),
         tick,
       );
       s.taskTitles[id] = (_str(a, 1) ?? '').replaceAll('_', ' ');
@@ -479,7 +520,13 @@ class EffectEngine {
       e.endCode = _int(a, 0);
       e.endLabel = _str(a, 1);
     },
-    'START_SAT': (s, a, e) {},
+    // The Graduation Exam's last line. The host sits the CSAT and takes the
+    // applications once the scene closes; see Game.takeCsat.
+    'START_SAT': (s, a, e) {
+      if (s.pack.rules.flag('exam', 'enabled', false) && s.csat == null) {
+        s.csatPending = true;
+      }
+    },
     'SHOW_ENDING': (s, a, e) {
       // Native sub_be91d0 presents an ending, then raises its second argument
       // as a continuation switch. The opening's START does not end the run.
@@ -521,19 +568,92 @@ class EffectEngine {
 
     // --- the special location tracks -------------------------------------
     //
-    // School offers "Idol practice", "Game practice", "Part collecting",
-    // "Special study" and "Psychic practice". Each is a side progression KSS
-    // runs in compiled code, so the mechanics are not recoverable from data.
-    // What *is* recoverable is that events gate on a matching switch, so each
-    // track advances its own counter: the content keyed to it then fires as
-    // the track progresses. How much a session is worth is tunable under
-    // `rules.specialTracks`.
+    // Each practice block adds one to the counter its storyline reads: the
+    // native handlers (idolAction, proGameAction, soccerAction,
+    // medicalAction, mechanicAction, practicePsychic) are a single `+ 1`.
+    // Story 16's idol beats fire at IDOL 10/25/50, soccer at SOCCER
+    // 10/30/50, the pro-gaming results branch on GAME 10/50/100; Ihyeon's
+    // potion levels need MEDICAL_COUNT 10, Hyunho's robots ROBOT_COUNT 10.
+    // The step stays tunable under `rules.specialTracks`.
     'IDOL_ACTION': (s, a, e) => _advanceTrack(s, 'IDOL'),
-    'PRO_GAME_ACTION': (s, a, e) => _advanceTrack(s, 'PRO_GAME'),
-    'MECHANIC_ACTION': (s, a, e) => _advanceTrack(s, 'MECHANIC'),
-    'MEDICAL_ACTION': (s, a, e) => _advanceTrack(s, 'MEDICAL'),
-    'PRACTICE_PSYCHIC': (s, a, e) => _advanceTrack(s, 'PSYCHIC'),
+    'PRO_GAME_ACTION': (s, a, e) => _advanceTrack(s, 'GAME'),
     'SOCCER_ACTION': (s, a, e) => _advanceTrack(s, 'SOCCER'),
+    'MEDICAL_ACTION': (s, a, e) => _advanceTrack(s, 'MEDICAL_COUNT'),
+    'MECHANIC_ACTION': (s, a, e) => _advanceTrack(s, 'ROBOT_COUNT'),
+    'PRACTICE_PSYCHIC': (s, a, e) =>
+        _advanceTrack(s, 'PSYCHIC_PRACTICE_COUNT'),
+
+    // --- Retry Year's compiled callbacks ----------------------------------
+    //
+    // Each is the disassembled body from the Korean native, not a guess.
+    // Addresses are recorded in docs/RETRY-YEAR.md.
+
+    // sub_bdc1b0 / sub_bdc264 / sub_bdc318: a friend's trouble block raises
+    // the switch their story waits on.
+    'DO_GO_BANJANG': (s, a, e) => s.setSwitch('NA_BLOCK', 1),
+    'DO_GO_LEE': (s, a, e) => s.setSwitch('LEE_BLOCK', 1),
+    'DO_GO_PRO': (s, a, e) => s.setSwitch('GO_BLOCK', 1),
+    // sub_bdb8dc: each assist counts toward Banjang's three diagnosis beats.
+    'DO_HELP_BANJANG': (s, a, e) => s.addSwitch('BANJANG_COUNT', 1),
+    // sub_bdc0d0 / sub_bdb9d8 / sub_bdbab8: raise, check events, lower.
+    'DO_GATHER': (s, a, e) => _pulse(s, e, 'GRASS_SW'),
+    'DO_MAKE_FOOD': (s, a, e) => _pulse(s, e, 'MAKE_FOOD_BLOCK'),
+    'DO_SINGKING': (s, a, e) => _pulse(s, e, 'SING_KING_BLOCK'),
+    // sub_bdbb98: practice is worth 2 with item 90008 in the bag, else 1.
+    // A character whose ability is SING_MONEY (67) is also paid each time;
+    // the amount is a remote-config value not in the binary, so
+    // rules.karaoke.money stands in for it.
+    'DO_KARAOKE': (s, a, e) {
+      s.addSwitch('SING_COUNT', s.itemCount(90008) > 0 ? 2 : 1);
+      if (s.pack.characters[s.characterId]?.specialFuncCode == 'SING_MONEY') {
+        s.addMoney(s.pack.rules.number('karaoke', 'money', 1000));
+      }
+    },
+    // sub_be9578: the next trouble block opens three days after the last
+    // target, rolling the month over.
+    'SET_NEXT_TARGET_BLOCK_CONDITION': (s, a, e) {
+      final month = s.switchValue('BLOCK_TARGET_MONTH');
+      final day = s.switchValue('BLOCK_TARGET_DAY');
+      if (month <= 0 || day <= 0) return;
+      final next = DateTime(s.date.day.year, month, day + 3);
+      s.setSwitch('BLOCK_TARGET_MONTH', next.month);
+      s.setSwitch('BLOCK_TARGET_DAY', next.day);
+    },
+    // sub_bea5f8 (0xff1048): the opponent and the practice they demand.
+    'SET_SING_TARGET': (s, a, e) {
+      final point = s.switchValue('SING_POINT');
+      s.setSwitch(
+        'SING_TARGET',
+        (point * 1.5 + s.random.nextInt(3)).round(),
+      );
+      s.setSwitch('SING_ENEMY', s.random.nextInt(6) + 1);
+    },
+    // sub_be9f38: Taeyang's bet. The argument names the mock exam (1-3) and
+    // the subject is drawn at random; FUNC_IS_GOLD_WIN settles it.
+    'SET_GOLD_SUN_VALUE': (s, a, e) {
+      final subjects = s.pack.manifest.subjects;
+      if (subjects.isEmpty) return;
+      s.setSwitch('GOLD_ORDER', _int(a, 0) ?? 1);
+      s.setSwitch('GOLD_SUN_SUBJECT', s.random.nextInt(subjects.length));
+    },
+    // sub_be973c: moving up to the Higher class closes the Lower class's
+    // haunts and sends you to the classroom.
+    'SET_HIGH_GOGO': (s, a, e) {
+      s.setSwitch('HIGH_GOGO', 1);
+      s.unlockedLocations.removeAll(const [2000, 20001, 20002, 20003, 20004]);
+      s.locationId = 1000;
+      s.unlockedLocations.add(1000);
+      e.moveToLocation = 1000;
+    },
+    // Takes one copy of the first listed item the player holds.
+    'REMOVE_ITEM_ONCE': (s, a, e) {
+      for (final n in a.whereType<num>()) {
+        if (s.itemCount(n.toInt()) > 0) {
+          s.removeItem(n.toInt());
+          return;
+        }
+      }
+    },
 
     // A draw/gacha beat: SET_DRAW_VALUE rolls, DO_DRAW commits the roll so
     // FUNC_GOOD_DRAW_VALUE can be compared against it.

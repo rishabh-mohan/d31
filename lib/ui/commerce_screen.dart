@@ -129,6 +129,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                         game.useItem(item.id);
                         Navigator.pop(context);
                         setState(() {});
+                        showItemReports(this.context, game);
                       },
                       child: const Text('Use'),
                     ),

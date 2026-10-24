@@ -96,6 +96,13 @@ class D30RaisedButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: color,
             foregroundColor: Colors.white,
+            // The lower face is drawn under this box, so the button must be
+            // exactly its painted face. Material's 48px tap-target padding
+            // made the face smaller than the box: the lower face read 10px
+            // instead of 6, and a held button uncovered it above the face,
+            // which looked like a thicker top border (TODO 63).
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            minimumSize: const Size(64, 44),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

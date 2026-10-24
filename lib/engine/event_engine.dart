@@ -13,6 +13,7 @@ library;
 import 'conditions.dart';
 import 'effects.dart';
 import 'pack.dart';
+import 'quiz.dart';
 import 'state.dart';
 import 'event_text.dart';
 
@@ -108,6 +109,7 @@ class EventRun {
   });
 
   void start() {
+    state.quiz = null;
     state.eventCounts[event.id] = (state.eventCounts[event.id] ?? 0) + 1;
     state.eventStates[event.id] = 1;
     state.eventsFiredToday++;
@@ -212,13 +214,23 @@ class EventRun {
             id = node.nextNodeId;
             continue;
           }
+          // A quiz choice draws its question now, and its options are
+          // shuffled so the answer is not always the first button.
+          final quizKind = QuizDraw.kindOf(
+            [node.optionText ?? '', ...node.options.map((o) => o.text)].join(),
+          );
+          if (quizKind != null) {
+            state.quiz = QuizDraw.draw(pack.quizzes, quizKind, state.random);
+          }
           final choices = <EventChoice>[];
           for (final option in node.options) {
             if (!conditions.evaluate(option.conditionSet, state)) continue;
-            choices.add(
-              EventChoice(expandEventText(option.text, state), option),
-            );
+            final text = expandEventText(option.text, state);
+            if (quizKind != null && text.trim().isEmpty) continue;
+            choices.add(EventChoice(text, option));
           }
+          if (quizKind != null && state.quiz != null) choices.shuffle(state.random);
+          state.quiz?.rewind();
           if (choices.isEmpty) {
             // Every branch gated out: fall through rather than deadlock.
             id = node.nextNodeId;
@@ -235,10 +247,23 @@ class EventRun {
           return;
 
         case 'last':
+          if (!gateOk && !_hasElseText(node)) {
+            current = _endBeat();
+            return;
+          }
           current = _endBeat(node);
           return;
 
         case 'text':
+          // A line whose gate failed is said only through its elseText.
+          // Without one it is skipped with its effect: shown anyway, the
+          // trait announcements ("[Jailbreak!!! All Stats +40!]") read as if
+          // a trait the player lacks had fired, and story 16's rival picks
+          // every subject at once instead of one.
+          if (!gateOk && !_hasElseText(node)) {
+            id = node.nextNodeId;
+            continue;
+          }
           final body = _textOf(node, gateOk);
           if (body.trim().isEmpty) {
             id = node.nextNodeId;
@@ -265,6 +290,9 @@ class EventRun {
 
   /// `elseText` is what the node shows when its own condition was false --
   /// KSS's way of writing a one-node branch.
+  static bool _hasElseText(EventNode node) =>
+      (node.elseText ?? '').trim().isNotEmpty;
+
   String _textOf(EventNode node, bool gateOk) {
     if (!gateOk && node.elseText != null && node.elseText!.isNotEmpty) {
       return expandEventText(node.elseText!, state);
@@ -285,6 +313,8 @@ class EventRun {
   /// prerequisites the pack adds are written the same way.
   EventBeat _endBeat([EventNode? node]) {
     state.eventStates[event.id] = 2;
+    final next = node?.continueTargetSwitch;
+    if (next != null && next.isNotEmpty) state.setSwitch(next, 1);
     return _buildEndBeat(node);
   }
 
@@ -351,6 +381,9 @@ class EventEngine {
     final section = state.currentSection;
     return pack.events.values.where((e) {
       if (e.isFake && !includeFake) return false;
+      if (e.isCharacterEvent && !e.characterIds.contains(state.characterId)) {
+        return false;
+      }
       if (e.rootNodeId < 0 || !pack.nodes.containsKey(e.rootNodeId)) {
         return false;
       }
@@ -373,7 +406,10 @@ class EventEngine {
       return null;
     }
 
-    final candidates = eligible(state);
+    // Character ability scenes have their own slot (Game._nextCharacterEvent).
+    final candidates = eligible(
+      state,
+    ).where((e) => !e.isCharacterEvent).toList();
     if (candidates.isEmpty) return null;
 
     final order =

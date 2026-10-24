@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:d30mode/engine/conditions.dart';
 import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/effects.dart';
+import 'package:d30mode/engine/event_engine.dart';
 import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/goals.dart';
@@ -42,9 +43,18 @@ Future<void> main() async {
       expect(pack.manifest.totalDays, 32); // 2023-10-16 .. 2023-11-16
       expect(pack.locations, hasLength(11));
       // English 1.29.0 campaign: 147 events, 3444 records / 3094 unique nodes.
-      expect(pack.events, hasLength(147));
-      expect(pack.nodes, hasLength(3094));
-      expect(pack.switchDefaults, hasLength(225));
+      expect(
+        pack.events.values.where((e) => !e.isCharacterEvent),
+        hasLength(147),
+      );
+      expect(
+        pack.nodes.keys.where(
+          (id) => !(pack.events[id ~/ 1000]?.isCharacterEvent ?? false),
+        ),
+        hasLength(3094),
+      );
+      // Campaign defaults plus the imported global character-event switches.
+      expect(pack.switchDefaults, hasLength(235));
       expect(pack.items, hasLength(177));
       expect(pack.traits, hasLength(244));
       expect(pack.books, hasLength(54));
@@ -65,6 +75,7 @@ Future<void> main() async {
     test('option nodes parse their inline branches', () {
       final optionNodes = pack.nodes.values
           .where((n) => n.type == 'option')
+          .where((n) => !(pack.events[n.id ~/ 1000]?.isCharacterEvent ?? false))
           .toList();
       expect(optionNodes, hasLength(74));
       // Every option node must offer at least one labelled branch -- an
@@ -346,10 +357,10 @@ Future<void> main() async {
 
     test('a held normal item feeds passiveSum', () {
       final game = Game.newRun(pack);
-      // NORMAL_STAT_2 resolves to +6 using the reference's x3 item scaling.
+      // NORMAL_STAT_2 adds two stats, one per efficiency unit.
       game.state.addItem(3026);
       game.state.locationId = 16003; // Reading Room, type "study"
-      expect(game.state.passiveSum('studyEfficiency'), 6);
+      expect(game.state.passiveSum('studyEfficiency'), 2);
       game.state.locationId = 1000; // School, type "school" -- out of scope
       expect(game.state.passiveSum('studyEfficiency'), 0);
     });
@@ -743,12 +754,12 @@ Future<void> main() async {
       expect(game.state.stats['english'], before + 100);
     });
 
-    test('a stat effect takes the extraStat of the effect', () {
+    test('a stat effect uses one stat per story efficiency unit', () {
       // Trait 104 "Bookworm": "+STAT_1 at [Study Locations]", shipped as
-      // extraStat 3 / storyStat 1. So +3, and only at a study location.
+      // extraStat 3 / storyStat 1. So +1, and only at a study location.
       final atReadingRoom = withTrait(104, locationId: 16003);
       expect(atReadingRoom.state.location!.type, 'study');
-      expect(atReadingRoom.traits.studyBonus(atReadingRoom.state), 3);
+      expect(atReadingRoom.traits.studyBonus(atReadingRoom.state), 1);
 
       final atGym = withTrait(104, locationId: 16005);
       expect(atGym.traits.studyBonus(atGym.state), 0);
@@ -766,14 +777,12 @@ Future<void> main() async {
       expect(game.traits.statValue(westernTaste), 1);
     });
 
-    test('extraStat is what a university badge prints', () {
-      // The evidence that settles extraStat over storyStat: Boryeong's badge
-      // is storyStat 2 / extraStat 7 and the badge screen reads
-      // "Korean Study Efficiency +7". No multiple of 2 reaches 7.
+    test('badges use the same unscaled study efficiency units', () {
+      // Boryeong carries storyStat 2 / extraStat 7; efficiency is +2.
       final boryeong = pack.badges[33]!;
       expect(boryeong.name, 'Boryeong University');
       final game = Game.newRun(pack, random: Random(59));
-      expect(game.traits.statValue(boryeong.effects.first), 7);
+      expect(game.traits.statValue(boryeong.effects.first), 2);
     });
 
     test('scope and conditions both gate a trait to its place', () {
@@ -781,7 +790,7 @@ Future<void> main() async {
       // locationIdList [2000] on the trait and LOCATION_ID == 2000 on the
       // effect. Either spelling alone must be enough.
       final atHome = withTrait(24, locationId: 2000);
-      expect(atHome.traits.studyBonus(atHome.state), 3);
+      expect(atHome.traits.studyBonus(atHome.state), 1);
       final atSchool = withTrait(24, locationId: 1000);
       expect(atSchool.traits.studyBonus(atSchool.state), 0);
     });
@@ -789,7 +798,7 @@ Future<void> main() async {
     test('a subject-specific effect only pays that subject', () {
       // Trait 17 "Gifted and Talented": Science +STAT_2.
       final game = withTrait(17);
-      expect(game.traits.studyBonus(game.state, subject: 'science'), 6);
+      expect(game.traits.studyBonus(game.state, subject: 'science'), 2);
       expect(game.traits.studyBonus(game.state, subject: 'korean'), 0);
     });
 
@@ -797,7 +806,7 @@ Future<void> main() async {
       // Trait 88 "Interdisciplinary Student": Humanities and Science +STAT_1.
       final game = withTrait(88);
       for (final subject in ['science', 'society']) {
-        expect(game.traits.studyBonus(game.state, subject: subject), 3);
+        expect(game.traits.studyBonus(game.state, subject: subject), 1);
       }
       for (final subject in ['korean', 'math', 'english']) {
         expect(game.traits.studyBonus(game.state, subject: subject), 0);
@@ -808,10 +817,10 @@ Future<void> main() async {
       // Trait 66 "Inferiority Complex": weakest subject +STAT_5.
       final game = withTrait(66);
       game.state.stats['math'] = 10; // now the weakest
-      expect(game.traits.studyBonus(game.state, subject: 'math'), 15);
+      expect(game.traits.studyBonus(game.state, subject: 'math'), 5);
       expect(game.traits.studyBonus(game.state, subject: 'korean'), 0);
       game.state.stats['korean'] = 1;
-      expect(game.traits.studyBonus(game.state, subject: 'korean'), 15);
+      expect(game.traits.studyBonus(game.state, subject: 'korean'), 5);
       expect(game.traits.studyBonus(game.state, subject: 'math'), 0);
     });
 
@@ -827,10 +836,7 @@ Future<void> main() async {
       // Trait 5 "Night Owl": -3 in the last five ticks, as TICK >= 10 --
       // itself evidence that 14 of the 15 ticks are the player's.
       expect(studyCost(withTrait(5, tick: 3)), plainStudyCost(tick: 3));
-      expect(
-        studyCost(withTrait(5, tick: 11)),
-        plainStudyCost(tick: 11) - 3,
-      );
+      expect(studyCost(withTrait(5, tick: 11)), plainStudyCost(tick: 11) - 3);
     });
 
     test('Out of Shape costs stamina, and exercising clears it', () {
@@ -882,11 +888,7 @@ Future<void> main() async {
         isTrue,
       );
       expect(
-        game.traits.conditionsHold(
-          wantsPresent,
-          game.state,
-          TraitContext.none,
-        ),
+        game.traits.conditionsHold(wantsPresent, game.state, TraitContext.none),
         isFalse,
       );
 
@@ -896,11 +898,7 @@ Future<void> main() async {
         isFalse,
       );
       expect(
-        game.traits.conditionsHold(
-          wantsPresent,
-          game.state,
-          TraitContext.none,
-        ),
+        game.traits.conditionsHold(wantsPresent, game.state, TraitContext.none),
         isTrue,
       );
     });
@@ -1051,7 +1049,7 @@ Future<void> main() async {
       final game = withTrait(35);
       game.state.date = GameDate(DateTime(2023, 11, 15), 7);
       expect(game.state.isDayBeforeExam, isTrue);
-      expect(game.traits.studyBonus(game.state), 45);
+      expect(game.traits.studyBonus(game.state), 15);
 
       game.state.date = GameDate(DateTime(2023, 11, 10), 7);
       expect(game.state.isDayBeforeExam, isFalse);
@@ -1286,7 +1284,14 @@ Future<void> main() async {
 
   group('book tiers and unlocking', () {
     test('ranks display as letters, weakest to strongest', () {
-      const expected = {'1': 'E', '2': 'D', '3': 'C', '4': 'B', '5': 'A', '6': 'S'};
+      const expected = {
+        '1': 'E',
+        '2': 'D',
+        '3': 'C',
+        '4': 'B',
+        '5': 'A',
+        '6': 'S',
+      };
       for (final book in pack.books.values) {
         final want = expected[book.bookRank];
         if (want != null) expect(book.tier, want);
@@ -1303,8 +1308,11 @@ Future<void> main() async {
       final game = Game.newRun(pack, random: Random(91));
       for (final subject in pack.manifest.subjects) {
         final unlocked = game.unlockedBooksFor(subject);
-        expect(unlocked, hasLength(1),
-            reason: '$subject should start with only its E-tier book');
+        expect(
+          unlocked,
+          hasLength(1),
+          reason: '$subject should start with only its E-tier book',
+        );
         expect(unlocked.single.tier, 'E');
       }
     });
@@ -1335,8 +1343,11 @@ Future<void> main() async {
       for (var slot = 0; slot < 400; slot++) {
         final book = game.bookForSlot(slot);
         expect(book, isNotNull);
-        expect(allowed.contains(book!.id), isTrue,
-            reason: '${book.name} (${book.tier}) is locked but was dealt');
+        expect(
+          allowed.contains(book!.id),
+          isTrue,
+          reason: '${book.name} (${book.tier}) is locked but was dealt',
+        );
       }
     });
 
@@ -1346,21 +1357,26 @@ Future<void> main() async {
       final book = pack.booksFor('korean').first;
       game.state.bookReadCounts[book.id] = book.doneCount;
 
-      final study = pack.locations[1000]!.actions
-          .firstWhere((a) => a.actionType == 'study');
+      final study = pack.locations[1000]!.actions.firstWhere(
+        (a) => a.actionType == 'study',
+      );
       final preview = game.preview(study, book: book);
 
       expect(preview.bookComplete, isTrue);
-      expect(preview.gain, greaterThan(0),
-          reason: 'a read-through book still pays out');
+      expect(
+        preview.gain,
+        greaterThan(0),
+        reason: 'a read-through book still pays out',
+      );
     });
 
     test('progress saturates rather than wrapping past completion', () {
       final game = Game.newRun(pack, random: Random(95));
       _leaveClass(game);
       final book = pack.booksFor('korean').first;
-      final study = pack.locations[1000]!.actions
-          .firstWhere((a) => a.actionType == 'study');
+      final study = pack.locations[1000]!.actions.firstWhere(
+        (a) => a.actionType == 'study',
+      );
 
       game.state.bookReadCounts[book.id] = book.doneCount ~/ 2;
       final half = game.preview(study, book: book).progress;
@@ -1516,6 +1532,39 @@ Future<void> main() async {
       while (!game.state.finished && ticks < tickBudget) {
         ticks++;
         final actions = game.hand();
+        if (actions.isEmpty && game.examEnabled && game.isExamDay) {
+          // Exam day: the Graduation Exam, the CSAT, the best realistic
+          // applications, then the endings until one closes the run.
+          void finish(EventRun run) {
+            eventsSeen++;
+            var beats = 0;
+            while (run.current != null && !run.current!.isEnd) {
+              if (++beats > 5000) fail('event ${run.event.id} did not end');
+              final beat = run.current!;
+              beat.choices.isNotEmpty
+                  ? run.choose(beat.choices.first)
+                  : run.advance();
+            }
+          }
+
+          final opening = game.beginDay();
+          if (opening != null) finish(opening);
+          game.takeCsat();
+          final admitted = game.submitApplications([
+            for (final d in game.departmentsByCutoff())
+              if (game.canApply(d) && game.admissionChance(d) >= .5) d.id,
+          ]);
+          game.enroll(admitted.firstOrNull);
+          for (
+            var run = game.nextEndingEvent();
+            run != null;
+            run = game.nextEndingEvent()
+          ) {
+            finish(run);
+          }
+          game.concludeRun();
+          break;
+        }
         if (actions.isEmpty) {
           // Nowhere to act: move somewhere that has actions, else stop.
           final elsewhere = game

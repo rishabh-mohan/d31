@@ -41,3 +41,11 @@ Per the user's instruction, log this and move to other TODOs. No new ordering
 patch or guessed event-by-event placement was applied in this follow-up.
 To resume, recover the native dispatch/comparator and lifecycle call sites,
 or obtain an original playthrough with dated/ticked scene transitions.
+
+## Later repairs in the shared tree
+
+The specific roll-call task-date predicate, friend-block gates, November
+calendar arithmetic across daylight saving, and Graduation Exam handoff have
+since been repaired. See RETRY-FOLLOWUP.md and RETRY-YEAR.md. Those repairs
+restore previously unreachable events; they do not recover the general native
+dispatch/comparator or establish numeric-ID ordering as original placement.

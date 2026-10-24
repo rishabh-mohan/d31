@@ -223,14 +223,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('only Mom and Ji Suin receive the event portrait lift', (
+  testWidgets('every portrait is raised, Mom and Ji Suin further still', (
     tester,
   ) async {
     final game = Game.newRun(retry);
-    for (final (event, npc, lift) in [
-      (169, 1, -24.0),
-      (3, 3, -24.0),
-      (2, 2, 0.0),
+    const lift = -EventScreen.portraitLift;
+    for (final (event, npc, expected) in [
+      (169, 1, lift - 24),
+      (3, 3, lift - 24),
+      (2, 2, lift),
     ]) {
       final run = game.events.begin(retry.events[event]!, game.state);
       while (run.portraitId != npc && !run.current!.isEnd) {
@@ -251,7 +252,7 @@ void main() {
             )
             .first,
       );
-      expect(transform.transform.getTranslation().y, lift);
+      expect(transform.transform.getTranslation().y, expected);
       expect(tester.takeException(), isNull);
     }
   });
@@ -299,7 +300,7 @@ void main() {
     expect(retry.manifest.storyId, 20);
     expect(retry.manifest.startDate.day, DateTime(2024, 10, 14));
     expect(retry.manifest.endDate.day, DateTime(2024, 11, 14));
-    expect(retry.events.length, 218);
+    expect(retry.events.values.where((e) => !e.isCharacterEvent).length, 218);
     expect(retry.locations.length, 8);
     expect(retry.characters.length, 20);
     expect(retry.locations[1000]!.name, 'Lower Classroom');
@@ -363,6 +364,27 @@ void main() {
     open(game);
     var actions = 0;
     while (!game.state.finished && actions++ < 600) {
+      if (game.isExamDay) {
+        final exam = game.beginDay();
+        expect(exam?.event.id, 74, reason: 'exam day opens on Graduation Exam');
+        finish(exam!);
+        expect(game.state.csatPending, isTrue);
+        game.takeCsat();
+        game.submitApplications([
+          for (final d in game.departmentsByCutoff())
+            if (game.canApply(d) && game.admissionChance(d) >= .5) d.id,
+        ]);
+        game.enroll(game.state.admittedDepartments.firstOrNull);
+        for (
+          var run = game.nextEndingEvent();
+          run != null;
+          run = game.nextEndingEvent()
+        ) {
+          finish(run);
+        }
+        game.concludeRun();
+        break;
+      }
       final action = game.availableActions().firstWhere(
         (a) => a.actionType == 'study',
       );
@@ -388,11 +410,14 @@ void main() {
       }
       if (game.state.dayEndPending) {
         game.finishPendingDay();
-        final morning = game.beginDay();
-        if (morning != null) finish(morning);
+        if (!game.isExamDay) {
+          final morning = game.beginDay();
+          if (morning != null) finish(morning);
+        }
       }
     }
     expect(game.state.finished, isTrue);
+    expect(game.state.endingLabel, isNotNull);
     expect(actions, lessThan(600));
   });
 

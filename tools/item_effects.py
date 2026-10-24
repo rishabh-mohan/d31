@@ -414,6 +414,17 @@ def _rule_meta(t: str, ctx: dict) -> list:
             "park": 16002,
         }
         out.append({"type": "unlockLocation", "locationId": ids[m.group(1).lower()]})
+    # Retry Year's promotion exam is passed on a proficiency the notes and
+    # guides raise (the native itemEffectTeacherPaper and its siblings add
+    # exactly these amounts to EXAM_POINT), and the kit reads back.
+    m = re.search(rf"promotion\s+exam\s+proficiency\s*\+{NUM}\s*%", t, re.I)
+    if m:
+        out.append({"type": "switchAdd", "switch": "EXAM_POINT",
+                    "value": int(_n(m.group(1)))})
+    if re.search(r"check\s+current\s+promotion\s+exam\s+proficiency", t, re.I):
+        out.append({"type": "report", "switch": "EXAM_POINT",
+                    "label": "Promotion Exam proficiency", "suffix": "%",
+                    "keepItem": True})
     if re.search(r"check\s+predicted\s+grades", t, re.I):
         out.append({"type": "ui", "action": "predictedGrades"})
     if re.search(r"check\s+abilities", t, re.I):

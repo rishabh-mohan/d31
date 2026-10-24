@@ -64,13 +64,13 @@ below is implemented behavior, not verified original chronology.
 
 The opening placement test is the authored narrative, not an invented question
 minigame. The original SHOW_ENDING reward/gallery popup is not reproduced; its
-continuation switch is implemented. Promotion/graduation exam mechanics, other
-special callbacks, and remaining art are tracked in RETRY-YEAR.md.
+continuation switch is implemented. Promotion/graduation exam and admissions flows are now implemented; their
+fitted scoring and remaining special callbacks are described in RETRY-YEAR.md.
 
-The confinement task's exact timestamp and expiration are recovered. General
-TODO_DAY/ROUGH_TODO_DAY rounding beyond whole-day differences is not recovered;
-those calculations are provisional. Tests establish the ordinary first-day
-release path, not every later early-release branch.
+The confinement task's exact timestamp and expiration are recovered. FUNC_ROUGH_TODO_DAY is now recovered as a same-day boolean check, not a day
+count; see RETRY-FOLLOWUP.md. Partial-day FUNC_TODO_DAY rounding remains
+provisional. Tests cover first-day release and later demerit confinement,
+without establishing every early-release branch.
 
 ## Verification
 

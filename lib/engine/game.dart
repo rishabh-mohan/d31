@@ -13,6 +13,7 @@ library;
 
 import 'dart:math';
 
+import 'admissions.dart';
 import 'conditions.dart';
 import 'effects.dart';
 import 'event_engine.dart';
@@ -165,9 +166,164 @@ class Game {
   }
 
   /// Tick-zero scheduled dialogue runs before the first action of a day.
-  EventRun? beginDay() => pack.rules.flag('events', 'checkAtDayStart', false)
-      ? nextScheduledEvent()
-      : null;
+  EventRun? beginDay() {
+    if (isExamDay && examEnabled) return _beginExamDay();
+    return pack.rules.flag('events', 'checkAtDayStart', false)
+        ? nextScheduledEvent()
+        : null;
+  }
+
+  // --- exam day -----------------------------------------------------------
+
+  bool get examEnabled =>
+      pack.rules.flag('exam', 'enabled', false) && !pack.admissions.isEmpty;
+
+  bool get isExamDay => state.date.compareTo(pack.manifest.endDate) >= 0;
+
+  /// The Graduation Exam scene opens exam day and ends on START_SAT. A pack
+  /// without one still sits the exam.
+  EventRun? _beginExamDay() {
+    if (state.csat != null || state.finished) return null;
+    final event = _nextPinnedEvent();
+    if (event != null) {
+      effects.resetTransient();
+      state.note('Event: ${event.name}', 'event');
+      return events.begin(event, state);
+    }
+    state.csatPending = true;
+    return null;
+  }
+
+  /// The highest-priority date-pinned event eligible now, ignoring the daily
+  /// cap. Exam day and the endings are scheduled content and must play.
+  GameEvent? _nextPinnedEvent() {
+    final order =
+        (pack.rules.section('events')['priorityOrder'] as List?)
+            ?.whereType<String>()
+            .toList() ??
+        const ['veryHigh', 'high', 'middle', 'low'];
+    int rank(GameEvent e) {
+      final i = order.indexOf(e.priority);
+      return i < 0 ? order.length : i;
+    }
+
+    final pinned = events.eligible(state).where((e) => !e.isRandomDate).toList()
+      ..sort((a, b) {
+        final r = rank(a).compareTo(rank(b));
+        return r != 0 ? r : a.id.compareTo(b.id);
+      });
+    return pinned.firstOrNull;
+  }
+
+  /// Sits the CSAT once; later calls return the same result.
+  CsatResult takeCsat() {
+    final existing = state.csat;
+    if (existing != null) return existing;
+    final mean = pack.rules.number('exam', 'meanTotal', 2600);
+    final sd = pack.rules.number('exam', 'sdTotal', 1300);
+    final subjects = pack.manifest.subjects;
+    var standard = Admissions.standardScoreFor(
+      state.totalStat,
+      mean: mean,
+      sd: sd,
+    );
+    // "University acceptance rate +1%" items move the score by the points
+    // that are worth around the middle of the curve.
+    standard += state.passiveSum('acceptanceRate', valueKey: 'percent') * 0.25;
+    final scores = <String, double>{
+      for (final s in subjects)
+        s: Admissions.standardScoreFor(
+          (state.stats[s] ?? 0) * subjects.length,
+          mean: mean,
+          sd: sd,
+        ),
+    };
+    final result = CsatResult(
+      standardScore: standard,
+      subjectScores: scores,
+      grades: {for (final e in scores.entries) e.key: Admissions.gradeFor(e.value)},
+    );
+    state.csat = result;
+    state.note(
+      'CSAT: standard score ${standard.toStringAsFixed(1)} '
+      '(top ${(100 - result.percentile).toStringAsFixed(1)}%).',
+      'system',
+    );
+    return result;
+  }
+
+  int get applicationLimit =>
+      pack.rules.number('exam', 'applications', 3).toInt();
+
+  /// Every department, hardest first.
+  List<Department> departmentsByCutoff() =>
+      pack.admissions.departments.values.toList()
+        ..sort((a, b) {
+          final c = b.deviation.compareTo(a.deviation);
+          return c != 0 ? c : a.id.compareTo(b.id);
+        });
+
+  /// Whether an application to [department] may be sent at all.
+  bool canApply(Department department) =>
+      department.requiredItems.every((id) => state.itemCount(id) > 0);
+
+  double admissionChance(Department department) => Admissions.acceptanceChance(
+    takeCsat().standardScore,
+    department.deviation,
+    spread: pack.rules.number('exam', 'admissionSpread', 1.5).toDouble(),
+  );
+
+  /// Sends the applications and decides each one. Returns the departments
+  /// that accepted.
+  List<int> submitApplications(List<int> departmentIds) {
+    if (state.applications.isNotEmpty) return state.admittedDepartments;
+    for (final id in departmentIds.take(applicationLimit)) {
+      final department = pack.admissions.departments[id];
+      if (department == null || !canApply(department)) continue;
+      state.applications.add(id);
+      if (state.random.nextDouble() < admissionChance(department)) {
+        state.admittedDepartments.add(id);
+      }
+    }
+    return state.admittedDepartments;
+  }
+
+  /// Enrols (or, with null, retakes the year) and turns the endings on.
+  void enroll(int? departmentId) {
+    if (departmentId != null &&
+        state.admittedDepartments.contains(departmentId)) {
+      state.enrolledDepartment = departmentId;
+      final d = pack.admissions.departments[departmentId]!;
+      final u = pack.admissions.universities[d.universityId];
+      state.note('Enrolled: ${u?.name ?? ''}, ${d.name}.', 'system');
+    }
+    state.csatPending = false;
+    state.setSwitch('ENDING_CODE', 1);
+  }
+
+  /// The next ending scene, once enrolment has turned the endings on.
+  EventRun? nextEndingEvent() {
+    if (state.finished || state.switchValue('ENDING_CODE') != 1) return null;
+    _processAutomaticEvents();
+    final event = _nextPinnedEvent();
+    if (event == null) return null;
+    effects.resetTransient();
+    state.note('Event: ${event.name}', 'event');
+    return events.begin(event, state);
+  }
+
+  /// No ending scene claimed the run: close it on the admission itself.
+  void concludeRun() {
+    if (state.finished) return;
+    state.finished = true;
+    final department = state.enrolledDepartment == null
+        ? null
+        : pack.admissions.departments[state.enrolledDepartment];
+    state.endingLabel ??= department == null
+        ? 'Retake the year'
+        : '${pack.admissions.universities[department.universityId]?.name ?? ''}'
+              ' — ${department.name}';
+  }
 
   EventRun? nextScheduledEvent() {
     if (openingPending ||
@@ -192,12 +348,19 @@ class Game {
         state.taskTitles.remove(id);
       }
     }
-    if (!pack.rules.flag('events', 'executeFakeEvents', false)) return;
+    // A campaign opts in to its own hidden events; the character abilities'
+    // nightly resets always run, or each ability would fire once per run.
+    final allFakes = pack.rules.flag('events', 'executeFakeEvents', false);
     final processed = <int>{};
     for (var steps = 0; steps < 100; steps++) {
       final event = events
           .eligible(state, includeFake: true)
-          .where((event) => event.isFake && !processed.contains(event.id))
+          .where(
+            (event) =>
+                event.isFake &&
+                (allFakes || event.isCharacterEvent) &&
+                !processed.contains(event.id),
+          )
           .firstOrNull;
       if (event == null) return;
       processed.add(event.id);
@@ -244,6 +407,7 @@ class Game {
   /// This is the pool the hand is drawn from, not what the player sees.
   List<LocationAction> availableActions() {
     if (openingPending || state.dayEndPending) return const [];
+    if (examEnabled && isExamDay) return const [];
     final here = state.location;
     if (here == null) return const [];
     return here.actions.where((a) {
@@ -258,11 +422,76 @@ class Game {
       // `conditionFuncCode` gates the special actions (idol practice, game
       // practice, ...). Without the switch set, hide them.
       final gate = a.conditionFuncCode;
-      if (gate != null && state.switchValue(blockSwitchFor(gate)) == 0) {
-        return false;
-      }
+      if (gate != null && !blockGateOpen(gate)) return false;
       return true;
     }).toList();
+  }
+
+  /// Whether a special block's compiled gate is open.
+  bool blockGateOpen(String gate) {
+    final recovered = recoveredBlockGates[gate];
+    if (recovered != null) return recovered(state);
+    return state.switchValue(blockSwitchFor(gate)) != 0;
+  }
+
+  /// Gates read from the Korean native's block-condition table (the
+  /// `Map<String, bool Function()>` built at 0x6cb798). Each body is the
+  /// disassembled closure, not a guess; see docs/RETRY-YEAR.md.
+  static final Map<String, bool Function(GameState)> recoveredBlockGates = {
+    // RJl / SJl / TJl: a friend's trouble block, once their rapport switch is
+    // high enough and the rolling BLOCK_TARGET date has passed.
+    'GO_PRO_CONDITION': (s) =>
+        s.switchValue('GO_BLOCK') == 0 &&
+        s.switchValue('GO_SEE') >= 2 &&
+        _pastBlockTarget(s) &&
+        s.switchValue('EXAM_SW') != 1,
+    'GO_LEE_CONDITION': (s) =>
+        s.switchValue('LEE_BLOCK') == 0 &&
+        s.switchValue('LEE_SEE') >= 3 &&
+        _pastBlockTarget(s) &&
+        s.switchValue('EXAM_SW') != 1,
+    'GO_BANJANG_CONDITION': (s) =>
+        s.switchValue('NA_BLOCK') == 0 &&
+        s.switchValue('BANJANG_HEALTH') >= 2 &&
+        _pastBlockTarget(s) &&
+        s.switchValue('EXAM_SW') != 1,
+    // UJl
+    'HELP_BANJANG_CONDITION': (s) =>
+        s.switchValue('BANJANG_STUDY_BLOCK_ON') == 1 &&
+        s.switchValue('BANJANG_CLEAR') == 0 &&
+        s.switchValue('NA_BLOCK') == 1 &&
+        s.switchValue('EXAM_SW') != 1,
+    // VJl / WJl
+    'SINGKING_CONDITION': (s) =>
+        s.switchValue('SING_POINT') >= 15 && s.switchValue('SING_WIN') != 1,
+    'KARAOKE_CONDITION': (s) => s.switchValue('SING_WIN') != 1,
+    // Story 16. LJl / MJl: the career blocks once their route opens.
+    'IDOL_BLOCK_CONDITION': (s) => s.switchValue('IDOL_BLOCK') == 1,
+    'PRO_GAME_BLOCK_CONDITION': (s) => s.switchValue('GAME_BLOCK') == 1,
+    // NJl / OJl / ZJl: blocks a character brings. Med Student Ihyeon (70)
+    // crafts medicine up to MEDICAL_LEVEL 3; Hyunho Park (74) collects parts
+    // until he holds Robotics Master (160020); psychic practice belongs to a
+    // character (10044) the catalog does not ship, so it stays shut.
+    'MEDICAL_BLOCK_CONDITION': (s) =>
+        s.characterId == 70 && s.switchValue('MEDICAL_LEVEL') <= 3,
+    'MECHANIC_BLOCK_CONDITION': (s) =>
+        s.characterId == 74 && !s.traits.contains(160020),
+    'PRACTICE_PSYCHIC_CONDITION': (s) =>
+        s.characterId == 10044 &&
+        !['skill1', 'skill2', 'skill3', 'skill4', 'skill5'].every(
+          (k) => s.switchValue(k) >= 5,
+        ),
+  };
+
+  /// The native builds `DATE_2024<MM><DD>00` from BLOCK_TARGET_MONTH/DAY and
+  /// asks whether now is strictly later, so the block opens from tick 1 of
+  /// the target day.
+  static bool _pastBlockTarget(GameState s) {
+    final month = s.switchValue('BLOCK_TARGET_MONTH');
+    final day = s.switchValue('BLOCK_TARGET_DAY');
+    if (month <= 0 || day <= 0) return false;
+    final target = GameDate(DateTime(s.date.day.year, month, day), 0);
+    return s.date.compareTo(target) > 0;
   }
 
   /// The switch a special block's gate actually reads.
@@ -700,6 +929,7 @@ class Game {
         state.date.tick + 1 < actionTicksPerDay) {
       state.addStat('all', pack.rules.exhaustedPenaltyStat);
       parts.add('You collapse from exhaustion.');
+      _releasePulses();
       if (deferExhaustion) {
         state.exhaustionPending = true;
         // The chosen action consumed a slot; the rest are lost to exhaustion.
@@ -913,6 +1143,7 @@ class Game {
 
     if (state.date.tick >= actionTicksPerDay) {
       final end = _endDay();
+      _releasePulses();
       return ActionOutcome(
         summary,
         dayEnded: true,
@@ -923,12 +1154,21 @@ class Game {
     }
 
     final event = _maybeEvent();
+    _releasePulses();
     return ActionOutcome(
       summary,
       event: event,
       runEnded: state.finished,
       beforeEvents: beforeEvents,
     );
+  }
+
+  /// Lowers the switches a block raised only for this action's event check.
+  void _releasePulses() {
+    for (final name in effects.pulsedSwitches) {
+      state.setSwitch(name, 0);
+    }
+    effects.pulsedSwitches.clear();
   }
 
   int get actionTicksPerDay {
@@ -957,7 +1197,9 @@ class Game {
 
     final entries = <ScheduledEntry>[];
     for (final event in pack.events.values) {
-      if (event.isFake || event.isRandomDate) continue;
+      if (event.isFake || event.isRandomDate || event.isCharacterEvent) {
+        continue;
+      }
       if ((state.eventStates[event.id] ?? 0) >= 2) continue;
       final set = event.eventSetId;
       if (set != null && !seenSets.contains(set)) continue;
@@ -1035,7 +1277,13 @@ class Game {
     }
     invalidateHand();
 
-    if (state.date.compareTo(pack.manifest.endDate) >= 0) {
+    if (isExamDay && examEnabled) {
+      // Exam day is played: the Graduation Exam scene, the CSAT, the
+      // applications, then whichever ending the result opens. No blocks.
+      state.note('Day ${state.totalDays}. The exam has arrived.', 'system');
+      return ActionOutcome('', dayEnded: true, event: eveningEvent);
+    }
+    if (isExamDay) {
       state.finished = true;
       state.endingLabel ??= 'Exam day';
       state.note('Day ${state.totalDays}. The exam has arrived.', 'system');
@@ -1053,6 +1301,8 @@ class Game {
     }
 
     state.note('Day ${state.dayNumber}.', 'system');
+    // Tick-0 housekeeping (the hidden resets) belongs to the new morning.
+    _processAutomaticEvents();
     final morningEvent = pack.rules.flag('events', 'checkAtDayStart', false)
         ? null
         : _maybeEvent();
@@ -1065,9 +1315,31 @@ class Game {
 
   EventRun? _maybeEvent() {
     _processAutomaticEvents();
+    final personal = _nextCharacterEvent();
+    if (personal != null) return personal;
     final event = events.pick(state);
     if (event == null) return null;
     final run = events.begin(event, state);
+    state.note('Event: ${event.name}', 'event');
+    return run;
+  }
+
+  /// The chosen character's own ability scene, if one is ready. These carry
+  /// their own odds (the Beggar is a 30% check each block) and reset nightly
+  /// through hidden events, so they neither wait for nor spend the day's
+  /// story-event budget.
+  EventRun? _nextCharacterEvent() {
+    final event =
+        (events
+                .eligible(state)
+                .where((e) => e.isCharacterEvent)
+                .toList()
+              ..sort((a, b) => a.id.compareTo(b.id)))
+            .firstOrNull;
+    if (event == null) return null;
+    final fired = state.eventsFiredToday;
+    final run = events.begin(event, state);
+    state.eventsFiredToday = fired;
     state.note('Event: ${event.name}', 'event');
     return run;
   }
@@ -1317,9 +1589,19 @@ class Game {
     if (!item.isConsumable) return false;
     effects.applyItem(item, state);
     state.itemUseCounts[itemId] = (state.itemUseCounts[itemId] ?? 0) + 1;
-    state.removeItem(itemId);
+    // A checking tool (the Promotion Exam Kit) is read, not used up.
+    if (!item.effects.any((e) => e['keepItem'] == true)) {
+      state.removeItem(itemId);
+    }
     state.note('Used ${item.name}.', 'effect');
     return true;
+  }
+
+  /// What the last item used asked to tell the player, emptied on read.
+  List<String> takeItemReports() {
+    final out = List<String>.of(effects.reports);
+    effects.reports.clear();
+    return out;
   }
 
   // --- outcome ------------------------------------------------------------

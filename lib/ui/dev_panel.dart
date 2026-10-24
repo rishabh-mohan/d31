@@ -23,6 +23,7 @@ import '../engine/game_date.dart';
 import '../engine/game.dart';
 import '../engine/pack.dart';
 import '../engine/save_store.dart';
+import '../engine/showcase.dart';
 import '../engine/state.dart';
 import 'game_screen.dart';
 import 'theme.dart';
@@ -251,7 +252,7 @@ class _StateTab extends StatelessWidget {
   /// run cannot be pushed outside its own calendar.
   static GameDate _shiftDays(Game game, int days) {
     final s = game.state;
-    final target = s.date.day.add(Duration(days: days));
+    final target = GameDate.addDays(s.date.day, days);
     final start = game.pack.manifest.startDate.day;
     final end = game.pack.manifest.endDate.day;
     final clamped = target.isBefore(start)
@@ -381,6 +382,25 @@ class _EventsTabState extends State<_EventsTab> {
                     onSelected: (v) => setState(() => _eligibleOnly = v),
                   ),
                 ],
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                child: PressFeedback(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.groups),
+                    label: Text(
+                      'Character showcase '
+                      '(${CharacterShowcase.lines(game.pack).length} lines)',
+                    ),
+                    onPressed: () async {
+                      final run = CharacterShowcase.begin(game);
+                      Navigator.of(context).pop();
+                      await widget.playEvent(run);
+                      CharacterShowcase.cleanUp(game.state);
+                    },
+                  ),
+                ),
               ),
             ],
           ),

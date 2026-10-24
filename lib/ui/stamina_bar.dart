@@ -28,10 +28,16 @@ class StaminaBar extends StatelessWidget {
 
   Widget _contents(double value) {
     final low = value <= .25;
+    // The outline is painted over the fill, not under it: drawn underneath,
+    // the fill's square ends covered the inside of the rounded corners and
+    // the border looked clipped there (TODO 61).
     return Container(
       height: 16,
       decoration: BoxDecoration(
         color: D30Colors.hpTrack,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: D30Colors.ink, width: 2),
       ),

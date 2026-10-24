@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../engine/game.dart';
 import '../engine/pack.dart';
 import '../engine/setup.dart';
+import '../engine/traits.dart';
 import 'pack_image.dart';
 import 'theme.dart';
 import 'setup_widgets.dart';
@@ -224,6 +225,40 @@ class _SetupScreenState extends State<SetupScreen> {
               ),
               onChanged: (v) => draft.lastName = v,
             ),
+            if (pack.hasFemaleScript) ...[
+              const SizedBox(height: 20),
+              const Text('Gender', style: TextStyle(fontSize: 18)),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (final (male, label) in [
+                    (true, 'Male'),
+                    (false, 'Female'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: ChoiceChip(
+                        label: Text(
+                          label,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        selected: draft.maleFor(pack) == male,
+                        selectedColor: D30Colors.accent,
+                        onSelected: (_) => setState(() => draft.isMale = male),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                draft.maleFor(pack)
+                    ? 'Ji Suin and Jian Lee are girls in this story.'
+                    : 'Ji Suin and Jian Lee are boys in this story.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: D30Colors.inkSoft),
+              ),
+            ],
           ],
         );
     }
@@ -331,8 +366,7 @@ String effectLabel(Map<String, dynamic> e) {
   final subject = e['plusStatType'] == 'all'
       ? 'All subjects'
       : subjectLabel(e['subjectType'] as String? ?? 'all');
-  final extra = e['extraStat'] as num? ?? 0;
-  final value = extra != 0 ? extra : e['storyStat'] ?? 0;
+  final value = studyEfficiencyValue(e);
   return switch (e['type']) {
     'plusStat' => '$subject study efficiency +$value',
     'firstPlusStat' => 'Initial $subject stats +${e['stat']}',
