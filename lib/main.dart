@@ -9,10 +9,12 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import 'engine/content_source.dart';
 import 'engine/game.dart';
 import 'engine/pack.dart';
+import 'ui/day_transition.dart';
 import 'ui/game_screen.dart';
 import 'ui/setup_screen.dart';
 import 'ui/pack_image.dart';
@@ -47,6 +49,13 @@ void _logJankyFrames() {
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   _logJankyFrames();
+  // Every screen is laid out against the 1080x2340 portrait reference, and
+  // several of them fit a fixed canvas to the viewport; there is no landscape
+  // form to rotate into. The Android manifest locks this too.
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const D30App());
 }
 
@@ -56,7 +65,7 @@ class D30App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'D30',
+      title: '30 Days',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,
       theme: ThemeData(
@@ -67,7 +76,10 @@ class D30App extends StatelessWidget {
           onSurface: D30Colors.ink,
         ),
         scaffoldBackgroundColor: D30Colors.page,
-        dividerTheme: const DividerThemeData(color: D30Colors.ink, thickness: 1.5),
+        dividerTheme: const DividerThemeData(
+          color: D30Colors.ink,
+          thickness: 1.5,
+        ),
         dialogTheme: DialogThemeData(
           backgroundColor: D30Colors.panel,
           shape: RoundedRectangleBorder(
@@ -139,6 +151,16 @@ class _TitleScreenState extends State<TitleScreen> {
       ),
     );
     if (game == null || !mounted) return;
+    // The reference hands off from setup through the navy D-31 screen, with a
+    // dash where the goal goes; the objective is announced over the hub after
+    // it. See docs/ui-reference UIR-08 and UIR-09.
+    await DayTransition.show(
+      context,
+      game: game,
+      before: DayTransition.snapshot(game.state),
+      initial: true,
+    );
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => GameScreen(

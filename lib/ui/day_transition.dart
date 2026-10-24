@@ -19,12 +19,18 @@ class DayTransition extends StatelessWidget {
   final DateTime? completedDay;
   final int? countdown;
 
+  /// The handoff straight after setup, before the day has been played. The
+  /// reference shows a dash where the goal row normally is: the objective is
+  /// announced afterwards, over the preparation hub, not here.
+  final bool initial;
+
   const DayTransition({
     super.key,
     required this.game,
     required this.before,
     this.completedDay,
     this.countdown,
+    this.initial = false,
   });
 
   static Future<void> show(
@@ -33,6 +39,7 @@ class DayTransition extends StatelessWidget {
     required Map<String, num> before,
     DateTime? completedDay,
     int? countdown,
+    bool initial = false,
   }) {
     return Navigator.of(context).push(
       PageRouteBuilder<void>(
@@ -43,6 +50,7 @@ class DayTransition extends StatelessWidget {
           before: before,
           completedDay: completedDay,
           countdown: countdown,
+          initial: initial,
         ),
         transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
@@ -61,7 +69,7 @@ class DayTransition extends StatelessWidget {
     final subjects = game.pack.manifest.subjects;
     final weekday =
         _weekdayNames[((completedDay ?? state.date.day).weekday - 1) % 7];
-    final goal = state.weeklyGoal;
+    final goal = initial ? null : state.weeklyGoal;
 
     return Scaffold(
       backgroundColor: const Color(0xFF152757),
