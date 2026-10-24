@@ -100,6 +100,14 @@ class DayTransition extends StatelessWidget {
                       color: const Color(0xFFDFE4F0),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.black, width: 1.5),
+                      // The reference card is raised off the navy, not flat.
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x66000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -175,21 +183,38 @@ class DayTransition extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 34),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 62,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF55B14E),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  // A raised control: darker lower face, then the soft shadow.
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xFF3D8138),
+                          offset: Offset(0, 6),
                         ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Icon(
-                        Icons.play_arrow,
-                        size: 38,
-                        color: Colors.white,
+                        BoxShadow(
+                          color: Color(0x55000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 62,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF55B14E),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          size: 38,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

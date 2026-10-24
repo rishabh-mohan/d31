@@ -25,75 +25,249 @@ class _DayMenuState extends State<DayMenu> {
   static const cream = Color(0xFFFFF9E9);
   static const peach = Color(0xFFFFEEDB);
 
-  Future<void> _panel(String title, Widget child, {bool fullHeight = false}) =>
-      showFlyUpDialog<void>(
-        context: context,
-        builder: (context) => Dialog(
-          backgroundColor: cream,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: orange, width: 4),
-          ),
-          child: SizedBox(
-            height: fullHeight ? MediaQuery.sizeOf(context).height * .86 : null,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 470, maxHeight: 650),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 26),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close, color: orange),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Flexible(child: child),
-                    const SizedBox(height: 18),
-                  ],
+  @override
+  void initState() {
+    super.initState();
+    // A fresh weekly goal announces itself over the hub, as in the reference.
+    final goal = game.state.weeklyGoal;
+    if (goal != null && game.state.announcedGoalWeek != goal.weekIndex) {
+      game.state.announcedGoalWeek = goal.weekIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _announceGoal();
+      });
+    }
+  }
+
+  /// The shared cream/orange modal.
+  ///
+  /// The reference integrates the close control into the top-right border as
+  /// an orange corner tab rather than floating a plain X, and it does not let
+  /// a one-line body collapse the window: [heightFactor] keeps the Calendar
+  /// tall and the Score Card deliberately short.
+  Future<void> _panel(
+    String title,
+    Widget child, {
+    bool fullHeight = false,
+    double? heightFactor,
+  }) => showFlyUpDialog<void>(
+    context: context,
+    builder: (context) {
+      final factor = heightFactor ?? (fullHeight ? .86 : null);
+      return Dialog(
+        backgroundColor: cream,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: orange, width: 4),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          height: factor == null
+              ? null
+              : MediaQuery.sizeOf(context).height * factor,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 470, maxHeight: 650),
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 26),
+                      ),
+                      const SizedBox(height: 18),
+                      Flexible(child: child),
+                      const SizedBox(height: 18),
+                    ],
+                  ),
                 ),
-              ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: _CornerClose(onTap: () => Navigator.pop(context)),
+                ),
+              ],
             ),
           ),
         ),
       );
+    },
+  );
 
   void _books() => _commerce(menu: PackMenu.books);
 
-  void _schedule() => _panel(
-    'Calendar',
-    Align(
-      alignment: Alignment.topCenter,
-      child: _box(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Row(
-            children: [
-              _tag('D-${game.state.daysRemaining}', orange),
-              const Expanded(
-                child: Text(
-                  'Graduation Exam',
+  /// The weekly-goal announcement.
+  ///
+  /// Two separate inset cards — the objective as `start → target` tiles either
+  /// side of a thick orange arrow, then the reward — and a single
+  /// acknowledging button. The reference has no close cross on this one.
+  Future<void> _announceGoal() {
+    final goal = game.state.weeklyGoal;
+    if (goal == null) return Future<void>.value();
+    return showFlyUpDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: cream,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: orange, width: 5),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 470),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Check your Weekly Goals',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22),
+                  style: TextStyle(fontSize: 24),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Container(height: 2, color: const Color(0x44502B0B)),
+                const SizedBox(height: 18),
+                _insetCard(
+                  label: 'Objectives',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: _tag(
+                          '${subjectLabel(goal.targetSubject)} ${goal.startValue.round()}',
+                          D30Colors.subject(goal.targetSubject),
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Icon(
+                          Icons.arrow_right_alt,
+                          color: orange,
+                          size: 38,
+                        ),
+                      ),
+                      Expanded(
+                        child: _tag(
+                          '${subjectLabel(goal.targetSubject)} ${goal.targetValue}',
+                          D30Colors.subject(goal.targetSubject),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _insetCard(
+                  label: 'Reward',
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _tag(
+                          subjectLabel(goal.rewardSubject),
+                          D30Colors.subject(goal.rewardSubject),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '+${goal.rewardValue}',
+                          style: const TextStyle(fontSize: 26),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: 190,
+                  child: D30RaisedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      "Let's do this!",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  /// A peach, shadowed rectangle with its heading above the content.
+  Widget _insetCard({required String label, required Widget child}) => Column(
+    children: [
+      Text(label, style: const TextStyle(fontSize: 20)),
+      const SizedBox(height: 6),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: peach,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 6,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: child,
+      ),
+    ],
+  );
+
+  /// One agenda row: an orange date segment and a peach title segment that
+  /// share a single rounded, shadowed rectangle.
+  Widget _agendaRow({double height = 76, double titleSize = 22}) => Container(
+    height: height,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: peach,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: orange),
+      boxShadow: const [
+        BoxShadow(color: Colors.black26, blurRadius: 5, offset: Offset(0, 4)),
+      ],
     ),
+    child: Row(
+      children: [
+        Container(
+          width: height * 1.15,
+          height: double.infinity,
+          color: orange,
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'D-${game.state.daysRemaining}',
+              style: const TextStyle(fontSize: 20, color: cream),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Graduation Exam',
+                style: TextStyle(fontSize: titleSize),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  void _schedule() => _panel(
+    'Calendar',
+    Align(alignment: Alignment.topCenter, child: _agendaRow()),
     fullHeight: true,
   );
 
@@ -184,34 +358,7 @@ class _DayMenuState extends State<DayMenu> {
                 child: Column(
                   children: [
                     InkWell(
-                      onTap: () => _panel(
-                        'Check your Weekly Goals',
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Objectives',
-                              style: TextStyle(fontSize: 24),
-                            ),
-                            if (goal != null) ...[
-                              const SizedBox(height: 16),
-                              _tag(
-                                '${subjectLabel(goal.targetSubject)} ${goal.startValue.round()} → ${goal.targetValue}',
-                                D30Colors.subject(goal.targetSubject),
-                              ),
-                              const SizedBox(height: 24),
-                              const Text(
-                                'Reward',
-                                style: TextStyle(fontSize: 24),
-                              ),
-                              _tag(
-                                '${subjectLabel(goal.rewardSubject)} +${goal.rewardValue}',
-                                D30Colors.subject(goal.rewardSubject),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                      onTap: _announceGoal,
                       child: FittedBox(
                         child: Row(
                           children: [
@@ -271,24 +418,12 @@ class _DayMenuState extends State<DayMenu> {
               height: 35,
               child: InkWell(
                 onTap: _schedule,
-                child: _box(
-                  child: Row(
-                    children: [
-                      Text('D-${state.daysRemaining}'),
-                      const Expanded(
-                        child: Text(
-                          'Graduation Exam',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _agendaRow(height: 35, titleSize: 14),
               ),
             ),
             const SizedBox(height: 8),
             Expanded(
-              flex: 5,
+              flex: 7,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -298,9 +433,32 @@ class _DayMenuState extends State<DayMenu> {
                         children: [
                           const Text('Traits', style: TextStyle(fontSize: 23)),
                           const SizedBox(height: 14),
-                          if (state.traits.isEmpty) const Text('-'),
-                          for (final id in state.traits)
-                            Text(game.pack.traits[id]?.name ?? 'Trait $id'),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              key: const ValueKey('hub-traits-scroll'),
+                              child: Column(
+                                children: [
+                                  if (state.traits.isEmpty) const Text('-'),
+                                  for (final id in state.traits)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
+                                      ),
+                                      child: D30Chip(
+                                        text:
+                                            game.pack.traits[id]?.name ??
+                                            'Trait $id',
+                                        color: traitColor(
+                                          game.pack.traits[id]?.type,
+                                        ),
+                                        textColor: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -315,7 +473,7 @@ class _DayMenuState extends State<DayMenu> {
                           children: [
                             const Text('Store', style: TextStyle(fontSize: 23)),
                             const SizedBox(height: 6),
-                            for (final offer in game.pack.shop.values)
+                            for (final offer in game.pack.shop.values.take(4))
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -334,7 +492,7 @@ class _DayMenuState extends State<DayMenu> {
                                     child: Row(
                                       children: [
                                         SizedBox(
-                                          width: 30,
+                                          width: 48,
                                           child: PackImage(
                                             path:
                                                 'items/${offer['itemId']}.png',
@@ -397,7 +555,7 @@ class _DayMenuState extends State<DayMenu> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              flex: 6,
+              flex: 5,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -532,12 +690,18 @@ class _DayMenuState extends State<DayMenu> {
                                 _tile(
                                   'Score Card',
                                   Icons.fact_check_outlined,
+                                  // Deliberately short next to the Calendar,
+                                  // with the message high and blank below it.
                                   () => _panel(
                                     'Score Card',
-                                    const Padding(
-                                      padding: EdgeInsets.all(24),
-                                      child: Text('No Score Card yet!'),
+                                    const Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'No Score Card yet!',
+                                        style: TextStyle(fontSize: 18),
+                                      ),
                                     ),
+                                    heightFactor: .26,
                                   ),
                                 ),
                                 _tile(
@@ -556,26 +720,62 @@ class _DayMenuState extends State<DayMenu> {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 60,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3CB52F),
-                  foregroundColor: cream,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+            // Raised like the reference: a darker lower face under the green.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(color: Color(0xFF2B8422), offset: Offset(0, 6)),
+                ],
+              ),
+              child: SizedBox(
+                height: 60,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3CB52F),
+                    foregroundColor: cream,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                ),
-                onPressed: widget.onStart,
-                child: Semantics(
-                  label: 'Start day',
-                  child: const Icon(Icons.play_arrow, size: 42),
+                  onPressed: widget.onStart,
+                  child: Semantics(
+                    label: 'Start day',
+                    child: const Icon(Icons.play_arrow, size: 42),
+                  ),
                 ),
               ),
             ),
+            const SizedBox(height: 6),
           ],
         ),
       ),
     );
   }
+}
+
+/// The orange tab that the reference builds into a modal's top-right border.
+class _CornerClose extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CornerClose({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: D30Colors.accent,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12)),
+    ),
+    child: InkWell(
+      onTap: onTap,
+      child: const Tooltip(
+        message: 'Close',
+        child: SizedBox(
+          width: 44,
+          height: 40,
+          child: Icon(Icons.close, color: Colors.white, size: 26),
+        ),
+      ),
+    ),
+  );
 }

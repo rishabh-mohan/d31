@@ -17,6 +17,7 @@
 library;
 
 import 'state.dart';
+import 'traits.dart';
 
 class WeeklyGoal {
   /// Which Monday this goal belongs to; 0 is the first week of the run.
@@ -126,7 +127,8 @@ class Goals {
     final goal = state.weeklyGoal;
     if (goal == null || !goal.met) return;
     final percent = state.passiveSum('goalReward', valueKey: 'percent');
-    final amount = (goal.rewardValue * (1 + percent / 100)).round();
+    final factor = TraitEngine(pack: state.pack).goalRewardFactor(state);
+    final amount = (goal.rewardValue * (1 + percent / 100) * factor).round();
     state.addStat(goal.rewardSubject, amount);
     state.note('Weekly goal met: ${goal.rewardSubject} +$amount.', 'effect');
   }

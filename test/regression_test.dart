@@ -200,9 +200,13 @@ void main() {
       expect(game.state.hp, game.state.hpMax);
       expect(game.state.pendingStationery, isEmpty);
       await tester.tap(find.byIcon(Icons.play_arrow));
-      await tester.pumpAndSettle();
+      // The draw opens rolling, so it never settles until it is stopped.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(StationeryDraw), findsOneWidget);
       expect(game.state.stationeryInventory, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('stop-all-stationery')));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
       expect(find.byType(DayMenu), findsOneWidget);
@@ -364,7 +368,7 @@ void main() {
       expect(find.text('First line'), findsOneWidget);
       expect(find.text('Friend'), findsWidgets);
       expect(find.text('Me'), findsWidgets);
-      await tester.tap(find.byTooltip('Close log'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Close'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Choose me'));
       await tester.pump();
@@ -416,6 +420,9 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    // A fresh goal announces itself over the hub; acknowledge it first.
+    await tester.tap(find.text("Let's do this!"));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.play_arrow));
     await tester.pumpAndSettle();

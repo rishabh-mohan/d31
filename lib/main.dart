@@ -14,6 +14,10 @@ import 'engine/content_source.dart';
 import 'engine/game.dart';
 import 'engine/pack.dart';
 import 'ui/game_screen.dart';
+import 'ui/setup_screen.dart';
+import 'ui/pack_image.dart';
+import 'engine/setup.dart';
+import 'ui/theme.dart';
 
 /// Logs any frame that misses the 16ms budget, with the build and raster
 /// times split out. Off in release.
@@ -54,14 +58,22 @@ class D30App extends StatelessWidget {
     return MaterialApp(
       title: 'D30',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFCF6679)),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFCF6679),
-          brightness: Brightness.dark,
+          seedColor: D30Colors.accent,
+          surface: D30Colors.panel,
+          primary: D30Colors.accentDark,
+          onSurface: D30Colors.ink,
+        ),
+        scaffoldBackgroundColor: D30Colors.page,
+        dividerTheme: const DividerThemeData(color: D30Colors.ink, thickness: 1.5),
+        dialogTheme: DialogThemeData(
+          backgroundColor: D30Colors.panel,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: D30Colors.accent, width: 3),
+          ),
         ),
         useMaterial3: true,
       ),
@@ -83,6 +95,7 @@ class _TitleScreenState extends State<TitleScreen> {
   Object? _error;
   StackTrace? _stack;
   bool _loading = true;
+  RunSetup? _setup;
 
   @override
   void initState() {
@@ -100,6 +113,7 @@ class _TitleScreenState extends State<TitleScreen> {
       if (!mounted) return;
       setState(() {
         _pack = pack;
+        _setup = RunSetup(pack);
         _location = location;
         _loading = false;
       });
@@ -113,14 +127,22 @@ class _TitleScreenState extends State<TitleScreen> {
     }
   }
 
-  void _start() {
+  Future<void> _start() async {
     final pack = _pack;
     final location = _location;
     if (pack == null || location == null) return;
+    PackImages.use(location);
+    final game = await Navigator.of(context).push<Game>(
+      MaterialPageRoute(
+        builder: (_) =>
+            SetupScreen(pack: pack, draft: _setup ??= RunSetup(pack)),
+      ),
+    );
+    if (game == null || !mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => GameScreen(
-          game: Game.newRun(pack),
+          game: game,
           packLocation: location,
           onPackReloaded: (p, l) => setState(() {
             _pack = p;
@@ -144,11 +166,11 @@ class _TitleScreenState extends State<TitleScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _pack == null
-                      ? 'D-31'
-                      : 'D-${_pack!.manifest.totalDays - 1}',
+                  _pack == null ? 'D-31' : 'D-${_pack!.manifest.totalDays - 1}',
                   style: const TextStyle(
-                      fontSize: 56, fontWeight: FontWeight.bold),
+                    fontSize: 56,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -165,7 +187,9 @@ class _TitleScreenState extends State<TitleScreen> {
                     onPressed: _start,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 48, vertical: 16),
+                        horizontal: 48,
+                        vertical: 16,
+                      ),
                       textStyle: const TextStyle(fontSize: 20),
                     ),
                     child: const Text('Start'),
@@ -234,19 +258,28 @@ class _ErrorCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('The pack did not load',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.onErrorContainer)),
+            Text(
+              'The pack did not load',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: scheme.onErrorContainer,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('$error',
-                style: TextStyle(
-                    color: scheme.onErrorContainer, fontFamily: 'monospace')),
+            Text(
+              '$error',
+              style: TextStyle(
+                color: scheme.onErrorContainer,
+                fontFamily: 'monospace',
+              ),
+            ),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.tonal(
-                  onPressed: onRetry, child: const Text('Retry')),
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
             ),
           ],
         ),

@@ -455,3 +455,17 @@ Stationery catalogs and four-piece sets live in `commerce.json`. The
 Draws pick a rank before an item. Combination adds the two to four input maps before
 sampling. These probability values are provisional, not recovered original odds;
 see [STATIONERY.md](STATIONERY.md). The weekly Thursday award is free.
+
+
+## Optional presentation.json
+
+Generated locally by `tools/presentation_assets.py`; loaded by ContentPack when
+present. `characters` and `npcs` map string IDs to `skeleton`, named `expressions`,
+named `clothes`, and named `otherLayers` paths. `backgrounds` maps original event
+asset paths to pack-relative art paths, and `badges` maps university IDs to crests.
+Paths resolve under pack `images/` first and bundled `assets/images/` second.
+This catalog is independent of gameplay data. Event nodes retain `standingId`,
+`standingOff`, `standingExpression`, `standingClothes` and `otherLayerList`.
+The builder always writes a valid `image` for each location, preferring originals
+and using explicitly documented fallbacks where original files are unavailable.
+See `TODO-FOLLOWUP.md` for regeneration and deployment.

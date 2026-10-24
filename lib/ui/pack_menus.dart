@@ -137,29 +137,79 @@ class _BooksMenuState extends State<BooksMenu> {
                                     ),
                                     const Divider(),
                                     const SizedBox(height: 8),
-                                    LinearProgressIndicator(
-                                      value: book.doneCount > 0
-                                          ? (count / book.doneCount).clamp(0, 1)
-                                          : 1,
-                                      backgroundColor: D30Colors.panelBorder,
-                                      color: D30Colors.accent,
+                                    // Progress read so far above the left of
+                                    // the bar, the completion marker and the
+                                    // target count at its right.
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '$count',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        const Spacer(),
+                                        const Icon(
+                                          Icons.monetization_on,
+                                          size: 14,
+                                          color: D30Colors.coin,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          '(${book.doneCount})',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      '$count / ${book.doneCount}',
-                                      style: const TextStyle(fontSize: 11),
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: D30Colors.ink,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: FractionallySizedBox(
+                                        alignment: Alignment.centerLeft,
+                                        widthFactor: book.doneCount > 0
+                                            ? (count / book.doneCount)
+                                                  .clamp(0, 1)
+                                                  .toDouble()
+                                            : 1,
+                                        child: const ColoredBox(
+                                          color: D30Colors.accent,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 )
-                              : Column(
-                                  children: [
-                                    const Icon(Icons.lock, size: 50),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Unlocked when you complete reading ${books[i - 1].name}',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ],
+                              // A locked tier withholds the book's normal
+                              // layout: a washed-out body under a large lock.
+                              : Opacity(
+                                  opacity: .55,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.lock,
+                                        size: 62,
+                                        color: Colors.black,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        i <= 1 ||
+                                                game.isBookComplete(
+                                                  books[i - 2],
+                                                )
+                                            ? 'Unlocked when you complete ${books[i - 1].name}'
+                                            : 'Unlocked when you complete the previous book',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                         ),
                       ),

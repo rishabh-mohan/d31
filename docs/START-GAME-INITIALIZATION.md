@@ -1,10 +1,29 @@
 # To-do: complete start-game initialization
 
-This is the implementation checklist for the original five-step setup flow.
-The current title starts a run directly; this document does **not** claim that
-the character/badge/trait selection screens are implemented. Player identity
-fields and event-name substitution already work. Trait effects remain parked
-by `rules.traits.enabled` until their activation is deliberately implemented.
+## Implementation checkpoint — 2026-10-23
+
+Title Start now opens `SetupScreen`: mode, character, badges, traits, name.
+Standard is playable; Elite is displayed disabled pending its rules. All 26
+story-16 characters and all badges are unlocked for the prototype by user request.
+Traits require `gachable: true` and global/matching story scope: event-only traits
+cannot be selected. Selections are distinct, capped at seven badges/five traits.
+Back preserves draft choices and names; no live run exists until Start Game.
+
+`RunSetup.commit` validates again, creates fresh state, grants initial traits,
+applies structured starting modifiers, fills modified maximum HP and issues the
+goal. Character/badge passives reuse TraitEngine (including work EXP). Run JSON
+stores the setup independently of current traits; loading never reapplies bonuses.
+Game and My Info use the selected portrait; My Info lists selected badges.
+
+Still outstanding: disk-persisted presets, account/save-slot integration, Elite
+mechanics, compiled character special abilities and block unlocks, the navy
+first-day screen/goal announcement. The existing preparation screen remains the
+handoff. Prototype proposals are in `EFFECTS-REFERENCE.md`; not-yet-implemented
+rules remain distinct from recovered facts. The setup and follow-up UI tests pass as part of the full
+139-test suite; static analysis is clean.
+
+The checklist below retains the full reference target and outstanding recovery
+requirements; it is not a statement that every original feature is implemented.
 
 ## Evidence and versions
 
@@ -171,3 +190,10 @@ trait duplicate/compatibility and consumption rules, name validation, exact badg
 effect scaling, account/save-slot persistence, and preset scoping. Screenshots
 establish the UI requirements; sibling-build pseudocode establishes persistence
 patterns, not every missing Global numerical rule.
+
+Deployment verified: debug APK installed on Nord N30 (7c2c1cc8), installed SHA-256 f687a22b1291300a849fb1866de08517304fdf59e00105982ba544f5a7f895c7 matches the local build. Missing character/badge catalogs added to the editable pack; existing rules retained.
+
+
+## UI follow-up
+
+See `TODO-FOLLOWUP.md` for the reference-style carousel, layered portraits, trait cards, original university crests and fixed seven-slot layout. Elite mechanics, account presets/slots and the exact first-day announcement remain outstanding.

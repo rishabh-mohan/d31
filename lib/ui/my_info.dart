@@ -1,268 +1,286 @@
-/// "My Info" — the panel behind the info button.
-///
-/// Portrait and name, the three levels, gold, the subject stats, the
-/// university badges, then traits on the left and equipped stationery on the
-/// right. Stationery reflects the live equipped cards; badge slots remain empty.
+/// Fixed reference-sized My Info panel, fitted to the available viewport.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
-import 'pack_image.dart';
+import '../engine/state.dart';
+import 'portrait.dart';
 import 'theme.dart';
 import 'stationery_card.dart';
+import 'university_badge.dart';
 
 class MyInfoPanel extends StatelessWidget {
   final Game game;
   const MyInfoPanel({super.key, required this.game});
-
-  static Future<void> show(BuildContext context, Game game) {
-    return showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (_) => MyInfoPanel(game: game),
-    );
-  }
+  static Future<void> show(BuildContext context, Game game) => showDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: .4),
+    builder: (_) => MyInfoPanel(game: game),
+  );
 
   @override
   Widget build(BuildContext context) {
     final state = game.state;
-    final m = game.pack.manifest;
-    final nextStudy = game.pack.studyLevels.nextThresholdAfter(state.studyExp);
-
+    final next = game.pack.studyLevels.nextThresholdAfter(state.studyExp);
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 40),
-      backgroundColor: D30Colors.panel,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: D30Colors.accent, width: 2.5),
-      ),
-      // A bounded Column with the list as its flexible child. A Stack here
-      // handed the shrink-wrapped ListView unbounded height and it collapsed
-      // to nothing, leaving only the barrier on screen.
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 8, 6),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'My Info',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: D30Colors.ink,
-                    ),
-                  ),
-                ),
-                Material(
-                  color: D30Colors.accent,
-                  borderRadius: BorderRadius.circular(10),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const SizedBox(
-                      width: 42,
-                      height: 42,
-                      child: Icon(Icons.close, color: Colors.white, size: 24),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
-              shrinkWrap: true,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFCEFDC),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 86,
-                        height: 96,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: const PackImage(
-                            path: 'character/portrait.png',
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 30),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: SizedBox(
+          width: 390,
+          height: 660,
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(color: D30Colors.ink, fontSize: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: D30Colors.panel,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: D30Colors.accent, width: 3),
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 52,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 44),
+                        const Expanded(
+                          child: Text(
+                            'My Info',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 26),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              state.fullName,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w600,
-                                color: D30Colors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            _line(
-                              'LV ${state.studyLevel.level} '
-                              '${state.studyLevel.name} '
-                              '(${state.studyExp.round()}/${nextStudy?.round() ?? 'MAX'})',
-                            ),
-                            _line('${state.money.round()} Gold'),
-                            _line(
-                              'Exercise Level ${state.exerciseLevel.level} '
-                              '(${_pct(game, exercise: true)})',
-                            ),
-                            _line(
-                              'Part-Time Level ${state.partTimeLevel.level} '
-                              '(${_pct(game, exercise: false)})',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    for (var i = 0; i < m.subjects.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 6),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: D30Colors.subject(m.subjects[i]),
-                            borderRadius: BorderRadius.circular(10),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.pop(context),
+                          style: IconButton.styleFrom(
+                            backgroundColor: D30Colors.accent,
+                            foregroundColor: Colors.white,
                           ),
-                          child: Column(
-                            children: [
-                              FittedBox(
-                                child: Text(
-                                  subjectLabel(m.subjects[i]),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: D30Colors.ink,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(18, 4, 18, 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEEDB),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 5,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: 104,
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 80,
+                                  child: Portrait(
+                                    pack: game.pack,
+                                    id: state.characterId,
+                                    character: true,
+                                    fallback: state.portrait,
                                   ),
                                 ),
-                              ),
-                              Text(
-                                '${(state.stats[m.subjects[i]] ?? 0).round()}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          state.fullName,
+                                          style: const TextStyle(fontSize: 24),
+                                        ),
+                                        Text(
+                                          'LV ${state.studyLevel.level} ${state.studyLevel.name} (${state.studyExp.round()}/${next?.round() ?? 'MAX'})',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        Text(
+                                          '${state.money.round()} Gold',
+                                          style: const TextStyle(fontSize: 17),
+                                        ),
+                                        Text(
+                                          'Exercise Level ${state.exerciseLevel.level} (${_pct(game, exercise: true)})',
+                                        ),
+                                        Text(
+                                          'Part-Time Level ${state.partTimeLevel.level} (${_pct(game, exercise: false)})',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 46,
+                            child: Row(
+                              children: [
+                                for (final subject
+                                    in game.pack.manifest.subjects)
+                                  Expanded(
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: D30Colors.subject(subject),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          FittedBox(
+                                            child: Text(
+                                              subjectLabel(subject),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              '${state.stats[subject]?.round() ?? 0}',
+                                              maxLines: 1,
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: UniversityBadgeSlots(
+                              pack: game.pack,
+                              ids: state.badgeIds,
+                            ),
+                          ),
+                          const Divider(color: D30Colors.ink, thickness: 1.5),
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        'Traits',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Expanded(
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.topCenter,
+                                          child: Column(
+                                            children: [
+                                              if (state.traits.isEmpty)
+                                                const Text('—'),
+                                              for (final id in state.traits)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 2,
+                                                      ),
+                                                  child: D30Chip(
+                                                    text: _traitLabel(
+                                                      game,
+                                                      state,
+                                                      id,
+                                                    ),
+                                                    color: traitColor(
+                                                      game
+                                                          .pack
+                                                          .traits[id]
+                                                          ?.type,
+                                                    ),
+                                                    textColor: Colors.white,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const VerticalDivider(
                                   color: D30Colors.ink,
+                                  width: 14,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: D30Colors.ink, thickness: 1),
-                const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Traits',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: D30Colors.ink,
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        'Stationery',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _SlotRow(
+                                          game: game,
+                                          left: 'pencil',
+                                          right: 'eraser',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Expanded(
+                                        child: _SlotRow(
+                                          game: game,
+                                          left: 'note',
+                                          right: 'markingPen',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (state.traits.isEmpty)
-                            const Text(
-                              '-',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: D30Colors.inkSoft,
-                              ),
-                            )
-                          else
-                            for (final id in state.traits)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 2,
-                                ),
-                                child: D30Chip(
-                                  text: game.pack.traits[id]?.name ?? '$id',
-                                  color: const Color(0xFF66BB6A),
-                                  textColor: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 180,
-                      margin: const EdgeInsets.symmetric(horizontal: 12),
-                      color: D30Colors.ink,
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Stationery',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: D30Colors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Plain rows, not a GridView: this sits next to a
-                          // sibling in a Row, and a scrollable has no
-                          // intrinsic height, which threw on every frame and
-                          // left the dialog blank.
-                          _SlotRow(game: game, left: 'pencil', right: 'eraser'),
-                          const SizedBox(height: 8),
-                          _SlotRow(
-                            game: game,
-                            left: 'note',
-                            right: 'markingPen',
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
-
-  static Widget _line(String text) => Padding(
-    padding: const EdgeInsets.only(top: 1),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 14, color: D30Colors.ink),
-    ),
-  );
 
   static String _pct(Game game, {required bool exercise}) {
     final table = exercise
@@ -272,12 +290,19 @@ class MyInfoPanel extends StatelessWidget {
     final tier = table.tierFor(exp);
     final next = table.nextThresholdAfter(exp);
     if (next == null || next <= tier.exp) return '100.0%';
-    final f = (exp - tier.exp) / (next - tier.exp) * 100;
-    return '${f.toStringAsFixed(1)}%';
+    return '${((exp - tier.exp) / (next - tier.exp) * 100).toStringAsFixed(1)}%';
   }
 }
 
 /// Two slots side by side.
+/// A trait's chip text: its name, plus the days left when it is one of the
+/// nine temporary ones (Flu 4, Fever Time 2, Hemorrhoids 5).
+String _traitLabel(Game game, GameState state, int id) {
+  final name = game.pack.traits[id]?.name ?? '$id';
+  final left = state.traitDaysLeft[id];
+  return left == null ? name : '$name ($left d)';
+}
+
 class _SlotRow extends StatelessWidget {
   final Game game;
   final String left;

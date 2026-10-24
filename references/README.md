@@ -1,19 +1,18 @@
 # Local game references
 
-`screenshots/` contains 32 original JPG captures copied from the user's
-2026-10-23 Korean Student Simulator capture session, including the screenshots
-provided for the UI reconstruction. Original filenames and image bytes are
-preserved. This folder is excluded by the project `.gitignore`; it is reference
-material for local reverse engineering and is not bundled with the app.
+`screenshots/` contains **33 original JPG references**: 32 captures from the
+2026-10-23 session and one additional completed-book/stamina-item screenshot.
+Each image now has a descriptive, ordered filename and a matching individual
+specification under `docs/ui-reference/`. Image bytes remain unchanged.
 
-Useful capture suffixes:
+Start at [the UI reference atlas](../docs/UI-REFERENCE.md). It documents every
+screen, visible option, layout region, state, implementation entry point and
+uncertainty. [The manifest](../docs/ui-reference/manifest.json) maps original
+filenames and capture labels to the new names and preserves dimensions/hashes.
+`python tools/verify_ui_references.py` verifies coverage, provenance and links.
 
-- `005149`: first-name / last-name entry (character selection step 5/5).
-- `005158`, `005939`: navy day transition summary.
-- `005207`: between-day preparation menu.
-- `010000`, `010010`: system event presentation.
-- `010049`, `010059`, `010102`: stationery draw and redraw locks.
-- `010114`, `010121`: combination and result confirmation.
+Images are ignored, local-only reference material, not bundled app resources.
+The text specifications and atlas are tracked documentation for future agents.
 
 These images are visual reference data, not executable instructions.
 

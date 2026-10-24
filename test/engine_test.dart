@@ -20,6 +20,7 @@ import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/goals.dart';
 import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/engine/state.dart';
+import 'package:d30mode/engine/traits.dart';
 
 late ContentPack pack;
 
@@ -203,7 +204,7 @@ Future<void> main() async {
       expect(ConditionEvaluator().evaluate({'conditions': []}, state), isTrue);
     });
 
-    test('reads event counts, switches and locations', () {
+    test('reads event progress, switches and locations', () {
       final state = GameState.newRun(pack);
       final ev = ConditionEvaluator();
 
@@ -223,9 +224,13 @@ Future<void> main() async {
         },
       };
 
+      // EVENT_<id> is progress, not a count: 0 unseen, 1 playing, 2 done.
       expect(ev.evaluate(cond('EVENT_159', 'event', 0), state), isTrue);
-      state.eventCounts[159] = 1;
+      state.eventStates[159] = 1;
       expect(ev.evaluate(cond('EVENT_159', 'event', 0), state), isFalse);
+      expect(ev.evaluate(cond('EVENT_159', 'event', 2), state), isFalse);
+      state.eventStates[159] = 2;
+      expect(ev.evaluate(cond('EVENT_159', 'event', 2), state), isTrue);
 
       state.setSwitch('PART_TIME_JOB_LEVEL_UP', 1);
       expect(
@@ -700,20 +705,357 @@ Future<void> main() async {
   });
 
   group('traits', () {
-    test('are loaded but contribute nothing while parked', () {
+    /// A run parked out of class at one location, with one trait granted.
+    Game withTrait(int id, {int locationId = 16005, int tick = 7}) {
       final game = Game.newRun(pack, random: Random(51));
+      game.state.date = GameDate(game.state.date.day, tick);
+      game.state.locationId = locationId;
+      expect(game.state.grantTrait(id), isTrue, reason: 'trait $id refused');
+      game.invalidateHand();
+      return game;
+    }
+
+    LocationAction actionOf(Game game, String type) =>
+        game.state.location!.actions.firstWhere((a) => a.actionType == type);
+
+    int studyCost(Game game) =>
+        game.preview(actionOf(game, 'study')).hpCost.round();
+
+    int plainStudyCost({int locationId = 16005, int tick = 7}) {
+      final game = Game.newRun(pack, random: Random(53));
+      game.state.date = GameDate(game.state.date.day, tick);
+      game.state.locationId = locationId;
+      return studyCost(game);
+    }
+
+    test('the catalog loads and the system is on', () {
       expect(pack.traits, hasLength(244));
-      expect(game.state.traitsEnabled, isFalse);
+      final game = Game.newRun(pack, random: Random(51));
+      expect(game.state.traitsEnabled, isTrue);
+    });
 
-      // Trait 1 is "TOEIC 800": firstPlusStat english +100.
-      final before = game.state.stats['english'];
-      game.state.traits.add(1);
+    test('firstPlusStat applies once, at run start', () {
+      // Trait 1 "TOEIC 800": Initial English Stats +100.
+      final game = Game.newRun(pack, random: Random(52));
+      final before = game.state.stats['english']!;
+      game.state.grantTrait(1);
       game.state.applyStartingTraitEffects();
-      expect(game.state.stats['english'], before);
+      expect(game.state.stats['english'], before + 100);
+    });
 
-      // Trait 5 "Night Owl" is an hpCost effect; it must not reach passiveSum.
-      game.state.traits.add(5);
-      expect(game.state.passiveSum('hpCost'), 0);
+    test('a stat effect takes the extraStat of the effect', () {
+      // Trait 104 "Bookworm": "+STAT_1 at [Study Locations]", shipped as
+      // extraStat 3 / storyStat 1. So +3, and only at a study location.
+      final atReadingRoom = withTrait(104, locationId: 16003);
+      expect(atReadingRoom.state.location!.type, 'study');
+      expect(atReadingRoom.traits.studyBonus(atReadingRoom.state), 3);
+
+      final atGym = withTrait(104, locationId: 16005);
+      expect(atGym.traits.studyBonus(atGym.state), 0);
+    });
+
+    test('an effect with extraStat 0 falls back to storyStat', () {
+      // Trait 160011 "High Potential" reads "+STAT_5" and ships
+      // extraStat 15 / storyStat 0, so the live number is 15.
+      final game = withTrait(160011);
+      expect(game.traits.studyBonus(game.state), 15);
+
+      // And the other way round: story 3's "Western Taste" ships
+      // extraStat 0 / storyStat 1 and its description reads "+1".
+      final westernTaste = pack.traits[30004]!.effects.first;
+      expect(game.traits.statValue(westernTaste), 1);
+    });
+
+    test('extraStat is what a university badge prints', () {
+      // The evidence that settles extraStat over storyStat: Boryeong's badge
+      // is storyStat 2 / extraStat 7 and the badge screen reads
+      // "Korean Study Efficiency +7". No multiple of 2 reaches 7.
+      final boryeong = pack.badges[33]!;
+      expect(boryeong.name, 'Boryeong University');
+      final game = Game.newRun(pack, random: Random(59));
+      expect(game.traits.statValue(boryeong.effects.first), 7);
+    });
+
+    test('scope and conditions both gate a trait to its place', () {
+      // Trait 24 "Hikikomori": +STAT_1 at {HOME}, written twice over --
+      // locationIdList [2000] on the trait and LOCATION_ID == 2000 on the
+      // effect. Either spelling alone must be enough.
+      final atHome = withTrait(24, locationId: 2000);
+      expect(atHome.traits.studyBonus(atHome.state), 3);
+      final atSchool = withTrait(24, locationId: 1000);
+      expect(atSchool.traits.studyBonus(atSchool.state), 0);
+    });
+
+    test('a subject-specific effect only pays that subject', () {
+      // Trait 17 "Gifted and Talented": Science +STAT_2.
+      final game = withTrait(17);
+      expect(game.traits.studyBonus(game.state, subject: 'science'), 6);
+      expect(game.traits.studyBonus(game.state, subject: 'korean'), 0);
+    });
+
+    test('tamgoos means the two elective slots', () {
+      // Trait 88 "Interdisciplinary Student": Humanities and Science +STAT_1.
+      final game = withTrait(88);
+      for (final subject in ['science', 'society']) {
+        expect(game.traits.studyBonus(game.state, subject: subject), 3);
+      }
+      for (final subject in ['korean', 'math', 'english']) {
+        expect(game.traits.studyBonus(game.state, subject: subject), 0);
+      }
+    });
+
+    test('lowSubject follows the weakest subject as it moves', () {
+      // Trait 66 "Inferiority Complex": weakest subject +STAT_5.
+      final game = withTrait(66);
+      game.state.stats['math'] = 10; // now the weakest
+      expect(game.traits.studyBonus(game.state, subject: 'math'), 15);
+      expect(game.traits.studyBonus(game.state, subject: 'korean'), 0);
+      game.state.stats['korean'] = 1;
+      expect(game.traits.studyBonus(game.state, subject: 'korean'), 15);
+      expect(game.traits.studyBonus(game.state, subject: 'math'), 0);
+    });
+
+    test('a stamina discount reaches the action cost', () {
+      // Trait 63 "Indestructible": Stamina Cost -3. The reference's buffed
+      // screenshots sit exactly 3 lower, which is where the un-buffed
+      // baseline in rules.staminaCost came from.
+      final buffed = withTrait(63);
+      expect(studyCost(buffed), plainStudyCost() - 3);
+    });
+
+    test('a tick-gated discount applies only in the last five ticks', () {
+      // Trait 5 "Night Owl": -3 in the last five ticks, as TICK >= 10 --
+      // itself evidence that 14 of the 15 ticks are the player's.
+      expect(studyCost(withTrait(5, tick: 3)), plainStudyCost(tick: 3));
+      expect(
+        studyCost(withTrait(5, tick: 11)),
+        plainStudyCost(tick: 11) - 3,
+      );
+    });
+
+    test('Out of Shape costs stamina, and exercising clears it', () {
+      final game = withTrait(GameState.outOfShapeTraitId);
+      expect(studyCost(game), plainStudyCost() + 3);
+      game.clearOutOfShape();
+      expect(studyCost(game), plainStudyCost());
+    });
+
+    test('percent fields are factors, not percentages', () {
+      // "Workaholic: Part-Time earnings +20%" ships percentPlusMoney 1.2,
+      // and "Getting Fitter!: Workout EXP +20%" ships percentPlusExp 1.2.
+      final game = withTrait(23, locationId: 16001); // Gold Mine
+      final (flat, factor) = game.traits.partTimeMoney(game.state);
+      expect(flat, 0);
+      expect(factor, closeTo(1.2, 0.0001));
+
+      final fitter = withTrait(25);
+      final (exFlat, exFactor) = fitter.traits.exerciseExp(fitter.state);
+      expect(exFlat, 0);
+      expect(exFactor, closeTo(1.2, 0.0001));
+
+      // And a flat one is flat: "All jobs are mine!: +100".
+      final flatPay = withTrait(22, locationId: 16001);
+      expect(flatPay.traits.partTimeMoney(flatPay.state).$1, 100);
+    });
+
+    test('sleep and goal rewards take their traits', () {
+      final sleeper = withTrait(14); // Deep Sleep: Stamina Recovery +1
+      expect(sleeper.traits.sleepHp(sleeper.state), 1);
+
+      final judger = withTrait(38); // MBTI J. Judger: rewards +10%
+      expect(
+        judger.traits.goalRewardFactor(judger.state),
+        closeTo(1.1, 0.0001),
+      );
+    });
+
+    test('a predicate condition can require a trait to be absent', () {
+      // Trait 212 "Superiority" wants trait 200010 NOT held, 213
+      // "Motivated" wants it held. Both belong to story 20, so they can
+      // never be granted in this run -- the evaluator is tested directly.
+      final game = Game.newRun(pack, random: Random(57));
+      final wantsAbsent = pack.traits[212]!.effects.first;
+      final wantsPresent = pack.traits[213]!.effects.first;
+
+      expect(
+        game.traits.conditionsHold(wantsAbsent, game.state, TraitContext.none),
+        isTrue,
+      );
+      expect(
+        game.traits.conditionsHold(
+          wantsPresent,
+          game.state,
+          TraitContext.none,
+        ),
+        isFalse,
+      );
+
+      game.state.traits.add(200010);
+      expect(
+        game.traits.conditionsHold(wantsAbsent, game.state, TraitContext.none),
+        isFalse,
+      );
+      expect(
+        game.traits.conditionsHold(
+          wantsPresent,
+          game.state,
+          TraitContext.none,
+        ),
+        isTrue,
+      );
+    });
+
+    test('a held item can be a condition too', () {
+      // Trait 138 "Overdresser": +6 per Winter Equipment, one effect per
+      // item (70002, 70003, 70008). Story 18's, so again evaluated directly.
+      final game = Game.newRun(pack, random: Random(58));
+      final effect = pack.traits[138]!.effects.first;
+      expect(
+        game.traits.conditionsHold(effect, game.state, TraitContext.none),
+        isFalse,
+      );
+      game.state.addItem(70002);
+      expect(
+        game.traits.conditionsHold(effect, game.state, TraitContext.none),
+        isTrue,
+      );
+    });
+
+    test('a temporary trait ages out, and only then stops counting', () {
+      // Trait 10 "Flu": Stamina Cost +4, initialLifeTime 4.
+      final game = withTrait(10);
+      expect(game.state.traitDaysLeft[10], 4);
+      expect(game.traits.hpCostDelta(game.state), 4);
+
+      for (var day = 0; day < 3; day++) {
+        game.state.expireTraitsForNewDay();
+        expect(game.state.traits, contains(10), reason: 'day $day');
+        expect(game.traits.hpCostDelta(game.state), 4);
+      }
+      game.state.expireTraitsForNewDay();
+      expect(game.state.traits, isNot(contains(10)));
+      expect(game.traits.hpCostDelta(game.state), 0);
+    });
+
+    test('a trait from another story is refused', () {
+      // Trait 202 "Genius of the Generation" belongs to story 20.
+      final game = Game.newRun(pack, random: Random(56));
+      expect(pack.traits[202]!.storyId, 20);
+      expect(game.state.grantTrait(202), isFalse);
+      expect(game.state.traits, isNot(contains(202)));
+      // Story 16's own traits are fine.
+      expect(pack.traits[160003]!.storyId, 16);
+      expect(game.state.grantTrait(160003), isTrue);
+    });
+
+    test('a granted trait survives save and load, clock and all', () {
+      final game = withTrait(10);
+      game.state.expireTraitsForNewDay();
+      final restored = GameState.fromJson(pack, game.state.toJson());
+      expect(restored.traits, contains(10));
+      expect(restored.traitDaysLeft[10], 3);
+    });
+
+    test('every effect type in the catalog is one the engine reads', () {
+      const known = {
+        'plusStat',
+        'schoolStudyPlusStat',
+        'hpCost',
+        'partTimeJobMoney',
+        'exerciseExp',
+        'plusSleepHp',
+        'goalReward',
+        'firstPlusStat',
+        'firstPlusMoney',
+        'firstExerciseLevel',
+        'firstPlusPartTimeJobLevel',
+      };
+      final unknown = <String>{};
+      for (final trait in pack.traits.values) {
+        for (final e in trait.effects) {
+          final type = e['type'] as String?;
+          if (type != null && !known.contains(type)) unknown.add(type);
+        }
+      }
+      expect(unknown, isEmpty, reason: 'unhandled trait effects: $unknown');
+    });
+
+    test('every condition target in the catalog is one the engine reads', () {
+      const known = {
+        'LOCATION_ID',
+        'LOCATION_TYPE',
+        'TICK',
+        'TICK_RANDOM',
+        'WEEKCODE',
+        'DATE_WEEK',
+        'DATE_INT',
+        'COMBO_STUDY',
+        'PREV_STUDY_SUBJECT',
+        'IS_BEFORE_SAT_EXAM',
+        'EXERCISE_LEVEL',
+        'PART_TIME_JOB_LEVEL',
+        'STUDY_LEVEL',
+        'IS_HAVE_ITEM',
+        'IS_HAVE_TRAIT',
+        'IS_TODAY_IN_DATE_LIST',
+      };
+      final unknown = <String>{};
+      for (final trait in pack.traits.values) {
+        for (final e in trait.effects) {
+          for (final c in (e['conditions'] as List? ?? const [])) {
+            final target = (c as Map)['target'] as String?;
+            if (target != null && !known.contains(target)) {
+              unknown.add(target);
+            }
+          }
+        }
+      }
+      expect(unknown, isEmpty, reason: 'unhandled trait conditions: $unknown');
+    });
+
+    test('a dice-roll trait rolls the same for the card and the block', () {
+      // Trait 33 "Monty Hall Problem": 2/3 chance of an extra +STAT_7 when
+      // studying Maths. If that roll came from the run's RNG the action card
+      // would show one number and the block would pay another.
+      final game = withTrait(33, locationId: 16003);
+      final first = game.traits.studyBonus(game.state, subject: 'math');
+      for (var i = 0; i < 20; i++) {
+        expect(game.traits.studyBonus(game.state, subject: 'math'), first);
+      }
+      expect(first, anyOf(0, 21));
+
+      // And it does move from tick to tick, which is what TICK_RANDOM means.
+      final seen = <num>{};
+      for (var tick = 0; tick < 14; tick++) {
+        game.state.date = GameDate(game.state.date.day, tick);
+        seen.add(game.traits.studyBonus(game.state, subject: 'math'));
+      }
+      expect(seen.length, greaterThan(1));
+    });
+
+    test('a study card promises what a trait-buffed block delivers', () {
+      final game = withTrait(33, locationId: 16003);
+      final study = game.state.location!.actions.firstWhere(
+        (a) => a.actionType == 'study',
+      );
+      final book = game.bookForSlot(0);
+      final promised = game.preview(study, book: book).gain;
+      final before = game.state.stats[book!.subject]!;
+      game.act(study, book: book);
+      expect(game.state.stats[book.subject]! - before, promised);
+    });
+
+    test('the day before the exam is what IS_BEFORE_SAT_EXAM means', () {
+      // Trait 35 "Procrastinator": all subjects +STAT_15 the day before the
+      // CSAT, which story 16 schedules on 2023-11-16.
+      final game = withTrait(35);
+      game.state.date = GameDate(DateTime(2023, 11, 15), 7);
+      expect(game.state.isDayBeforeExam, isTrue);
+      expect(game.traits.studyBonus(game.state), 45);
+
+      game.state.date = GameDate(DateTime(2023, 11, 10), 7);
+      expect(game.state.isDayBeforeExam, isFalse);
+      expect(game.traits.studyBonus(game.state), 0);
     });
   });
 
@@ -789,6 +1131,156 @@ Future<void> main() async {
         walk(e.conditionSet, e.id);
       }
       expect(bad, isEmpty);
+    });
+  });
+
+  group('storyline prerequisites', () {
+    // #189 "Come On!" -- the teacher walking you over to the comic club --
+    // is gated in the shipped data on nothing but its date, because KSS runs
+    // an event set one beat at a time in compiled code. Without #188 "School
+    // Comics Contest" behind it, the teacher reacts to a comic you never
+    // drew. tools/build_pack.py adds the prerequisite the set logic implied.
+    Game atComeOnDay() {
+      final game = Game.newRun(pack, random: Random(189));
+      game.state.date = GameDate(DateTime(2023, 10, 20), 0);
+      return game;
+    }
+
+    bool comeOnEligible(Game game) =>
+        game.events.eligible(game.state).any((e) => e.id == 189);
+
+    test('"Come On!" waits for the comics contest it follows', () {
+      final game = atComeOnDay();
+      expect(
+        comeOnEligible(game),
+        isFalse,
+        reason: 'the comic club beat must not fire before the contest',
+      );
+
+      // Mid-play is not good enough either: the prerequisite is completion.
+      game.state.eventStates[188] = 1;
+      expect(comeOnEligible(game), isFalse);
+
+      game.state.eventStates[188] = 2;
+      expect(comeOnEligible(game), isTrue);
+    });
+
+    test('playing the contest through is what unlocks it', () {
+      final game = atComeOnDay();
+      final run = game.events.begin(pack.events[188]!, game.state);
+      var steps = 0;
+      while (!run.current!.isEnd && steps++ < 200) {
+        final choices = run.current!.choices;
+        if (choices.isEmpty) {
+          run.advance();
+        } else {
+          run.choose(choices.first);
+        }
+      }
+      expect(run.current!.isEnd, isTrue);
+      expect(game.state.eventStates[188], 2);
+      expect(comeOnEligible(game), isTrue);
+    });
+
+    test('an event reports 0, then 1 while playing, then 2', () {
+      final game = Game.newRun(pack, random: Random(188));
+      expect(game.state.eventStates[1] ?? 0, 0);
+      final run = game.events.begin(pack.events[1]!, game.state);
+      expect(game.state.eventStates[1], 1);
+      var steps = 0;
+      while (!run.current!.isEnd && steps++ < 200) {
+        final choices = run.current!.choices;
+        choices.isEmpty ? run.advance() : run.choose(choices.first);
+      }
+      expect(game.state.eventStates[1], 2);
+    });
+  });
+
+  group('a maxed exercise level', () {
+    Game maxedAt(int locationId) {
+      final game = Game.newRun(pack, random: Random(10));
+      _leaveClass(game);
+      game.state.locationId = locationId;
+      game.state.exerciseExp = pack.exerciseLevels.tiers.last.exp;
+      game.invalidateHand();
+      return game;
+    }
+
+    test('tops out at level 10', () {
+      expect(pack.exerciseLevels.maxLevel, 10);
+      final game = maxedAt(16005);
+      expect(game.state.exerciseLevel.level, 10);
+      expect(game.state.exerciseMaxed, isTrue);
+    });
+
+    test('retires the workout block from every location that offers it', () {
+      // All ten locations with a workout action -- every one but the Gold
+      // Mine, which deals only part-time work and sleep.
+      final offering = pack.locations.values
+          .where((l) => l.actions.any((a) => a.actionType == 'exercise'))
+          .map((l) => l.id)
+          .toList();
+      expect(offering, hasLength(10));
+
+      for (final id in offering) {
+        final game = maxedAt(id);
+        expect(
+          game.availableActions().any((a) => a.actionType == 'exercise'),
+          isFalse,
+          reason: 'location $id still offers a workout at level 10',
+        );
+        expect(
+          game.availableActions(),
+          isNotEmpty,
+          reason: 'location $id must still deal something',
+        );
+        game.state.rerolls = 40;
+        for (var i = 0; i < 40; i++) {
+          expect(
+            game.hand().any((a) => a.actionType == 'exercise'),
+            isFalse,
+            reason: 'a workout was dealt at level 10 in location $id',
+          );
+          game.refreshHand();
+        }
+      }
+    });
+
+    test('is still offered a workout below the cap', () {
+      final game = Game.newRun(pack, random: Random(10));
+      _leaveClass(game);
+      game.state.locationId = 16005; // Gym
+      game.invalidateHand();
+      expect(
+        game.availableActions().any((a) => a.actionType == 'exercise'),
+        isTrue,
+      );
+    });
+
+    test('can never go Out of Shape', () {
+      // The global trait event 10010003 "Out of Shape" has exactly one
+      // condition, TRAIT_EVENT_7 == 1. Pinning that switch to 0 at the cap
+      // is what makes the event unreachable there.
+      final game = maxedAt(16005);
+      game.state.setSwitch(GameState.outOfShapeSwitch, 1);
+      expect(game.state.switchValue(GameState.outOfShapeSwitch), 0);
+      game.state.addSwitch(GameState.outOfShapeSwitch, 1);
+      expect(game.state.switchValue(GameState.outOfShapeSwitch), 0);
+
+      // Below the cap the switch behaves normally -- the rule is the cap,
+      // not a blanket ban.
+      final fresh = Game.newRun(pack, random: Random(10));
+      fresh.state.setSwitch(GameState.outOfShapeSwitch, 1);
+      expect(fresh.state.switchValue(GameState.outOfShapeSwitch), 1);
+    });
+
+    test('exercising clears an Out of Shape already held', () {
+      final game = Game.newRun(pack, random: Random(10));
+      game.state.setSwitch(GameState.outOfShapeSwitch, 1);
+      game.state.traits.add(GameState.outOfShapeTraitId);
+      game.clearOutOfShape();
+      expect(game.state.switchValue(GameState.outOfShapeSwitch), 0);
+      expect(game.state.traits, isNot(contains(GameState.outOfShapeTraitId)));
     });
   });
 
@@ -900,6 +1392,16 @@ Future<void> main() async {
       expect(costOf('exercise'), closeTo(24, 1.5));
       expect(costOf('partTimeJob'), closeTo(29, 1));
       expect(costOf('sleep'), 0, reason: 'sleep restores, it does not cost');
+    });
+
+    test('a Class block starts at -9 stamina', () {
+      // The reference's first Class block of a run reads -9: no exercise
+      // level, no trait discount, no item.
+      final game = Game.newRun(pack, random: Random(91));
+      expect(game.inClass, isTrue);
+      final lesson = game.hand().first;
+      expect(lesson.actionType, 'lesson');
+      expect(game.preview(lesson).hpCost, 9);
     });
 
     test('an E-tier textbook is worth +15, as the Books panel shows', () {

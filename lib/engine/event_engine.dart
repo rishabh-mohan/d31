@@ -52,6 +52,24 @@ class EventRun {
 
   EventBeat? current;
   String? backgroundImg;
+  int? portraitId;
+  String portraitExpression = 'defaults';
+  String portraitClothes = 'defaults';
+  List<String> portraitOtherLayers = const [];
+
+  void _updatePortrait(EventNode node) {
+    if (node.standingOff) {
+      portraitId = null;
+      return;
+    }
+    final id = node.standingId ?? (node.speakerId > 0 ? node.speakerId : null);
+    // Player speech leaves the previous NPC on screen.
+    if (id == null || id <= 0) return;
+    portraitId = id;
+    portraitExpression = node.standingExpression;
+    portraitClothes = node.standingClothes;
+    portraitOtherLayers = node.otherLayers;
+  }
 
   /// Guards against a cycle in hand-edited content. A graph that loops
   /// forever would hang the UI thread with no clue why.
@@ -69,6 +87,7 @@ class EventRun {
 
   void start() {
     state.eventCounts[event.id] = (state.eventCounts[event.id] ?? 0) + 1;
+    state.eventStates[event.id] = 1;
     state.eventsFiredToday++;
     _walkFrom(event.rootNodeId);
   }
@@ -130,6 +149,7 @@ class EventRun {
       final gateOk = conditions.evaluate(node.conditionSet, state);
 
       if (gateOk) {
+        _updatePortrait(node);
         effects.applyChanger(node.changer, state);
         if (effects.endRequested) {
           state.finished = true;
@@ -220,7 +240,16 @@ class EventRun {
     return pack.speakers[node.speakerId] ?? 'Speaker ${node.speakerId}';
   }
 
-  EventBeat _endBeat([EventNode? node]) => EventBeat(
+  /// Every way out of the graph lands here, so this is the one place that
+  /// can mark the event finished (state 2) for the conditions that wait on
+  /// it -- `EVENT_191 equal 2` gates Readers' Response, and the storyline
+  /// prerequisites the pack adds are written the same way.
+  EventBeat _endBeat([EventNode? node]) {
+    state.eventStates[event.id] = 2;
+    return _buildEndBeat(node);
+  }
+
+  EventBeat _buildEndBeat([EventNode? node]) => EventBeat(
     node:
         node ??
         EventNode(

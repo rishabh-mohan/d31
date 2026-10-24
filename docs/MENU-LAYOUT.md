@@ -47,3 +47,17 @@ Validation: `test/menu_navigation_test.dart` covers 2/3/4 ingredient acceptance,
 invalid-input atomicity, full hub names, effect previews, four-tab round trips at
 320/393 logical pixels, the two-card combine result, and header centering. Existing
 menu, event, lifecycle and stationery regressions remain part of the full suite.
+
+
+## TODO pass — 2026-10-23
+
+Preparation trait chips use the same polarity colors as My Info (good green,
+bad red, other purple). The hub Store previews only the first three offers with
+48px icons, leaving the full offer list in the expanded Store. Locked book text
+names the preceding book only if that book is unlocked; later locks say
+“Unlocked when you complete the previous book”.
+
+
+## Follow-up: crowded preparation and My Info
+
+Traits/Store now use 7 parts of the available panel height to Stationery/navigation’s 5. Four Store previews fit. Only the bounded preparation trait list scrolls. My Info uses a fitted 390×660 layout without page scrolling and seven fixed crest slots (four above three). See `TODO-FOLLOWUP.md` for rendering checks.

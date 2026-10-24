@@ -97,6 +97,25 @@ def main() -> int:
     print(" character")
     copy(CHARACTER, OUT / "character" / "portrait.png")
 
+    print(" characters")
+    # Each selectable character's own portrait, for the Student ID card on the
+    # character-select carousel. `skeleton.imgPath` is the finished artwork.
+    characters = 0
+    characters_file = D30 / "packs" / "kss16" / "characters.json"
+    if characters_file.exists():
+        wanted = {c["id"] for c in
+                  json.loads(characters_file.read_text(encoding="utf-8"))["characters"]}
+        catalog = json.loads(
+            (KSS / "global_data/characters.json").read_text(encoding="utf-8"))["characters"]
+        for c in catalog:
+            if c["id"] not in wanted:
+                continue
+            path = (c.get("skeleton") or {}).get("imgPath")
+            if not path:
+                continue
+            if copy(KSS / path.removeprefix("assets/"), OUT / "characters" / f"{c['id']}.png"):
+                characters += 1
+
     print(" stationery")
     equipment = json.loads((KSS / "global_data/equipment_items.json").read_text(encoding="utf-8"))["equipmentItems"]
     for item in equipment:
@@ -123,24 +142,19 @@ def main() -> int:
             if copy(src, OUT / "items" / src.name):
                 items += 1
 
-    print(f"done: {n} backgrounds, 1 character, {len(UI_ICONS)} ui, {items} items")
+    print(f"done: {n} backgrounds, 1 character, {characters} portraits, "
+          f"{len(UI_ICONS)} ui, {items} items")
 
-    # Write the location -> background mapping into the pack so the UI reads
-    # it as data rather than hardcoding it.
-    locations_file = D30 / "packs" / "kss16" / "locations.json"
+    # Exact story-16 backgrounds and layered characters supersede stand-ins.
+    import presentation_assets
+    presentation_assets.build(D30 / 'packs/kss16')
+    locations_file = D30 / 'packs/kss16/locations.json'
     if locations_file.exists():
-        with locations_file.open(encoding="utf-8") as fh:
-            data = json.load(fh)
-        for loc in data["locations"]:
-            name = LOCATION_BACKGROUND.get(loc["id"])
-            if name:
-                loc["image"] = f"backgrounds/{name}.png"
-        with locations_file.open("w", encoding="utf-8", newline="\n") as fh:
-            json.dump(data, fh, ensure_ascii=False, indent=1)
-            fh.write("\n")
-        print(f" wrote `image` onto {len(data['locations'])} locations")
-    else:
-        print(" (pack not built yet -- run tools/build_pack.py, then re-run this)")
+        data = json.loads(locations_file.read_text(encoding='utf-8'))
+        image_paths = presentation_assets.location_images()
+        for loc in data['locations']:
+            loc['image'] = image_paths.get(loc['id'])
+        locations_file.write_text(json.dumps(data, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
 
     return 0
 

@@ -154,12 +154,16 @@ class EffectEngine {
         if (id != null) state.unlockedLocations.add(id);
       case 'removeTraits':
         final kind = e['traitType'] as String? ?? 'bad';
-        state.traits.removeWhere((id) => state.pack.traits[id]?.type == kind);
+        for (final id in state.traits.toList()) {
+          if (state.pack.traits[id]?.type == kind) state.removeTrait(id);
+        }
       case 'cureTrait':
         final label = (e['trait'] as String? ?? '').toLowerCase();
-        state.traits.removeWhere(
-          (id) => (state.pack.traits[id]?.name ?? '').toLowerCase() == label,
-        );
+        for (final id in state.traits.toList()) {
+          if ((state.pack.traits[id]?.name ?? '').toLowerCase() == label) {
+            state.removeTrait(id);
+          }
+        }
       // Passive modifiers: read via passiveSum while the item is held.
       case 'studyEfficiency':
       case 'exerciseEfficiency':
@@ -247,9 +251,14 @@ class EffectEngine {
     // The host owns the loss-of-day sequence, after this global dialogue.
     // Do not charge the stat penalty or roll the date a second time here.
     'DEFAULT_FAIL_EVENT': (s, a, e) {},
-    // Trait effects are parked by rules.traits.enabled; the global workout
-    // event still clears its EXERCISE_LEVEL_UP switch through its changer.
-    'REMOVE_TRAIT_FROM_EXERCISE': (s, a, e) {},
+    // Exercising cures Out of Shape. Trait *effects* stay parked by
+    // rules.traits.enabled, but the trait and the switch its global event
+    // (10010003, gated on TRAIT_EVENT_7 == 1) waits on are cleared here, so
+    // the event cannot fire again off a stale switch.
+    'REMOVE_TRAIT_FROM_EXERCISE': (s, a, e) {
+      s.switches[GameState.outOfShapeSwitch] = 0;
+      s.removeTrait(GameState.outOfShapeTraitId);
+    },
     // --- stats ---
     'INCREASE_STAT': (s, a, e) =>
         s.addStat(_subjectAt(s, _int(a, 0) ?? 0), _num(a, 1)),
@@ -322,17 +331,22 @@ class EffectEngine {
     // --- traits ---
     'ACQUIRE_TRAIT': (s, a, e) {
       final id = _int(a, 0);
-      if (id != null) s.traits.add(id);
+      // grantTrait starts a temporary trait's clock and refuses traits
+      // belonging to another story.
+      if (id != null && s.grantTrait(id)) {
+        final trait = s.pack.traits[id];
+        if (trait != null) s.note('Gained trait: ${trait.name}.', 'effect');
+      }
     },
     'REMOVE_TRAIT': (s, a, e) {
       final id = _int(a, 0);
-      if (id != null) s.traits.remove(id);
+      if (id != null) s.removeTrait(id);
     },
     'REMOVE_BAD_TRAIT_RANDOM': (s, a, e) {
       final bad = s.traits
           .where((id) => s.pack.traits[id]?.type == 'bad')
           .toList();
-      if (bad.isNotEmpty) s.traits.remove(bad[s.random.nextInt(bad.length)]);
+      if (bad.isNotEmpty) s.removeTrait(bad[s.random.nextInt(bad.length)]);
     },
 
     // --- locations ---

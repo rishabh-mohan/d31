@@ -12,6 +12,7 @@ import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/ui/day_transition.dart';
+import 'package:d30mode/ui/dev_panel.dart';
 import 'package:d30mode/ui/day_menu.dart';
 import 'package:d30mode/ui/location_picker.dart';
 import 'package:d30mode/ui/my_info.dart';
@@ -39,13 +40,18 @@ Future<void> main() async {
         host(DayMenu(game: game, onStart: () => started = true)),
       );
       await tester.pumpAndSettle();
+      // A fresh goal announces itself over the hub; acknowledge it first.
+      expect(find.text('Check your Weekly Goals'), findsOneWidget);
+      await tester.tap(find.text("Let's do this!"));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Traits'), findsOneWidget);
       expect(find.text('Stationery'), findsOneWidget);
       expect(
-        find.byType(Scrollable),
-        findsNothing,
-        reason: 'the preparation menu must fit without scrolling',
+        find.byKey(const ValueKey('hub-traits-scroll')),
+        findsOneWidget,
+        reason:
+            'only the trait list scrolls inside the fitted preparation menu',
       );
       for (final title in ['Books', 'Score Card', 'Schedule']) {
         await tester.ensureVisible(find.text(title));
@@ -97,6 +103,151 @@ Future<void> main() async {
     expect(find.text('D-$countdown'), findsOneWidget);
   });
 
+  group('the dev panel Traits tab', () {
+    /// The tab's own list, which is the last one built: the State tab stays
+    /// in the tree behind it.
+    Finder list() => find.byType(ListView).last;
+
+    Future<void> scrollTo(WidgetTester tester, Finder target) async {
+      for (var i = 0; i < 40 && target.evaluate().isEmpty; i++) {
+        await tester.drag(list(), const Offset(0, -260));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    Future<void> scrollToTop(WidgetTester tester) async {
+      for (var i = 0; i < 40; i++) {
+        await tester.drag(list(), const Offset(0, 400));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    Future<Game> open(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.75;
+      addTearDown(tester.view.reset);
+
+      final game = Game.newRun(pack);
+      await tester.pumpWidget(
+        host(
+          DevPanel(
+            game: game,
+            packLocation: PackLocation('kss16', null, false),
+            onStateChanged: () {},
+            playEvent: (run) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Six tabs do not fit a phone width, so the bar scrolls -- which is
+      // how it behaves on the device too.
+      await tester.ensureVisible(find.text('Traits'));
+      await tester.tap(find.text('Traits'));
+      await tester.pumpAndSettle();
+      return game;
+    }
+
+    /// Filters the catalog down to one trait and taps its row.
+    Future<void> tapTrait(WidgetTester tester, String title) async {
+      final field = find.ancestor(
+        of: find.text('Filter by id, name or description'),
+        matching: find.byType(TextField),
+      );
+      await scrollTo(tester, field);
+      await tester.enterText(field, title.split('  ·  ').first);
+      await tester.pumpAndSettle();
+
+      final row = find.text(title);
+      await scrollTo(tester, row);
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('renders the live readout, not just a tab', (tester) async {
+      await open(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Trait effects'), findsOneWidget);
+      expect(find.text('What they are doing right now'), findsOneWidget);
+      expect(find.text('Held (0)'), findsOneWidget);
+      // Every payout a trait can reach is reported.
+      for (final row in [
+        'Study',
+        'Class',
+        'Stamina',
+        'Sleep restore',
+        'Part-time pay',
+        'Workout exp',
+        'Goal reward',
+      ]) {
+        expect(find.text(row), findsOneWidget, reason: 'missing $row');
+      }
+    });
+
+    testWidgets('grants a trait by tapping it, and the readout follows', (
+      tester,
+    ) async {
+      final game = await open(tester);
+      // 63 "Indestructible" is Stamina Cost -3, unconditional.
+      await tapTrait(tester, 'Indestructible  ·  63');
+      expect(game.state.traits, contains(63));
+
+      await scrollToTop(tester);
+      expect(find.text('Held (1)'), findsOneWidget);
+      expect(
+        find.textContaining('study -3'),
+        findsOneWidget,
+        reason: 'the stamina readout should show the discount',
+      );
+    });
+
+    testWidgets('says why a trait from another story is refused', (
+      tester,
+    ) async {
+      final game = await open(tester);
+      // 202 "Genius of the Generation" is story 20's, and hidden by default.
+      final toggle = find.byType(CheckboxListTile);
+      await scrollTo(tester, toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      await tapTrait(tester, 'Genius of the Generation  ·  202');
+      expect(game.state.traits, isNot(contains(202)));
+      expect(find.textContaining('belongs to story 20'), findsOneWidget);
+    });
+
+    testWidgets('shows a temporary trait clock, and clears all', (
+      tester,
+    ) async {
+      final game = await open(tester);
+      await tapTrait(tester, 'Flu  ·  10'); // Flu lasts 4 days
+      expect(game.state.traits, contains(10));
+      expect(find.text('Granted Flu, for 4 days.'), findsOneWidget);
+
+      await scrollToTop(tester);
+      expect(find.text('Flu · 4d'), findsOneWidget);
+      await tester.tap(find.text('Clear all'));
+      await tester.pumpAndSettle();
+      expect(game.state.traits, isEmpty);
+      expect(find.text('Held (0)'), findsOneWidget);
+    });
+  });
+
+  testWidgets('My Info names a temporary trait and its days left', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+
+    final game = Game.newRun(pack);
+    // Trait 10 "Flu" is bad and lasts 4 days.
+    expect(game.state.grantTrait(10), isTrue);
+    await tester.pumpWidget(host(MyInfoPanel(game: game)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Flu (4 d)'), findsOneWidget);
+  });
+
   testWidgets('My Info renders its content, not just a barrier', (
     tester,
   ) async {
@@ -110,6 +261,7 @@ Future<void> main() async {
 
     expect(find.text('My Info'), findsOneWidget);
     expect(find.text('Traits'), findsOneWidget);
+    expect(find.text('—'), findsWidgets, reason: 'no traits held yet');
     expect(find.text('Stationery'), findsOneWidget);
     // The name comes from the pack manifest.
     expect(

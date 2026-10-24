@@ -14,7 +14,7 @@ class D30Colors {
   static const panelBorder = Color(0xFFF3C58E);
 
   // The orange chrome: top bar, location banner
-  static const accent = Color(0xFFF7903D);
+  static const accent = Color(0xFFFF8B55);
   static const accentDark = Color(0xFFE2761F);
   static const onAccent = Colors.white;
 
@@ -31,20 +31,20 @@ class D30Colors {
   static const coin = Color(0xFFF5C33B);
 
   // The blue level box
-  static const levelBox = Color(0xFF4F7FC4);
+  static const levelBox = Color(0xFF405366);
   static const levelBoxDark = Color(0xFF3F67A4);
 
   // The exercise card
-  static const exercise = Color(0xFFE23B7D);
+  static const exercise = Color(0xFFC90068);
 
   // Subject chips, keyed by the pack's subject names. A subject with no
   // entry falls back to a neutral chip rather than vanishing.
   static const subjects = <String, Color>{
-    'korean': Color(0xFFF9D5DC),
-    'english': Color(0xFFFAF0C0),
-    'math': Color(0xFFCFE0F5),
-    'science': Color(0xFFCDEBD2),
-    'society': Color(0xFFDDD5F0),
+    'korean': Color(0xFFF5ACBD),
+    'english': Color(0xFFFAE899),
+    'math': Color(0xFFAFBFDF),
+    'science': Color(0xFF98D4AA),
+    'society': Color(0xFFD7BCE4),
   };
   static const subjectFallback = Color(0xFFE8E8E8);
 
@@ -52,6 +52,53 @@ class D30Colors {
 
   static const ink = Color(0xFF4A3B2E);
   static const inkSoft = Color(0xFF8A7765);
+}
+
+/// Raised controls share a dark lower face and a soft warm shadow.
+class D30RaisedButton extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onPressed;
+  final Color color;
+  final Color? edgeColor;
+
+  const D30RaisedButton({
+    super.key,
+    required this.child,
+    required this.onPressed,
+    this.color = D30Colors.accent,
+    this.edgeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: edgeColor ?? Color.lerp(color, Colors.black, .22)!,
+            offset: const Offset(0, 6),
+          ),
+          const BoxShadow(
+            color: Color(0x264A2B10),
+            blurRadius: 8,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: child,
+      ),
+    ),
+  );
 }
 
 /// Display names for subjects, as the reference UI writes them.
@@ -201,3 +248,10 @@ class D30AlertDot extends StatelessWidget {
     );
   }
 }
+
+/// Shared polarity colors for setup, preparation and My Info.
+Color traitColor(String? type) => switch (type) {
+  'good' => const Color(0xFF66BB6A),
+  'bad' => const Color(0xFFE57373),
+  _ => const Color(0xFFBA68C8),
+};
