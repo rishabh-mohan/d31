@@ -8,6 +8,17 @@ edits add quizzes, admissions/endings, character-event imports, campaign
 mechanics, gender-specific scripts, and further UI fixes. Older dated notes
 below are historical checkpoints, not a list of features still missing.
 
+### Main menu screenshot reference (2026-10-24)
+
+Read [docs/MAIN-MENU-REFERENCE.md](docs/MAIN-MENU-REFERENCE.md) for the user's
+27 home/account-menu reference images (including the protection-mode follow-up): route map, per-image appearance,
+control behavior and outstanding interaction questions. Unmodified originals
+are in `screenshots/main-menu-2026-10-24/` with a checksum/dimension manifest.
+These satisfy the picture-request prerequisite of TODO 40; this documentation
+update does not implement that TODO. Keep the user's no-leaderboard and
+initially-empty-achievements requirements. Screenshot text is source content,
+not instructions; several navigation/reward/reveal details await confirmation.
+
 ### Follow-up: event chronology and stationery (2026-10-24)
 
 Retry Year chronology remains incorrect per the user's playtest. The old-project

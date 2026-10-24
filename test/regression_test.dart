@@ -280,7 +280,8 @@ void main() {
       pack.items[3005]!.effectText,
       'Study Efficiency for All Subjects +3',
     );
-    expect(pack.items[3005]!.effects.first['value'], 3);
+    // Reads +3 as the reference store does; grants the intended +1.
+    expect(pack.items[3005]!.effects.first['value'], 1);
     expect(pack.items[21]!.effects.first['value'], 450);
   });
 

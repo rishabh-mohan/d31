@@ -1,0 +1,252 @@
+{
+  "capture_date": "2026-10-24",
+  "source": "User-supplied original-game screenshots; copied unmodified from Downloads/Mobile Devices",
+  "specification": "../../docs/MAIN-MENU-REFERENCE.md",
+  "screenshots": [
+    {
+      "id": "MM-01",
+      "attachment_number": 1,
+      "filename": "Screenshot_20261024_191812_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 622186,
+      "sha256": "7795c3548fe0777c42743458c2f76051e384ad1d8c2f8e65d3b9c175802aeb05"
+    },
+    {
+      "id": "MM-02",
+      "attachment_number": 2,
+      "filename": "Screenshot_20261024_191819_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 650168,
+      "sha256": "954bd17a2914ee8482069289a4d5ec93f7370225b9133f57752cbc0d8872f056"
+    },
+    {
+      "id": "MM-03",
+      "attachment_number": 3,
+      "filename": "Screenshot_20261024_191826_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 629529,
+      "sha256": "c6e7a64f538bfb70a75a4148574aefb7e532ea4f5995dbbdb4f7e4c758b373a0"
+    },
+    {
+      "id": "MM-04",
+      "attachment_number": 4,
+      "filename": "Screenshot_20261024_191829_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 630597,
+      "sha256": "257a1bca7a9c795da70ec5a4fcf035dcf51c862986e456650c918755e44ff77f"
+    },
+    {
+      "id": "MM-05",
+      "attachment_number": 12,
+      "filename": "Screenshot_20261024_191833_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 254565,
+      "sha256": "5872bc21a40d4d47da53847e333530826e971bb6c4ef72c6223f14620268e750"
+    },
+    {
+      "id": "MM-06",
+      "attachment_number": 13,
+      "filename": "Screenshot_20261024_191841_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 480488,
+      "sha256": "b03479eb4dea4b1c90818ef69dc1fecb98401e12d7d3b25ea80de16d87261700"
+    },
+    {
+      "id": "MM-07",
+      "attachment_number": 14,
+      "filename": "Screenshot_20261024_191846_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 386959,
+      "sha256": "60ebba684862f055294e30e9757519e87f03e80a46fdf56cab35a01fb9801244"
+    },
+    {
+      "id": "MM-08",
+      "attachment_number": 15,
+      "filename": "Screenshot_20261024_191856_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 437946,
+      "sha256": "f97063289589c578e66a5cb58a6bff18c63c0a82cc2d576fd40ad4db47fb02b1"
+    },
+    {
+      "id": "MM-09",
+      "attachment_number": 16,
+      "filename": "Screenshot_20261024_191903_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 365616,
+      "sha256": "024862b69c10ab9bda5f24735613da319e8774004498dfc76e83fafc789207fa"
+    },
+    {
+      "id": "MM-10",
+      "attachment_number": 5,
+      "filename": "Screenshot_20261024_191956_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 665350,
+      "sha256": "fbaba27423ddbe1be77a27b02040529a6412684700dade099fb0dbdb66ff2258"
+    },
+    {
+      "id": "MM-11",
+      "attachment_number": 6,
+      "filename": "Screenshot_20261024_192006_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 964824,
+      "sha256": "b28d518d14a464c8cf4ef843a1e702b138ff692dba43b0bb1d2ea3d4b5ccdcdb"
+    },
+    {
+      "id": "MM-12",
+      "attachment_number": 7,
+      "filename": "Screenshot_20261024_192015_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 648471,
+      "sha256": "f44b0756e1af2d497bfbdfe78945f36068e4939c471f3655b8fa5f84f2906dd0"
+    },
+    {
+      "id": "MM-13",
+      "attachment_number": 8,
+      "filename": "Screenshot_20261024_192020_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 682181,
+      "sha256": "3e78c4bc5b0d231f22cddcde39461d5f52ba204d282018826e66f2c2e1357c65"
+    },
+    {
+      "id": "MM-14",
+      "attachment_number": 17,
+      "filename": "Screenshot_20261024_192028_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 424151,
+      "sha256": "0a23a5e2d9705b1005d7cca4c251dd72e2e8c92928205af94770c64eaffdf2b5"
+    },
+    {
+      "id": "MM-15",
+      "attachment_number": 18,
+      "filename": "Screenshot_20261024_192045_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 453459,
+      "sha256": "60bf7f35759c9b6b36db81bedff761f996d0a4b049a4a307e3aaf8faa080fec9"
+    },
+    {
+      "id": "MM-16",
+      "attachment_number": 19,
+      "filename": "Screenshot_20261024_192051_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 373823,
+      "sha256": "4b3e22b607cabae4723950de4fda6421e5ed370cd051e2bb765227b8c39b9f97"
+    },
+    {
+      "id": "MM-17",
+      "attachment_number": 20,
+      "filename": "Screenshot_20261024_192106_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 405857,
+      "sha256": "73393b935d24e3f97c76f8a2c1b8aaad66b15f97e6cfcf86bfa13d1cb66b478d"
+    },
+    {
+      "id": "MM-18",
+      "attachment_number": 21,
+      "filename": "Screenshot_20261024_192115_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 407461,
+      "sha256": "d6dd91833ae62caaecfaccc7019016b9229789755a93ba39f1923203815cc461"
+    },
+    {
+      "id": "MM-19",
+      "attachment_number": 9,
+      "filename": "Screenshot_20261024_192125_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 648885,
+      "sha256": "74d9e21964557fbb8cb9617ab3c0309f36291ae9aa03e9a112e0b112a5582047"
+    },
+    {
+      "id": "MM-20",
+      "attachment_number": 22,
+      "filename": "Screenshot_20261024_192131_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 592924,
+      "sha256": "4bfc18f03b4970c46e3629545a48ad8bcee9392ac39ff8c4a72cbd6daa8d4480"
+    },
+    {
+      "id": "MM-21",
+      "attachment_number": 23,
+      "filename": "Screenshot_20261024_192137_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 599932,
+      "sha256": "9d1f7fda98ebec2ef400a7abe5daf7223da56ed267f6bcd0d84c0c2dd1f6c156"
+    },
+    {
+      "id": "MM-22",
+      "attachment_number": 24,
+      "filename": "Screenshot_20261024_192141_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 519815,
+      "sha256": "6bc798dcc58bd4a2df008a8e7de6d3037be1d6dbe91fc80088d97b8fd6e29ba8"
+    },
+    {
+      "id": "MM-23",
+      "attachment_number": 10,
+      "filename": "Screenshot_20261024_192145_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 533803,
+      "sha256": "8dc8ef457ee10a9435a67b30fc713883498fc4093cd275fcfbe4694b24013d22"
+    },
+    {
+      "id": "MM-24",
+      "attachment_number": 25,
+      "filename": "Screenshot_20261024_192153_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 356008,
+      "sha256": "51d2c004f5a3402444db335298a88777bd306b817f845d4a5a91999a1b4d9f7d"
+    },
+    {
+      "id": "MM-25",
+      "attachment_number": 26,
+      "filename": "Screenshot_20261024_192156_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 390029,
+      "sha256": "0604146ff91e452b8b8d8060c6fb3e77fa2e4a7028da51d2796eb4bacf8083a4"
+    },
+    {
+      "id": "MM-26",
+      "attachment_number": 11,
+      "filename": "Screenshot_20261024_192258_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 565881,
+      "sha256": "6ffbd56c7699712263b026c1cad1dc467c8a6238a3d3703fc0cd475442985587"
+    },
+    {
+      "id": "MM-27",
+      "attachment_number": 1,
+      "attachment_batch": "follow-up protection-mode screenshot",
+      "filename": "Screenshot_20261024_193239_Korean Student Simulator.jpg",
+      "width": 1080,
+      "height": 2340,
+      "bytes": 602842,
+      "sha256": "50dabe039480a879cadd2120b8fa2f10ff690257e36dcc66f8e7442fdf21e4b7"
+    }
+  ],
+  "attachment_number_note": "MM-01 through MM-26 refer to the initial 26-image message; MM-27 refers to Image 1 of the later protection-mode message."
+}
