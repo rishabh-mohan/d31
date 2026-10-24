@@ -31,7 +31,9 @@ flutter:
     # Placeholder art lifted from KSS by tools/copy_assets.py. Local use
     # only; gitignored. A pack may override any of these by shipping its own
     # images/ folder.
+    - assets/images/scene/
     - assets/images/backgrounds/
+    - assets/images/characters/
     - assets/images/character/
     - assets/images/ui/
     - assets/images/items/

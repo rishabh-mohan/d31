@@ -72,10 +72,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(Scrollable), findsNothing);
+      // A fresh goal announces itself over the hub; acknowledge it first.
+      await tester.tap(find.text("Let's do this!"));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('hub-traits-scroll')), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const ValueKey('open-stationery'))).height,
-        greaterThan(
+        lessThan(
           tester.getSize(find.byKey(const ValueKey('open-store'))).height,
         ),
       );

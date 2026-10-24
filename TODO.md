@@ -1,0 +1,41 @@
+For any agents reading this page: respond with progress or completion using 1R, 2R, 3R underneath the entry detailing what has been done if half complete, or writing DONE if complete
+TODO:
+1. Traits in the "Traits" menu on the day start screen should have a green, red, or purple background depending on the effect of the trait (positive green, negative red, neutral purple). The backgrounds are implemented in the info menu
+   DONE — Shared green/red/purple trait colors now appear in preparation, My Info and setup.
+2. Modify the Store menu (in the overall page, not the menu shared with items, books, stationery) so that the icons are more visible, even if it means that one item is cutoff/not visible from the outside menu.
+   DONE — Hub Store has larger 48px icons; the follow-up taller panel now fits four previews. The full Store still lists every offer.
+3. In the Books detailed menu, change the "Unlocked when you complete X" to "Unlocked when you complete the previous book" unless the previous book is already unlocked, which should then keep the "Unlocked when you complete X" structure.
+   DONE — Locked books name the previous book only when it is unlocked; otherwise say “the previous book”.
+4. (Highest priority) Continue implementing the game initalization menu, which contains character selection, college badge selection, trait selection (note that not every trait can be selected as some are only obtainable through in-game events), name, and gamemode (Order should be gamemode, character, college badges, trait selection, name)
+   1R — Implemented the five-step Standard flow: mode -> character -> badges -> traits -> name, with back navigation, portraits, Unicode names, 7/5 selection limits and event-only trait exclusion. All setup-eligible collections unlocked per user request.
+   2R — Run JSON preserves difficulty, character, badges, initial traits and identity; structured initial/passive bonuses apply, including work EXP. My Info displays selected portrait and badges. Added setup engine/widget tests; all 132 tests and analysis pass.
+   3R — Still open: Elite gameplay (currently disabled), compiled character special abilities, disk-persisted presets/account/save-slot UI and the exact first-day navy/announcement presentation. See docs/START-GAME-INITIALIZATION.md.
+5. Comb through the main project and create a .md detailing the effects of every item, trait, and event. Ask the prompter for clarification when psuedocde and other resources are not able to provide a good enough answer
+   DONE — Generated references/recovery/EFFECTS-REFERENCE.md for all 177 items, 244 traits and 149 active-pack events, with conditional graph outcomes and source hashes. docs/EFFECTS-REFERENCE.md distinguishes current behavior, unresolved originals and concrete proposed prototype rules, as requested. Regenerate with tools/build_effect_reference.py; generated game text stays local-only.
+6. Quizmaster (event) does not display the question being asked, it looks like the title for choices is not shown/is truncated. Needs fixing
+   DONE — Choice panel displays authored optionText and the complete question above answers, with scrolling for long text; tested at 320px/393px.
+7. Stamina depletion should not show up if the character runs out of stamina on the 14th tick
+   DONE — Zero HP on the final action follows normal day rollover, without exhaustion dialogue or collapse penalty; final/penultimate boundaries tested.
+8. Match the UI of the intitalization screen to the UI shown in the screenshots in references
+   DONE — Reference-style mode cards, Student ID carousel, crest slots/list, portrait with five trait slots, tiered two-column trait cards and name screen. Elite/shop mechanics remain tracked under TODO 4.
+9. It looks like location is broken for the first six ticks, the school picture does not appear in the background
+   DONE — School uses its original bundled classroom, and image paths survive pack regeneration.
+9B. In the location selection screen, the images for each location are blank.
+   DONE — All eleven location cards resolve bundled art. Eight streamed originals recovered; Art Museum uses a documented temporary fallback because both original URLs return 404.
+10. In events, the picture of the person speaking (sometimes built with multiple pictures to allow for changing expression, action, etc) should be visible (if the main character starts speaking, keep the previous speaking character on screen)
+   DONE — NPC body/expression/clothing layers render and persist during player speech; explicit hide and expression changes are tested.
+11. Store and Traits should be taller than Stationery and the books-items-scorecard-schedule block so more shop items and traits are visible at a glance. Once there are too many traits to display on the traits box, add the ability to scroll
+   DONE — Traits/Store are taller (7:5), four Store previews fit, and overflow traits scroll inside their box.
+12. Colleges should have their college icon, and closer resemble the examples provided in reference screenshots
+   DONE — Original college crests, colored effect rows and fixed four-plus-three selected slots match the reference structure.
+13. This will likely be fixed with the proper implementation of colleges matching the screenshots provided, but the My Info tab should not scroll, and the college section of it should more closely match the reference screenshots
+   DONE — My Info uses a fitted fixed layout with seven crest slots and no scroll, tested with seven long college names and eighteen traits.
+14. Add rotation lock to app, rename app to 30 Days, and add an app icon
+15. Schedule events should not be hardcodes as more scheduled events can be added by in-game events (ie. cooking competition, math competition).
+16. Events show the previous speaker from the last event on the first screen of the new event
+17. Stamina is being subtracted by one less than the stated rate (should subtract by the stated rate)
+15. Go through the screenshot descriptions in docs/ui-reference and move the UI closer to them
+   DONE — Gameplay: HP percentage now sits inside the bar, centred on the filled part and red when low (UIR-17/18); the met-goal check moved to the far right of the goal row (UIR-28); the hamburger drawer is left-anchored with a red top-left close, Main Menu/Save restriction text, ON/OFF circle toggles and destination rows (UIR-30). Night screens got the raised card and green button (UIR-08/19). Preparation: weekly goals now announce themselves once per goal week in a two-inset-card dialog with "Let's do this!" (UIR-09); the schedule strip and Calendar entry share one rounded row with an orange date segment (UIR-10/16); Score Card is short with an integrated corner X (UIR-15). Commerce: acquisition popup with artwork, Use above Confirm (UIR-22); wallet/sort pills and a category line in store cards (UIR-11); filter pills carry the filled toggle and the set hint matches (UIR-12); locked books are washed under a large padlock and progress shows count/target markers (UIR-13); the combine result reveals on a dark glowing stage (UIR-27). Events: history is titled by the event with coloured speaker chips, rules and a red Close (UIR-32); choices are a full-width sheet with centred heading and orange branches (UIR-31). Stationery draw rolls until stopped, on a charcoal vignette (UIR-23/24/25).
+   Not done, deliberately: the sudden-mission strip (UIR-28) needs a mission system that does not exist; the grey warning-triangle control (UIR-20/21) has no established action, so it was not invented; the quick stamina-item panel (UIR-33) remains the deferred item it already was.
+16. Find and fix the source of lag
+   DONE — Measured, not guessed. StationeryCard's auto-fit name search ran up to ten TextPainter layouts inside a LayoutBuilder, so it re-ran on every rebuild and relayout; four of them on the preparation hub cost ~11ms of a ~24ms rebuild. Caching the fitted size takes the hub from 24.2ms to 9.6ms and the expanded stationery menu from 15.9ms to 10.1ms (debug, 393x852). Method and numbers are in CLAUDE.md §5e.

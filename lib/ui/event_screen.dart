@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 
 import '../engine/event_engine.dart';
 import 'pack_image.dart';
+import 'portrait.dart';
+import '../engine/event_text.dart';
 import 'theme.dart';
 import 'event_text.dart';
 
@@ -139,57 +141,80 @@ class _EventScreenState extends State<EventScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         side: BorderSide(color: D30Colors.accent, width: 3),
       ),
+      // The reference's history window: the event's own name as the heading,
+      // a coloured speaker chip above each turn, a rule under every message,
+      // and one wide red Close on an opaque footer — no top-right cross.
       builder: (context) => SizedBox(
-        height: MediaQuery.sizeOf(context).height * .65,
+        height: MediaQuery.sizeOf(context).height * .75,
         child: Column(
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Log',
-                      style: TextStyle(fontSize: 24, color: D30Colors.ink),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Close log',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+              child: Text(
+                run.event.name.isEmpty ? 'Log' : run.event.name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, color: D30Colors.ink),
+              ),
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
                 children: [
                   for (final line in _history)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (line.speaker != null)
-                            Text(
-                              line.speaker!,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: D30Colors.accent,
-                              ),
-                            ),
-                          EventText(
-                            line.text,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: D30Colors.ink,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (line.speaker != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: D30Chip(
+                              text: line.speaker!,
+                              color: line.speaker == 'Me'
+                                  ? D30Colors.accent
+                                  : const Color(0xFF4FA55A),
+                              textColor: Colors.white,
+                              fontSize: 13,
                             ),
                           ),
-                        ],
-                      ),
+                        EventText(
+                          line.text,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: D30Colors.ink,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Divider(
+                            height: 2,
+                            thickness: 1.5,
+                            color: Color(0x44502B0B),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
+              ),
+            ),
+            Material(
+              color: D30Colors.panel,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: D30Colors.alert,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close', style: TextStyle(fontSize: 19)),
+                  ),
+                ),
               ),
             ),
           ],
@@ -257,6 +282,21 @@ class _EventScreenState extends State<EventScreen> {
                                     color: Color(0xFFBFD4E6),
                                   ),
                                 ),
+                                if (run.portraitId != null)
+                                  Positioned.fill(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 115,
+                                      ),
+                                      child: Portrait(
+                                        pack: run.pack,
+                                        id: run.portraitId,
+                                        expression: run.portraitExpression,
+                                        clothes: run.portraitClothes,
+                                        otherLayers: run.portraitOtherLayers,
+                                      ),
+                                    ),
+                                  ),
                                 // Dim so the dialogue box always reads.
                                 Container(
                                   color: Colors.black.withValues(alpha: 0.08),
@@ -286,58 +326,132 @@ class _EventScreenState extends State<EventScreen> {
                                       ),
                                     ),
                                   ),
+                                  // The choice surface is a full-width sheet
+                                  // against the bottom edge, rounded only at
+                                  // the top, over the dimmed scene.
                                   Align(
                                     alignment: Alignment.bottomCenter,
                                     child: Container(
                                       width: double.infinity,
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        16,
+                                        16,
+                                        20,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: D30Colors.panel,
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              top: Radius.circular(16),
+                                            ),
                                         border: Border.all(
                                           color: D30Colors.accent,
                                           width: 3,
                                         ),
                                       ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              const Expanded(
-                                                child: Text(
-                                                  'Choose',
-                                                  style: TextStyle(
-                                                    fontSize: 22,
+                                      constraints: BoxConstraints(
+                                        maxHeight:
+                                            MediaQuery.sizeOf(context).height *
+                                            .58,
+                                      ),
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Stack(
+                                              children: [
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 44,
+                                                      ),
+                                                  child: SizedBox(
+                                                    width: double.infinity,
+                                                    child: EventText(
+                                                      expandEventText(
+                                                        beat.node.optionText
+                                                                    ?.trim()
+                                                                    .isNotEmpty ==
+                                                                true
+                                                            ? beat
+                                                                  .node
+                                                                  .optionText!
+                                                            : 'What should I do?',
+                                                        run.state,
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                        fontSize: 22,
+                                                        color: D30Colors.ink,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                  right: 0,
+                                                  top: 0,
+                                                  child: IconButton(
+                                                    tooltip: 'Log',
+                                                    onPressed: _showLog,
+                                                    icon: const Icon(
+                                                      Icons
+                                                          .format_list_bulleted,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (beat.text.trim().isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 12,
+                                                ),
+                                                child: EventText(
+                                                  beat.text,
+                                                  key: const ValueKey(
+                                                    'choice-question',
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
                                                     color: D30Colors.ink,
                                                   ),
                                                 ),
                                               ),
-                                              IconButton(
-                                                tooltip: 'Log',
-                                                onPressed: _showLog,
-                                                icon: const Icon(
-                                                  Icons.format_list_bulleted,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          for (final choice in beat.choices)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 4,
+                                            // Large, full-width orange
+                                            // branches, as in the reference.
+                                            for (final choice in beat.choices)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 5,
+                                                    ),
+                                                child: SizedBox(
+                                                  width: double.infinity,
+                                                  child: D30RaisedButton(
+                                                    onPressed: () =>
+                                                        _choose(choice),
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 6,
+                                                          ),
+                                                      child: EventText(
+                                                        choice.text,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: const TextStyle(
+                                                          fontSize: 17,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
-                                              child: SizedBox(
-                                                width: double.infinity,
-                                                child: OutlinedButton(
-                                                  onPressed: () =>
-                                                      _choose(choice),
-                                                  child: EventText(choice.text),
                                                 ),
                                               ),
-                                            ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -360,12 +474,9 @@ class _EventScreenState extends State<EventScreen> {
 
   String? _background(EventBeat? beat) {
     final fromNode = beat?.backgroundImg;
-    if (fromNode != null && fromNode.isNotEmpty) {
-      // Campaign background paths are not in the pack's art set yet; fall
-      // back to the location backdrop so the scene is never blank.
-      return run.state.location?.image;
-    }
-    return run.state.location?.image;
+    final mapped =
+        (run.pack.presentation['backgrounds'] as Map?)?[fromNode] as String?;
+    return mapped ?? run.state.location?.image;
   }
 }
 

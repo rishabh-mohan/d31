@@ -24,6 +24,33 @@ class GameState {
   GameDate date;
   int locationId;
   bool isMale;
+  String difficulty = 'standard';
+  int? characterId;
+  final List<int> badgeIds = [];
+  final List<int> initialTraitIds = [];
+
+  String get portrait =>
+      pack.characters[characterId]?.portrait ?? 'character/portrait.png';
+
+  Iterable<GameTrait> get setupModifiers sync* {
+    final character = pack.characters[characterId];
+    if (character != null) {
+      yield GameTrait.fromJson({
+        'id': -character.id,
+        'effectList': character.effects,
+      });
+    }
+    for (final id in badgeIds) {
+      final badge = pack.badges[id];
+      if (badge != null) {
+        yield GameTrait.fromJson({
+          'id': -100000 - id,
+          'effectList': badge.effects,
+        });
+      }
+    }
+  }
+
   String firstName;
   String lastName;
   String get fullName =>
@@ -40,8 +67,25 @@ class GameState {
   /// Event switches, seeded from the pack's declared defaults.
   final Map<String, int> switches;
 
-  /// How many times each event has fired. `EVENT_<id>` conditions read this.
+  /// How many times each event has fired. Drives the dev panel and the
+  /// run summary; conditions read [eventStates] instead.
   final Map<int, int> eventCounts = {};
+
+  /// Where each event stands, in KSS's own three values: **0** never seen,
+  /// **1** playing right now, **2** finished.
+  ///
+  /// Recovered from the content: across story 16 every `EVENT_<id>`
+  /// condition compares against 0 or 2 and nothing else (148 and 11 of them).
+  /// A fired-count can never reach 2 for a once-only event, so the eleven
+  /// `equal 2` conditions -- the four Readers' Response beats, the mining
+  /// restoration, Provoked -- were dead while counts backed them.
+  final Map<int, int> eventStates = {};
+
+  /// The switch the global Out of Shape trait event (10010003) is gated on.
+  /// KSS names a trait event's switch `TRAIT_EVENT_<traitId>`, and trait 7
+  /// is Out of Shape ("Stamina Cost +3 / Regular exercise might help").
+  static const outOfShapeSwitch = 'TRAIT_EVENT_7';
+  static const outOfShapeTraitId = 7;
 
   final Set<int> unlockedLocations = {};
   final Map<int, int> inventory = {}; // itemId -> count
@@ -103,6 +147,11 @@ class GameState {
 
   /// The current weekly goal, renewed every Monday.
   WeeklyGoal? weeklyGoal;
+
+  /// Which goal week has already had its announcement dialog shown, so the
+  /// reference's "Check your Weekly Goals" popup opens once per goal and not
+  /// again on every preparation screen. `null` means none yet.
+  int? announcedGoalWeek;
 
   /// Study blocks clicked during the current goal week, counted whether or
   /// not the goal has already been met -- surplus effort still weights the
@@ -182,6 +231,11 @@ class GameState {
   LevelTier get studyLevel => pack.studyLevels.tierFor(studyExp);
   LevelTier get exerciseLevel => pack.exerciseLevels.tierFor(exerciseExp);
   LevelTier get partTimeLevel => pack.partTimeLevels.tierFor(partTimeExp);
+
+  /// True once the exercise level sits on the top tier of the level table
+  /// (level 10, "Big 3 of 1000"). At the top there is no exp left to earn,
+  /// so workout blocks stop being dealt and Out of Shape cannot be applied.
+  bool get exerciseMaxed => exerciseLevel.level >= pack.exerciseLevels.maxLevel;
 
   num get totalStat => stats.values.fold<num>(0, (a, b) => a + b);
 
@@ -287,12 +341,19 @@ class GameState {
 
   void setSwitch(String name, int value) {
     if (engineSwitches.contains(name)) return;
+    if (name == outOfShapeSwitch && exerciseMaxed) {
+      // A maxed-out exercise level cannot be out of shape. Holding the
+      // switch at 0 is what keeps the Out of Shape trait event from firing,
+      // because that event's only condition is TRAIT_EVENT_7 == 1.
+      switches[name] = 0;
+      return;
+    }
     switches[name] = value;
   }
 
   void addSwitch(String name, int delta) {
     if (engineSwitches.contains(name)) return;
-    switches[name] = switchValue(name) + delta;
+    setSwitch(name, switchValue(name) + delta);
   }
 
   int itemCount(int id) => inventory[id] ?? 0;
@@ -315,17 +376,91 @@ class GameState {
     return true;
   }
 
-  /// Whether trait effects are applied at all. Parked for now by request;
-  /// the catalog still loads and traits can still be granted, they simply
-  /// contribute nothing. Flip `rules.traits.enabled` to bring them back.
-  bool get traitsEnabled => pack.rules.flag('traits', 'enabled', false);
+  /// Whether trait effects are applied at all. `TraitEngine` reads the same
+  /// flag; this is here for the UI, which greys the panel when it is off.
+  bool get traitsEnabled => pack.rules.flag('traits', 'enabled', true);
+
+  /// Days left on a temporary trait. Nine traits ship `initialLifeTime`
+  /// (Flu 4, Fever Time 2, Hemorrhoids 5); a permanent trait has no entry.
+  final Map<int, int> traitDaysLeft = {};
+
+  /// Grants a trait, honouring the two things that can refuse it: a trait
+  /// scoped to another story, and one already held. Returns what happened,
+  /// so an event can say so.
+  bool grantTrait(int id) {
+    final trait = pack.traits[id];
+    if (trait == null) return false;
+    final story = pack.manifest.storyId;
+    if (trait.storyId != null && story != null && trait.storyId != story) {
+      note(
+        'Trait ${trait.name} (#$id) belongs to story ${trait.storyId}, '
+            'not $story; not granted.',
+        'system',
+      );
+      return false;
+    }
+    if (!traits.add(id)) return false;
+    if (trait.lifeTimeDays != null) traitDaysLeft[id] = trait.lifeTimeDays!;
+    return true;
+  }
+
+  bool removeTrait(int id) {
+    traitDaysLeft.remove(id);
+    return traits.remove(id);
+  }
+
+  /// A held trait is in force unless its clock has run out.
+  bool traitInForce(int id) {
+    if (!traits.contains(id)) return false;
+    final left = traitDaysLeft[id];
+    return left == null || left > 0;
+  }
+
+  /// Ages the temporary traits one day and drops the expired ones. Called
+  /// from the day rollover. Returns what it removed, for the day summary.
+  List<GameTrait> expireTraitsForNewDay() {
+    final gone = <GameTrait>[];
+    for (final id in traitDaysLeft.keys.toList()) {
+      final left = (traitDaysLeft[id] ?? 0) - 1;
+      if (left > 0) {
+        traitDaysLeft[id] = left;
+        continue;
+      }
+      traitDaysLeft.remove(id);
+      traits.remove(id);
+      final trait = pack.traits[id];
+      if (trait != null) gone.add(trait);
+    }
+    return gone;
+  }
+
+  /// True on the eve of an exam day, which four traits key off
+  /// (`IS_BEFORE_SAT_EXAM`) -- Procrastinator's +45 lands here. The exam
+  /// days are the pack's own `specialDays`; story 16 has one, the CSAT.
+  bool get isDayBeforeExam {
+    final tomorrow = date.day.add(const Duration(days: 1));
+    for (final day in pack.manifest.specialDays) {
+      final code =
+          ((day['gameDate'] as Map?)?['dateCode'] ?? day['dateCode'])
+              as String?;
+      final when = GameDate.tryParse(code);
+      if (when == null) continue;
+      if (when.day.year == tomorrow.year &&
+          when.day.month == tomorrow.month &&
+          when.day.day == tomorrow.day) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// Traits are passive modifiers; `firstPlus*` ones only apply at run start.
   void applyStartingTraitEffects() {
     if (!traitsEnabled) return;
-    for (final id in traits) {
-      final trait = pack.traits[id];
-      if (trait == null) continue;
+    for (final trait in [
+      ...traits.map((id) => pack.traits[id]).whereType<GameTrait>(),
+      ...setupModifiers,
+    ]) {
       for (final e in trait.effects) {
         switch (e['type']) {
           case 'firstPlusStat':
@@ -369,15 +504,9 @@ class GameState {
         if (v is num) total += v;
       }
     }
-    if (!traitsEnabled) return total;
-    for (final id in traits) {
-      for (final e
-          in pack.traits[id]?.effects ?? const <Map<String, dynamic>>[]) {
-        if (e['type'] != effectType) continue;
-        final v = e[key] ?? e['extraStat'] ?? e['plusValue'];
-        if (v is num) total += v;
-      }
-    }
+    // Traits are NOT summed here. They speak a different effect vocabulary
+    // (`plusStat`, not `studyEfficiency`) and carry conditions, scope and a
+    // lifetime, so they go through `TraitEngine` instead.
     return total;
   }
 
@@ -395,6 +524,10 @@ class GameState {
 
   Map<String, dynamic> toJson() => {
     'packId': pack.manifest.id,
+    'difficulty': difficulty,
+    'characterId': characterId,
+    'badgeIds': badgeIds,
+    'initialTraitIds': initialTraitIds,
     'date': date.code,
     'locationId': locationId,
     'isMale': isMale,
@@ -406,10 +539,12 @@ class GameState {
     'partTimeExp': partTimeExp,
     'switches': switches,
     'eventCounts': eventCounts.map((k, v) => MapEntry(k.toString(), v)),
+    'eventStates': eventStates.map((k, v) => MapEntry(k.toString(), v)),
     'unlockedLocations': unlockedLocations.toList(),
     'inventory': inventory.map((k, v) => MapEntry(k.toString(), v)),
     'itemUseCounts': itemUseCounts.map((k, v) => MapEntry(k.toString(), v)),
     'traits': traits.toList(),
+    'traitDaysLeft': traitDaysLeft.map((k, v) => MapEntry(k.toString(), v)),
     'bookReadCounts': bookReadCounts.map((k, v) => MapEntry(k.toString(), v)),
     'bookChoices': bookChoices,
     'shopPurchases': shopPurchases,
@@ -434,6 +569,7 @@ class GameState {
     'rerolls': rerolls,
     'cookies': cookies,
     'weeklyGoal': weeklyGoal?.toJson(),
+    'announcedGoalWeek': announcedGoalWeek,
     'studyBlocksThisWeek': studyBlocksThisWeek,
     'surplusStudyBlocks': surplusStudyBlocks,
     'finished': finished,
@@ -465,6 +601,18 @@ class GameState {
       firstName: j['firstName'] as String?,
       lastName: j['lastName'] as String?,
     );
+    state.difficulty = j['difficulty'] as String? ?? 'standard';
+    state.characterId = (j['characterId'] as num?)?.toInt();
+    state.badgeIds.addAll(
+      (j['badgeIds'] as List? ?? [])
+          .whereType<int>()
+          .where(pack.badges.containsKey)
+          .toSet()
+          .take(7),
+    );
+    state.initialTraitIds.addAll(
+      (j['initialTraitIds'] as List? ?? []).whereType<int>().toSet().take(5),
+    );
     state.studyExp = (j['studyExp'] as num?) ?? 0;
     state.exerciseExp = (j['exerciseExp'] as num?) ?? 0;
     state.partTimeExp = (j['partTimeExp'] as num?) ?? 0;
@@ -476,6 +624,15 @@ class GameState {
     }
 
     intMap('eventCounts', state.eventCounts);
+    intMap('eventStates', state.eventStates);
+    intMap('traitDaysLeft', state.traitDaysLeft);
+    if (state.eventStates.isEmpty) {
+      // A save written before event progress was tracked: anything that had
+      // fired is treated as finished, which is what its count meant.
+      state.eventCounts.forEach((id, count) {
+        if (count > 0) state.eventStates[id] = 2;
+      });
+    }
     intMap('inventory', state.inventory);
     intMap('itemUseCounts', state.itemUseCounts);
     intMap('bookReadCounts', state.bookReadCounts);
@@ -522,6 +679,7 @@ class GameState {
     state.weeklyGoal = WeeklyGoal.fromJson(
       (j['weeklyGoal'] as Map?)?.cast<String, dynamic>(),
     );
+    state.announcedGoalWeek = (j['announcedGoalWeek'] as num?)?.toInt();
     state.studyBlocksThisWeek =
         (j['studyBlocksThisWeek'] as num?)?.toInt() ?? 0;
     state.surplusStudyBlocks = (j['surplusStudyBlocks'] as num?)?.toInt() ?? 0;

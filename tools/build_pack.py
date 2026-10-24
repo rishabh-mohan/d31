@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import item_effects  # noqa: E402
+import presentation_assets  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -191,6 +192,22 @@ def build_items(out: Path):
 # --------------------------------------------------------------------------
 
 
+# Storyline beats whose prerequisite the shipped data does not carry.
+#
+# KSS runs an event *set* one beat at a time in compiled code, so a beat can
+# rely on that sequencing instead of stating it. 189 "Come On!" -- the teacher
+# walking you over to the comic club -- is gated on nothing but its date, and
+# fires whether or not 188 "School Comics Contest" ever happened, which reads
+# as the teacher reacting to a comic you never drew. Both of 188's branches
+# ("Enter" / "No thanks") converge on submitting the comic, so completing 188
+# is the whole prerequisite; no branch needs telling apart.
+#
+# Written as `EVENT_<id> == 2`, the same shape the data uses itself for
+# 192 (`EVENT_191 == 2`) and 162 (`EVENT_60 == 2`): 0 unseen, 1 playing,
+# 2 finished.
+SET_PREREQUISITES = {189: 188}
+
+
 def build_events(out: Path):
     def english(obj):
         if isinstance(obj, list):
@@ -213,6 +230,13 @@ def build_events(out: Path):
             e["name"] = e.pop("text")
         e.pop("index", None)
         e.pop("version", None)
+    for e in events:
+        required = SET_PREREQUISITES.get(e["id"])
+        if required is None:
+            continue
+        e["conditionSet"]["right"]["conditions"].append({
+            "type": "defaults", "target": f"EVENT_{required}",
+            "compareType": "equal", "value": 2, "targetType": "event"})
     npcs = {}
     for file in [GLOBAL / "npcs.json", ENGLISH / "data/npcs.json"]:
         for npc in load(file)["npcs"]:
@@ -262,8 +286,77 @@ def build_commerce(out: Path):
         "sets": clean(load(GLOBAL / "equipment_item_sets.json"))["equipmentItemSets"]})
 
 
+# rank -> the stars the Student ID card shows.
+CHARACTER_STARS = {"one": 1, "two": 2, "three": 3}
+
+
+def build_characters(out: Path):
+    """The character-select catalog, filtered to this story.
+
+    The global file carries 65 characters for every story; `availableStoryIds`
+    containing 16 is what makes one selectable here, and 26 are. Portraits are
+    copied by tools/copy_assets.py from each character's `skeleton.imgPath`.
+    """
+    chars = clean(load(GLOBAL / "characters.json"))["characters"]
+    out_chars = []
+    for c in chars:
+        if 16 not in (c.get("availableStoryIds") or []):
+            continue
+        entry = {
+            "id": c["id"],
+            "name": " ".join(filter(None, [c.get("firstName"), c.get("lastName")])),
+            "gender": c.get("genderType"),
+            "rank": c.get("rank"),
+            "stars": CHARACTER_STARS.get(c.get("rank"), 1),
+            "isDefault": c.get("isDefault", False),
+            # Display prose. NOT the mechanic: Siho Kang reads "+3" while the
+            # structured effect is extraStat 6. The effect is what applies.
+            "effectDescription": c.get("effectDescription", ""),
+            "portrait": f"characters/{c['id']}.png",
+        }
+        if c.get("plusEffect"):
+            entry["plusEffect"] = c["plusEffect"]
+        if c.get("specialFuncCode"):
+            entry["specialFuncCode"] = c["specialFuncCode"]
+        out_chars.append(entry)
+    out_chars.sort(key=lambda c: c["id"])
+    write(out, "characters.json", {"characters": out_chars},
+          "Story-16 selectable characters. effectDescription is display prose; "
+          "plusEffect is the mechanic.")
+    print(f"    {len(out_chars)} of {len(chars)} characters are story 16's")
+
+
+def build_badges(out: Path):
+    """University badges, joined to the university that issues them.
+
+    The badge screen lists them alphabetically and prints each effect, so the
+    name and the effect both have to travel with the record.
+    """
+    badges = clean(load(GLOBAL / "university_badges.json"))["badges"]
+    unis = {u["id"]: u for u in
+            clean(load(GLOBAL / "university/universities.json"))["universities"]}
+    out_badges = []
+    for b in badges:
+        uni = unis.get(b["universityId"], {})
+        out_badges.append({
+            "universityId": b["universityId"],
+            "name": uni.get("engName") or uni.get("korName") or
+                    f"University {b['universityId']}",
+            "rank": uni.get("rank", "none"),
+            "colorCode": uni.get("colorCode"),
+            "effects": b.get("effect") or [],
+        })
+    # "(Alphabetical order)", as the screen says.
+    out_badges.sort(key=lambda b: b["name"].lower())
+    write(out, "badges.json", {"badges": out_badges})
+    print(f"    {len(out_badges)} university badges")
+
+
 def build_locations(out: Path):
     locs = clean(load(CAMPAIGN / "data/locations.json"))["locations"]
+    image_paths = presentation_assets.location_images()
+    for loc in locs:
+        loc["image"] = image_paths.get(loc["id"])
     write(out, "locations.json", {"locations": locs})
     print(f"    {len(locs)} locations")
 
@@ -349,6 +442,9 @@ def build_calendar_and_manifest(out: Path):
 
     manifest = {
         "id": "kss16",
+        # The trait catalog is global and scopes 104 of its 244 traits to a
+        # story; the engine rejects the ones that are not this story's.
+        "storyId": 16,
         "name": "31-Day Mode",
         "description": story.get("description", ""),
         "formatVersion": 1,
@@ -434,8 +530,10 @@ def build_rules(out: Path):
             # un-buffed baseline.
             "base": 9.5,
             "perWeight": 6.25,
-            # Class costs a little less than studying.
-            "lesson": 9.5,
+            # Class costs a little less than studying. The reference's
+            # first Class block of a run reads -9, so this is the whole
+            # lesson cost at exercise level 0 with no trait discount.
+            "lesson": 9,
         },
         "study": {
             # gained stat = book.power * studyWeight * levelWeight * locationWeight
@@ -469,9 +567,10 @@ def build_rules(out: Path):
             },
         },
         "traits": {
-            # Parked by request: the 244-trait catalog still loads and traits
-            # can still be granted, but their effects do nothing.
-            "enabled": False,
+            # The 244-trait catalog ships its own effectList, so this is the
+            # one system that is data rather than a fit. lib/engine/traits.dart
+            # reads it.
+            "enabled": True,
         },
         "school": {
             # Weekday class: the student is held at School for the first
@@ -547,6 +646,10 @@ def main() -> int:
 
     print(" manifest")
     build_calendar_and_manifest(out)
+    print(" characters")
+    build_characters(out)
+    print(" badges")
+    build_badges(out)
     print(" rules")
     build_rules(out)
     print(" locations")
@@ -562,6 +665,7 @@ def main() -> int:
     print(" events")
     build_events(out)
     build_commerce(out)
+    presentation_assets.build(out)
     print("done")
     return 0
 

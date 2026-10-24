@@ -23,6 +23,7 @@ import 'commerce_screen.dart';
 import 'my_info.dart';
 import 'location_picker.dart';
 import 'pack_image.dart';
+import 'portrait.dart';
 import 'theme.dart';
 
 typedef PackReloaded = void Function(ContentPack pack, PackLocation location);
@@ -238,35 +239,48 @@ class _GameScreenState extends State<GameScreen> {
   /// Moving is not in the reference layout's main screen; it lives behind the
   /// menu button until the real navigation is specified.
   Future<void> _openMenu() async {
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      showDragHandle: true,
-      builder: (_) => _MenuSheet(
-        game: game,
-        onMove: () {
-          Navigator.of(context).pop();
-          _pickLocation();
-        },
-        onInventory: () {
-          Navigator.of(context).pop();
-          _openInventory();
-        },
-        onStore: () {
-          Navigator.pop(context);
-          _openCommerce();
-        },
-        onStationery: () {
-          Navigator.pop(context);
-          _openCommerce(stationery: true);
-        },
-        onReset: () {
-          Navigator.pop(context);
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        },
-        onDevPanel: () {
-          Navigator.of(context).pop();
-          _openDevPanel();
-        },
+      barrierColor: Colors.black54,
+      builder: (_) => SafeArea(
+        // The reference anchors this drawer to the left edge and leaves a
+        // strip of the game visible on the right, unlike the centred modals.
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 14, 8, 8),
+            child: SizedBox(
+              width: (MediaQuery.sizeOf(context).width * .75).clamp(260, 400),
+              child: _MenuSheet(
+                game: game,
+                onMove: () {
+                  Navigator.of(context).pop();
+                  _pickLocation();
+                },
+                onInventory: () {
+                  Navigator.of(context).pop();
+                  _openInventory();
+                },
+                onStore: () {
+                  Navigator.pop(context);
+                  _openCommerce();
+                },
+                onStationery: () {
+                  Navigator.pop(context);
+                  _openCommerce(stationery: true);
+                },
+                onReset: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                onDevPanel: () {
+                  Navigator.of(context).pop();
+                  _openDevPanel();
+                },
+              ),
+            ),
+          ),
+        ),
       ),
     );
     if (mounted) setState(() {});
@@ -495,13 +509,15 @@ class _SquareButton extends StatelessWidget {
     final radius = BorderRadius.circular(circular ? 24 : 12);
     return Material(
       color: D30Colors.accent,
+      elevation: 3,
+      shadowColor: const Color(0x554A2B10),
       borderRadius: radius,
       child: InkWell(
         borderRadius: radius,
         onTap: onTap,
         child: SizedBox(
-          width: 52,
-          height: 56,
+          width: 44,
+          height: 44,
           child: Icon(icon, color: D30Colors.onAccent, size: 22),
         ),
       ),
@@ -516,13 +532,16 @@ class _WhitePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
+      height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: D30Colors.accent, width: 2),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 4)),
+        ],
       ),
       child: child,
     );
@@ -563,73 +582,92 @@ class _MainPanel extends StatelessWidget {
     final here = state.location;
     final weekly = state.weeklyGoal;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: D30Colors.accent,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          // Location banner
-          SizedBox(
-            height: 34,
-            child: Center(
-              child: Text(
-                here?.name ?? '-',
-                style: const TextStyle(
-                  color: D30Colors.onAccent,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+    return LayoutBuilder(
+      builder: (context, constraints) => Container(
+        decoration: BoxDecoration(
+          color: D30Colors.accent,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            // Location banner
+            SizedBox(
+              height: 34,
+              child: Center(
+                child: Text(
+                  here?.name ?? '-',
+                  style: const TextStyle(
+                    color: D30Colors.onAccent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
-          ),
-          _TickDots(
-            state: state,
-            total: game.actionTicksPerDay,
-            filled: exhausted && !state.exhaustionPending
-                ? game.actionTicksPerDay
-                : null,
-          ),
-          const SizedBox(height: 6),
-          Expanded(child: RepaintBoundary(child: _Portrait(state: state))),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 330,
-            child: FittedBox(
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              child: SizedBox(
-                width: 480,
-                child: Column(
-                  children: [
-                    if (weekly != null) ...[
-                      _GoalStrip(goal: weekly, state: state),
-                      const SizedBox(height: 4),
-                    ],
-                    _SubjectChips(state: state),
-                    const SizedBox(height: 4),
-                    _StatusBar(
-                      state: state,
-                      actionTicks: game.actionTicksPerDay,
-                      onRefresh: onRefresh,
+            _TickDots(
+              state: state,
+              total: game.actionTicksPerDay,
+              filled: exhausted && !state.exhaustionPending
+                  ? game.actionTicksPerDay
+                  : null,
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: RepaintBoundary(child: _Portrait(state: state)),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              height: constraints.maxHeight * .55,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(
+                  width: 480,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: D30Colors.panel,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: D30Colors.accent, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 5,
+                          offset: Offset(0, 7),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    _ActionGrid(
-                      game: game,
-                      exhausted: exhausted,
-                      actions: actions,
-                      bookFor: bookFor,
-                      onAct: onAct,
+                    child: Column(
+                      children: [
+                        if (weekly != null) ...[
+                          _GoalStrip(goal: weekly, state: state),
+                          const SizedBox(height: 4),
+                        ],
+                        _SubjectChips(state: state),
+                        const SizedBox(height: 4),
+                        _StatusBar(
+                          state: state,
+                          actionTicks: game.actionTicksPerDay,
+                          onRefresh: onRefresh,
+                        ),
+                        const SizedBox(height: 6),
+                        _ActionGrid(
+                          game: game,
+                          exhausted: exhausted,
+                          actions: actions,
+                          bookFor: bookFor,
+                          onAct: onAct,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -666,13 +704,13 @@ class _TickDots extends StatelessWidget {
                 Container(
                   key: ValueKey('day-tick-$i-${i < used ? 'filled' : 'empty'}'),
                   width: size,
-                  height: size,
+                  height: 24,
                   margin: EdgeInsets.only(right: i == total - 1 ? 0 : gap),
                   decoration: BoxDecoration(
                     color: i < used
                         ? D30Colors.accent.withValues(alpha: 0.45)
                         : const Color(0xFFF6E4CF),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
             ],
@@ -709,11 +747,11 @@ class _Portrait extends StatelessWidget {
               alignment: Alignment.bottomCenter,
               child: FractionallySizedBox(
                 heightFactor: 0.92,
-                child: PackImage(
-                  path: 'character/portrait.png',
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomCenter,
-                  placeholder: const SizedBox.shrink(),
+                child: Portrait(
+                  pack: state.pack,
+                  id: state.characterId,
+                  character: true,
+                  fallback: state.portrait,
                 ),
               ),
             ),
@@ -762,9 +800,6 @@ class _GoalStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final current = state.stats[goal.targetSubject] ?? 0;
-    final progress = goal.progressFrom(current);
-
     return D30Panel(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       radius: 10,
@@ -772,15 +807,15 @@ class _GoalStrip extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                goal.met ? Icons.check_circle : Icons.track_changes,
+              const Icon(
+                Icons.track_changes,
                 size: 16,
-                color: goal.met ? D30Colors.hpGreen : D30Colors.accentDark,
+                color: D30Colors.accentDark,
               ),
               const SizedBox(width: 6),
-              Text(
-                goal.met ? 'Goal met' : 'Weekly Goals',
-                style: const TextStyle(fontSize: 11, color: D30Colors.ink),
+              const Text(
+                'Weekly Goals',
+                style: TextStyle(fontSize: 11, color: D30Colors.ink),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -813,19 +848,18 @@ class _GoalStrip extends StatelessWidget {
                   ),
                 ),
               ),
+              // The reference keeps the target and reward labels and marks the
+              // achieved goal with a check at the far right of the row.
+              if (goal.met) ...[
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.check_circle,
+                  key: ValueKey('goal-met-check'),
+                  size: 18,
+                  color: D30Colors.hpGreen,
+                ),
+              ],
             ],
-          ),
-          const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5,
-              backgroundColor: D30Colors.hpTrack,
-              valueColor: AlwaysStoppedAnimation(
-                goal.met ? D30Colors.hpGreen : D30Colors.accent,
-              ),
-            ),
           ),
         ],
       ),
@@ -851,6 +885,13 @@ class _SubjectChips extends StatelessWidget {
               decoration: BoxDecoration(
                 color: D30Colors.subject(subjects[i]),
                 borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -931,38 +972,7 @@ class _StatusBar extends StatelessWidget {
           const SizedBox(width: 8),
           const Icon(Icons.favorite, size: 15, color: Color(0xFF3A2E24)),
           const SizedBox(width: 6),
-          Expanded(
-            child: Container(
-              height: 16,
-              decoration: BoxDecoration(
-                color: D30Colors.hpTrack,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                children: [
-                  FractionallySizedBox(
-                    widthFactor: pct,
-                    child: Container(color: D30Colors.hpGreen),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Text(
-                        '${(pct * 100).round()}%',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          Expanded(child: _HpBar(pct: pct)),
           const SizedBox(width: 8),
           Material(
             color: D30Colors.accent,
@@ -994,6 +1004,66 @@ class _StatusBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The outlined stamina bar.
+///
+/// The reference prints the percentage *inside* the bar, centred on the filled
+/// part: at 100% it sits in the middle of the bar, at 6% it has slid to the
+/// left edge and turned red. It is never hidden, however little is left.
+class _HpBar extends StatelessWidget {
+  final double pct;
+  const _HpBar({required this.pct});
+
+  static const _labelWidth = 36.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final low = pct <= .25;
+    return Container(
+      height: 16,
+      decoration: BoxDecoration(
+        color: D30Colors.hpTrack,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: D30Colors.ink, width: 2),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final left = (width * pct / 2 - _labelWidth / 2).clamp(
+            0.0,
+            (width - _labelWidth).clamp(0.0, double.infinity),
+          );
+          return Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: pct,
+                child: Container(color: D30Colors.hpGreen),
+              ),
+              Positioned(
+                left: left,
+                top: 0,
+                bottom: 0,
+                width: _labelWidth,
+                child: Center(
+                  child: Text(
+                    '${(pct * 100).round()}%',
+                    key: const ValueKey('hp-percent'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: low ? D30Colors.alert : D30Colors.ink,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1074,7 +1144,7 @@ class _ActionGrid extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.fromLTRB(38, 8, 38, 10),
       decoration: BoxDecoration(
         color: D30Colors.panel,
         borderRadius: BorderRadius.circular(12),
@@ -1084,7 +1154,7 @@ class _ActionGrid extends StatelessWidget {
         children: [
           for (var row = 0; row < (actions.length + 1) ~/ 2; row++)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 14),
               child: SizedBox(
                 height: _ActionCard.height,
                 child: Row(
@@ -1093,7 +1163,7 @@ class _ActionGrid extends StatelessWidget {
                     Expanded(
                       child: RepaintBoundary(child: _cardAt(context, row * 2)),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 18),
                     Expanded(
                       child: row * 2 + 1 < actions.length
                           ? RepaintBoundary(
@@ -1122,7 +1192,7 @@ class _ActionGrid extends StatelessWidget {
 
 class _ActionCard extends StatelessWidget {
   /// Fixed so a lesson, a textbook and a workout card all line up.
-  static const double height = 132;
+  static const double height = 146;
 
   final ActionPreview preview;
   final VoidCallback onTap;
@@ -1170,55 +1240,68 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final onFill = _filled ? Colors.white : D30Colors.ink;
 
-    return Material(
-      color: _fill,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
+    return DecoratedBox(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _filled
-                  ? Colors.black.withValues(alpha: 0.12)
-                  : D30Colors.panelBorder,
-              width: 1.5,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: _filled
+                ? Color.lerp(_fill, Colors.black, .28)!
+                : const Color(0xFFF7D4A3),
+            offset: const Offset(0, 7),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _title(onFill),
-              if (_hasBodyRow) _body(onFill),
-              if (preview.bookComplete)
-                _readingComplete()
-              else if (_showsProgress)
-                _progressBar(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.favorite,
-                    size: 14,
-                    color: _filled ? Colors.white : const Color(0xFF3A2E24),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    preview.kind == ActionKind.sleep
-                        ? '+${preview.gain ?? 0}'
-                        : '-${_trim(preview.hpCost)}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: onFill,
-                    ),
-                  ),
-                ],
+        ],
+      ),
+      child: Material(
+        color: _fill,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _filled
+                    ? Colors.black.withValues(alpha: 0.12)
+                    : D30Colors.panelBorder,
+                width: 1.5,
               ),
-            ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _title(onFill),
+                if (_hasBodyRow) _body(onFill),
+                if (preview.bookComplete)
+                  _readingComplete()
+                else if (_showsProgress)
+                  _progressBar(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.favorite,
+                      size: 14,
+                      color: _filled ? Colors.white : const Color(0xFF3A2E24),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      preview.kind == ActionKind.sleep
+                          ? '+${preview.gain ?? 0}'
+                          : '-${_trim(preview.hpCost)}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: onFill,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1431,7 +1514,13 @@ class _ActionCard extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 
-class _MenuSheet extends StatelessWidget {
+/// The hamburger drawer, laid out like the reference: a red close square over
+/// the upper-left corner, restricted Main Menu/Save rows carrying their own
+/// explanation, circular ON/OFF settings toggles, then the destinations.
+///
+/// The three toggles have nothing to drive yet — there is no audio — so they
+/// are session-local and say so in their semantics rather than pretending.
+class _MenuSheet extends StatefulWidget {
   final Game game;
   final VoidCallback onMove;
   final VoidCallback onInventory;
@@ -1450,58 +1539,245 @@ class _MenuSheet extends StatelessWidget {
     required this.onReset,
   });
 
+  /// Kept outside the widget so a reopened drawer shows the same positions.
+  static final Map<String, bool> settings = {
+    'Rumble': true,
+    'SFX': true,
+    'BGM': true,
+  };
+
+  @override
+  State<_MenuSheet> createState() => _MenuSheetState();
+}
+
+class _MenuSheetState extends State<_MenuSheet> {
+  Game get game => widget.game;
+
+  /// The day has to be over before the original lets you leave or save.
+  bool get _dayOver => game.state.date.tick == 0;
+
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.map_outlined),
-            title: const Text('Go to'),
-            subtitle: Text(game.state.location?.name ?? '-'),
-            onTap: game.inClass ? null : onMove,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 14, left: 14),
+          child: Material(
+            color: D30Colors.panel,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: D30Colors.accent, width: 3),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
+              children: [
+                _restricted(
+                  'Main Menu',
+                  'You may leave once the day is over.',
+                  onTap: widget.onReset,
+                ),
+                _restricted(
+                  'Save',
+                  'You may save once the day is over.',
+                  // Run saving is not built; the row stays unavailable rather
+                  // than offering an action that does nothing.
+                  unavailable: 'Not available in this prototype.',
+                ),
+                for (final name in _MenuSheet.settings.keys) _toggleRow(name),
+                _destination(Icons.card_giftcard, 'Store', widget.onStore),
+                _destination(Icons.edit, 'Stationery', widget.onStationery),
+                _destination(
+                  Icons.map_outlined,
+                  'Go to${game.state.location == null ? '' : ' · ${game.state.location!.name}'}',
+                  game.inClass || game.state.movementLocked
+                      ? null
+                      : widget.onMove,
+                  note: game.inClass || game.state.movementLocked
+                      ? 'You cannot leave right now.'
+                      : null,
+                ),
+                _destination(
+                  Icons.backpack_outlined,
+                  'Bags',
+                  widget.onInventory,
+                ),
+                _destination(Icons.tune, 'Dev panel', widget.onDevPanel),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEEDB),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '30 Days — clean-room rebuild',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: D30Colors.inkSoft),
+                  ),
+                ),
+              ],
+            ),
           ),
-          if (game.inClass || game.state.movementLocked)
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text(
-                '  You cannot leave right now.',
-                style: TextStyle(fontSize: 12),
+        ),
+        // Unlike every other modal here, the close control sits top-left.
+        Positioned(
+          left: 0,
+          top: 0,
+          child: Material(
+            color: D30Colors.alert,
+            borderRadius: BorderRadius.circular(10),
+            elevation: 3,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => Navigator.pop(context),
+              child: const Tooltip(
+                message: 'Close menu',
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(Icons.close, color: Colors.white, size: 26),
+                ),
               ),
             ),
-          const Divider(height: 28),
-          ListTile(
-            leading: const Icon(Icons.storefront),
-            title: const Text('Store'),
-            onTap: onStore,
           ),
-          ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('Stationery'),
-            onTap: onStationery,
-          ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Reset / Main Menu'),
-            onTap: onReset,
-          ),
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.backpack_outlined),
-            title: const Text('Inventory'),
-            onTap: onInventory,
-          ),
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.tune),
-            title: const Text('Dev panel'),
-            onTap: onDevPanel,
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _row({required Widget child}) => Column(
+    children: [
+      Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: child),
+      Container(height: 2, color: const Color(0x33502B0B)),
+    ],
+  );
+
+  /// A row the original disables with a coral explanation, not just opacity.
+  Widget _restricted(
+    String label,
+    String reason, {
+    VoidCallback? onTap,
+    String? unavailable,
+  }) {
+    final blocked = unavailable != null || !_dayOver;
+    return _row(
+      child: InkWell(
+        onTap: blocked ? null : onTap,
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 17,
+                color: blocked ? D30Colors.inkSoft : D30Colors.ink,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                blocked ? (unavailable ?? reason) : '',
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _toggleRow(String name) => _row(
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            name,
+            style: const TextStyle(fontSize: 17, color: D30Colors.ink),
+          ),
+        ),
+        for (final on in [true, false]) ...[
+          const SizedBox(width: 8),
+          _ToggleCircle(
+            label: on ? 'ON' : 'OFF',
+            selected: _MenuSheet.settings[name] == on,
+            onTap: () => setState(() => _MenuSheet.settings[name] = on),
+          ),
+        ],
+      ],
+    ),
+  );
+
+  Widget _destination(
+    IconData icon,
+    String label,
+    VoidCallback? onTap, {
+    String? note,
+  }) => _row(
+    child: InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 22, color: D30Colors.accentDark),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 17,
+                color: onTap == null ? D30Colors.inkSoft : D30Colors.ink,
+              ),
+            ),
+          ),
+          if (note != null)
+            Text(
+              note,
+              style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// The ON/OFF circles: filled orange when chosen, outlined cream when not.
+class _ToggleCircle extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ToggleCircle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    customBorder: const CircleBorder(),
+    onTap: onTap,
+    child: Container(
+      width: 42,
+      height: 42,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected ? D30Colors.accent : D30Colors.panel,
+        shape: BoxShape.circle,
+        border: Border.all(color: D30Colors.accent, width: 2),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: selected ? Colors.white : D30Colors.accent,
+        ),
+      ),
+    ),
+  );
 }

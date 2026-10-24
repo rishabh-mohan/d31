@@ -55,6 +55,10 @@ class PackManifest {
   final List<String> subjects;
   final List<Map<String, dynamic>> specialDays;
 
+  /// Which KSS story this pack is. The trait catalog is global and carries
+  /// traits scoped to other stories; this is what rejects them.
+  final int? storyId;
+
   PackManifest({
     required this.id,
     required this.name,
@@ -67,6 +71,7 @@ class PackManifest {
     required this.lastName,
     required this.subjects,
     required this.specialDays,
+    required this.storyId,
   });
 
   int get totalDays => startDate.daysUntil(endDate) + 1;
@@ -90,6 +95,7 @@ class PackManifest {
       endDate: endDate,
       ticksPerDay: (cal['ticksPerDay'] as num?)?.toInt() ?? 15,
       startLocationId: (start['locationId'] as num?)?.toInt() ?? 1000,
+      storyId: (j['storyId'] as num?)?.toInt(),
       firstName: start['firstName'] as String? ?? 'Player',
       lastName: start['lastName'] as String? ?? '',
       subjects:
@@ -293,6 +299,11 @@ class EventOption {
 }
 
 class EventNode {
+  final int? standingId;
+  final bool standingOff;
+  final String standingExpression;
+  final String standingClothes;
+  final List<String> otherLayers;
   final int id;
   final int boxId;
   final String type;
@@ -313,6 +324,11 @@ class EventNode {
   final Map<String, dynamic>? eventSound;
 
   EventNode({
+    this.standingId,
+    this.standingOff = false,
+    this.standingExpression = 'defaults',
+    this.standingClothes = 'defaults',
+    this.otherLayers = const [],
     required this.id,
     required this.boxId,
     required this.type,
@@ -334,6 +350,13 @@ class EventNode {
   });
 
   factory EventNode.fromJson(Map<String, dynamic> j) => EventNode(
+    standingId: (j['standingId'] as num?)?.toInt(),
+    standingOff: j['standingOff'] == true,
+    standingExpression: j['standingExpression'] as String? ?? 'defaults',
+    standingClothes: j['standingClothes'] as String? ?? 'defaults',
+    otherLayers: (j['otherLayerList'] as List? ?? [])
+        .whereType<String>()
+        .toList(),
     id: (j['id'] as num).toInt(),
     boxId: (j['boxId'] as num?)?.toInt() ?? 0,
     type: j['type'] as String? ?? 'text',
@@ -444,6 +467,7 @@ class GameItem {
 }
 
 class GameTrait {
+  final bool setupEligible;
   final int id;
   final String name;
   final String description;
@@ -451,22 +475,128 @@ class GameTrait {
   final String rank;
   final List<Map<String, dynamic>> effects;
 
+  /// Scope: the trait only counts at these locations, or at locations of
+  /// this type. 39 traits carry one or the other.
+  final List<int> locationIds;
+  final String? locationType;
+
+  /// The story this trait belongs to. 104 of 244 are story-scoped (3, 14,
+  /// 16, 18, 20); a trait from another story must never be granted here.
+  final int? storyId;
+
+  /// Days the trait lasts once granted. Nine are temporary -- Flu 4, Fever
+  /// Time 2, Hemorrhoids 5. Null is permanent.
+  final int? lifeTimeDays;
+
   GameTrait({
+    this.setupEligible = false,
     required this.id,
     required this.name,
     required this.description,
     required this.type,
     required this.rank,
     required this.effects,
+    required this.locationIds,
+    required this.locationType,
+    required this.storyId,
+    required this.lifeTimeDays,
   });
 
   factory GameTrait.fromJson(Map<String, dynamic> j) => GameTrait(
+    setupEligible: j['gachable'] == true,
     id: (j['id'] as num).toInt(),
     name: j['name'] as String? ?? 'Trait',
     description: j['description'] as String? ?? '',
     type: j['type'] as String? ?? 'good',
     rank: j['rank'] as String? ?? 'C',
     effects: (j['effectList'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(),
+    locationIds: (j['locationIdList'] as List? ?? const [])
+        .whereType<num>()
+        .map((n) => n.toInt())
+        .toList(),
+    locationType: j['locationType'] as String?,
+    storyId: (j['storyId'] as num?)?.toInt(),
+    lifeTimeDays: (j['initialLifeTime'] as num?)?.toInt(),
+  );
+}
+
+/// One selectable character on the Student ID carousel.
+///
+/// `effectDescription` is the prose the card prints and **is not the
+/// mechanic** — Siho Kang reads "+3" while `plusEffect` says `extraStat 6`.
+/// The structured effect is what the engine applies.
+class GameCharacter {
+  final int id;
+  final String name;
+  final String gender;
+  final String rank;
+  final int stars;
+  final bool isDefault;
+  final String effectDescription;
+  final String portrait;
+
+  /// One structured effect, in the same vocabulary as a trait's.
+  final Map<String, dynamic>? plusEffect;
+
+  /// The two characters whose effect is compiled code rather than data
+  /// (a crafting block each). Carried so the run knows, applied by nothing.
+  final String? specialFuncCode;
+
+  GameCharacter({
+    required this.id,
+    required this.name,
+    required this.gender,
+    required this.rank,
+    required this.stars,
+    required this.isDefault,
+    required this.effectDescription,
+    required this.portrait,
+    required this.plusEffect,
+    required this.specialFuncCode,
+  });
+
+  factory GameCharacter.fromJson(Map<String, dynamic> j) => GameCharacter(
+    id: (j['id'] as num).toInt(),
+    name: j['name'] as String? ?? 'Character',
+    gender: j['gender'] as String? ?? 'male',
+    rank: j['rank'] as String? ?? 'one',
+    stars: (j['stars'] as num?)?.toInt() ?? 1,
+    isDefault: j['isDefault'] as bool? ?? false,
+    effectDescription: j['effectDescription'] as String? ?? '',
+    portrait: j['portrait'] as String? ?? '',
+    plusEffect: (j['plusEffect'] as Map?)?.cast<String, dynamic>(),
+    specialFuncCode: j['specialFuncCode'] as String?,
+  );
+
+  List<Map<String, dynamic>> get effects => [?plusEffect];
+
+  bool get isMale => gender != 'female';
+}
+
+/// A university badge: up to seven are worn, and each applies once.
+class UniversityBadge {
+  final int universityId;
+  final String name;
+  final String rank;
+  final String? colorCode;
+  final List<Map<String, dynamic>> effects;
+
+  UniversityBadge({
+    required this.universityId,
+    required this.name,
+    required this.rank,
+    required this.colorCode,
+    required this.effects,
+  });
+
+  factory UniversityBadge.fromJson(Map<String, dynamic> j) => UniversityBadge(
+    universityId: (j['universityId'] as num).toInt(),
+    name: j['name'] as String? ?? 'University',
+    rank: j['rank'] as String? ?? 'none',
+    colorCode: j['colorCode'] as String?,
+    effects: (j['effects'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
         .toList(),
   );
@@ -518,6 +648,10 @@ class LevelTable {
 
   num efficiencyAt(int locationId) => locationEfficiency[locationId] ?? 1;
 
+  /// The top tier's level. Exercise tops out at 10 in story 16's table.
+  int get maxLevel =>
+      tiers.fold<int>(0, (best, t) => t.level > best ? t.level : best);
+
   /// The next tier's threshold, or null at the top. Drives the "0 / 495"
   /// progress line on the level box.
   num? nextThresholdAfter(num exp) {
@@ -565,14 +699,16 @@ class GameBook {
   /// a study block and the coloured spine in the Books menu both read
   /// E/D/C/B/A/S, weakest to strongest. Anything unrecognised falls through
   /// unchanged rather than being hidden.
-  String get tier => const {
-    '1': 'E',
-    '2': 'D',
-    '3': 'C',
-    '4': 'B',
-    '5': 'A',
-    '6': 'S',
-  }[bookRank] ?? bookRank;
+  String get tier =>
+      const {
+        '1': 'E',
+        '2': 'D',
+        '3': 'C',
+        '4': 'B',
+        '5': 'A',
+        '6': 'S',
+      }[bookRank] ??
+      bookRank;
 }
 
 // ---------------------------------------------------------------------------
@@ -580,6 +716,7 @@ class GameBook {
 // ---------------------------------------------------------------------------
 
 class ContentPack {
+  final Map<String, dynamic> presentation;
   final PackManifest manifest;
   final Rules rules;
   final Map<int, GameLocation> locations;
@@ -590,6 +727,13 @@ class ContentPack {
   final Map<int, GameItem> items;
   final Map<int, GameTrait> traits;
   final Map<int, GameBook> books;
+
+  /// Character-select catalog, filtered to this story by the builder.
+  final Map<int, GameCharacter> characters;
+
+  /// University badges, keyed by `universityId` and already in the
+  /// alphabetical order the badge screen lists them in.
+  final Map<int, UniversityBadge> badges;
   final LevelTable studyLevels;
   final LevelTable exerciseLevels;
   final LevelTable partTimeLevels;
@@ -610,6 +754,7 @@ class ContentPack {
   final Map<int, List<EventNode>> nodesByBox;
 
   ContentPack({
+    this.presentation = const {},
     required this.manifest,
     required this.rules,
     required this.locations,
@@ -620,6 +765,8 @@ class ContentPack {
     required this.items,
     required this.traits,
     required this.books,
+    this.characters = const {},
+    this.badges = const {},
     required this.studyLevels,
     required this.exerciseLevels,
     required this.partTimeLevels,
@@ -746,6 +893,9 @@ class ContentPack {
     final lv = lvRaw == null ? <String, dynamic>{} : _obj('levels.json', lvRaw);
 
     return ContentPack(
+      presentation: opt('presentation.json') == null
+          ? const {}
+          : _obj('presentation.json', opt('presentation.json')!),
       manifest: manifest,
       rules: rules,
       locations: locations,
@@ -771,6 +921,22 @@ class ContentPack {
             in (evRaw['speakers'] as List? ?? const []).whereType<Map>())
           (n['id'] as num).toInt(): n['name'] as String,
       },
+      characters: indexed(
+        'characters.json',
+        'characters',
+        GameCharacter.fromJson,
+      ),
+      badges: {
+        for (final j
+            in opt('badges.json') == null
+                ? const <Map<String, dynamic>>[]
+                : _list(
+                    'badges.json',
+                    _obj('badges.json', opt('badges.json')!),
+                    'badges',
+                  ))
+          (j['universityId'] as num).toInt(): UniversityBadge.fromJson(j),
+      },
       shop: indexed('commerce.json', 'offers', (j) => j),
       stationery: indexed('commerce.json', 'stationery', (j) => j),
       stationerySets: opt('commerce.json') == null
@@ -791,6 +957,7 @@ class ContentPack {
     'events/events.json',
   ];
   static const optionalFiles = [
+    'presentation.json',
     'events/switches.json',
     'events/sets.json',
     'events/system.json',
@@ -799,6 +966,8 @@ class ContentPack {
     'books.json',
     'levels.json',
     'commerce.json',
+    'characters.json',
+    'badges.json',
   ];
   static List<String> get allFiles => [...requiredFiles, ...optionalFiles];
 

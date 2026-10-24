@@ -53,8 +53,21 @@ and mandatory choice stops remain unchanged.
   them into the run identity. The current title-to-game flow still uses pack
   defaults; adding a name selection screen is deliberately deferred.
 - Preserve the fixed Korean-name token substitutions when wiring that screen.
-- Reference: `references/screenshots/Screenshot_20261023_005149_Korean Student Simulator.jpg`.
+- Reference: `references/screenshots/07-setup-05-player-name-005149.jpg`.
 
 `test/event_presentation_test.dart` checks name expansion across all text paths,
 legacy/new save behavior, nested styles and literal names, repeated workout
 level-ups, same-action exhaustion, and formatted dialogue/choices/log rendering.
+
+
+## Choice questions and layered NPCs
+
+The choice window renders the node's `optionText` heading and the current
+expanded dialogue/question above its buttons. Long content scrolls within the
+window. Do not cover the only copy of the question with a generic title.
+
+`presentation.json` supplies NPC skeleton/expression/clothing paths and event
+background mappings. EventRun retains NPC appearance while the player speaks;
+positive speaker/standing IDs update it, and standingOff hides it. The same
+Portrait widget composites player layers in setup, gameplay and My Info.
+See `TODO-FOLLOWUP.md` for source recovery, fallbacks and regression checks.

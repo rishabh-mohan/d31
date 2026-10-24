@@ -185,7 +185,14 @@ void main() {
       game.state.date = GameDate(DateTime(2023, 10, 19), 0);
       game.beginWeeklyStationeryDraw();
       await tester.pumpWidget(MaterialApp(home: StationeryDraw(game: game)));
+      await tester.pump();
+      // The cards roll first; no keep/redraw controls until they are stopped.
+      expect(find.text('Tap on a stationery to obtain them.'), findsOneWidget);
+      expect(find.text('Close'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 330));
+      await tester.tap(find.byKey(const ValueKey('stop-all-stationery')));
       await tester.pumpAndSettle();
+      expect(find.text('Free re-draw'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('draw-card-0')));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.lock), findsOneWidget);

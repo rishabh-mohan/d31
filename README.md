@@ -101,6 +101,13 @@ python tools/build_pack.py
 
 Re-running overwrites the pack, so copy a tuned `rules.json` aside first.
 
+## UI reference atlas
+
+[docs/UI-REFERENCE.md](docs/UI-REFERENCE.md) indexes all 33 reference screenshots.
+Each has a descriptive image filename and a detailed Markdown specification,
+including visible state, approximate geometry, controls, fine-tuning checklist,
+uncertainties and code entry points. Original filename/hash provenance is retained.
+
 ## Layout
 
 ```

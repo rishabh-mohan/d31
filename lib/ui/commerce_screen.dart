@@ -22,9 +22,7 @@ class CommerceScreen extends StatefulWidget {
   });
 
   static Route<void> route(Game game, {PackMenu menu = PackMenu.shop}) =>
-      flyUpRoute<void>(
-        (_) => CommerceScreen(game: game, initialMenu: menu),
-      );
+      flyUpRoute<void>((_) => CommerceScreen(game: game, initialMenu: menu));
   @override
   State<CommerceScreen> createState() => _CommerceScreenState();
 }
@@ -75,42 +73,78 @@ class _CommerceScreenState extends State<CommerceScreen> {
     }
     final offer = game.pack.shop[id]!;
     final item = game.pack.items[(offer['itemId'] as num).toInt()]!;
+    // The reference's acquisition popup: large artwork, then the name, the
+    // flavour line and the effect on separate lines, then a narrow Use above
+    // a wider Confirm. Both are raised orange buttons.
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      barrierColor: Colors.black54,
+      builder: (context) => Dialog(
         backgroundColor: D30Colors.panel,
-        title: Text('Got a ${item.name}!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: 90,
-              width: 90,
-              child: PackImage(
-                path: 'items/${item.id}.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-            Text(item.description),
-            const SizedBox(height: 12),
-            Text(item.effectText),
-          ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: D30Colors.accent, width: 5),
         ),
-        actions: [
-          if (item.isConsumable)
-            TextButton(
-              onPressed: () {
-                game.useItem(item.id);
-                Navigator.pop(context);
-                setState(() {});
-              },
-              child: const Text('Use'),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 120,
+                  width: 120,
+                  child: PackImage(
+                    path: 'items/${item.id}.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Got a ${item.name}!',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 22, color: D30Colors.ink),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  item.description,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, color: D30Colors.ink),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.effectText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 15, color: D30Colors.ink),
+                ),
+                const SizedBox(height: 20),
+                if (item.isConsumable)
+                  SizedBox(
+                    width: 120,
+                    child: D30RaisedButton(
+                      onPressed: () {
+                        game.useItem(item.id);
+                        Navigator.pop(context);
+                        setState(() {});
+                      },
+                      child: const Text('Use'),
+                    ),
+                  ),
+                SizedBox(
+                  width: 200,
+                  child: D30RaisedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Confirm',
+                      style: TextStyle(fontSize: 17),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Confirm'),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -146,33 +180,53 @@ class _CommerceScreenState extends State<CommerceScreen> {
       return;
     }
     setState(() => materials.clear());
-    await showDialog<void>(
+    // The reveal is its own dark, glowing stage — no commerce chrome, no red
+    // Close, just the card and a wide Confirm well below it.
+    await showGeneralDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 180,
-              height: 265,
-              child: StationeryCard(
-                id: result,
-                item: game.pack.stationery[result]!,
+      barrierLabel: 'Stationery result',
+      barrierColor: Colors.black.withValues(alpha: .88),
+      pageBuilder: (context, _, _) => Material(
+        type: MaterialType.transparency,
+        child: Center(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                radius: .7,
+                colors: [Color(0x55FFFFFF), Color(0x00000000)],
               ),
             ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: 260,
-              height: 52,
-              child: FilledButton(
-                style: orangeButton,
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Confirm'),
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 180,
+                    height: 265,
+                    child: StationeryCard(
+                      id: result,
+                      item: game.pack.stationery[result]!,
+                    ),
+                  ),
+                  const SizedBox(height: 56),
+                  SizedBox(
+                    width: 260,
+                    height: 52,
+                    child: FilledButton(
+                      style: orangeButton,
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'Confirm',
+                        style: TextStyle(fontSize: 19),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -190,26 +244,64 @@ class _CommerceScreenState extends State<CommerceScreen> {
       const Divider(indent: 25, endIndent: 25),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        // Wallet in an outlined cream pill, sort in a filled orange one.
         child: Row(
           children: [
-            Expanded(
-              child: Text(
-                'Owned: ${game.state.money.round()} Gold',
-                style: const TextStyle(fontSize: 16),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: D30Colors.panel,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: D30Colors.accent, width: 2),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Owned : ${game.state.money.round()} Gold',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
               ),
             ),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: D30Colors.accent,
-              ),
-              onPressed: () => setState(() => priceAscending = !priceAscending),
-              icon: Icon(
-                priceAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 18,
-              ),
-              label: const Text(
-                'Sort by price',
-                style: TextStyle(fontSize: 12),
+            const SizedBox(width: 8),
+            Material(
+              color: D30Colors.accent,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => setState(() => priceAscending = !priceAscending),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.filter_list,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Sort by price',
+                        style: TextStyle(fontSize: 13, color: Colors.white),
+                      ),
+                      Icon(
+                        priceAscending
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward,
+                        size: 15,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -242,16 +334,32 @@ class _CommerceScreenState extends State<CommerceScreen> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                item.name,
-                                style: const TextStyle(fontSize: 22),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(fontSize: 22),
+                                  ),
+                                  // The reference prints the bag category
+                                  // under the title, not as a separate pill.
+                                  Text(
+                                    item.isConsumable
+                                        ? 'Consumables'
+                                        : 'Others',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: D30Colors.inkSoft,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                         const Divider(),
                         Text(item.effectText, textAlign: TextAlign.center),
-                        const SizedBox(height: 8),
+                        const Divider(),
                         Text(item.description, textAlign: TextAlign.center),
                         const SizedBox(height: 12),
                         OutlinedButton(
@@ -458,7 +566,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
             ),
             child: sets.isEmpty
                 ? const Text(
-                    'Equip four matching names for Set Effects!',
+                    'Equip stationery with matching names for Set Effects!',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12),
                   )
@@ -498,6 +606,8 @@ class _CommerceScreenState extends State<CommerceScreen> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
+                    // The active category is marked by the small filled
+                    // toggle inside the pill, not by tinting the whole pill.
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: D30Colors.ink,
@@ -509,16 +619,33 @@ class _CommerceScreenState extends State<CommerceScreen> {
                           borderRadius: BorderRadius.circular(9),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 3),
-                        backgroundColor: filter == type
-                            ? const Color(0xFFFFDEBD)
-                            : null,
                       ),
                       onPressed: () => setState(() => filter = type),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(
-                          type == 'all' ? 'All' : stationeryTypeLabel(type),
-                          style: const TextStyle(fontSize: 11),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              type == 'all' ? 'All' : stationeryTypeLabel(type),
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            const SizedBox(width: 3),
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: filter == type
+                                    ? D30Colors.accent
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: D30Colors.accent,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

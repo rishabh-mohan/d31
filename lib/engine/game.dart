@@ -20,6 +20,7 @@ import 'game_date.dart';
 import 'goals.dart';
 import 'pack.dart';
 import 'state.dart';
+import 'traits.dart';
 
 /// Which card shape an action gets drawn as.
 enum ActionKind { study, lesson, partTimeJob, exercise, sleep, special }
@@ -104,10 +105,15 @@ class Game {
   final EffectEngine effects;
   final EventEngine events;
 
+  /// Reads the trait catalog's own `effectList`. See `traits.dart` for which
+  /// of the two stat fields is the real one.
+  final TraitEngine traits;
+
   Game({required this.pack, required this.state})
     : conditions = ConditionEvaluator(),
       effects = EffectEngine(),
-      events = EventEngine(pack: pack) {
+      events = EventEngine(pack: pack),
+      traits = TraitEngine(pack: pack) {
     // One evaluator and one effect engine across the whole run, so the
     // "unknown verb" sets accumulate somewhere the dev panel can read.
     effects.conditions.unknownTargets.addAll(conditions.unknownTargets);
@@ -146,6 +152,11 @@ class Game {
       if (a.blockDuplicated && state.usedActionKeysToday.contains(_key(a))) {
         return false;
       }
+      // A maxed-out exercise level retires the workout block: there is no
+      // level left to earn, so it stops being dealt into the hand. Every
+      // location keeps at least two other actions, so no pool empties --
+      // the Gym, the thinnest at three, still deals sleep and study.
+      if (a.actionType == 'exercise' && state.exerciseMaxed) return false;
       // `conditionFuncCode` gates the special actions (idol practice, etc.)
       // behind story switches. Without the switch set, hide them.
       final gate = a.conditionFuncCode;
@@ -242,6 +253,11 @@ class Game {
     gain += state.studyLevel.plusStat;
     // "Study Efficiency for Lessons" items carry subject `lesson`.
     gain += state.passiveSum('studyEfficiency', subject: 'lesson');
+    gain += traits.studyBonus(
+      state,
+      subject: lesson.subject,
+      schoolStudy: true,
+    );
     gain += state.stationeryBonus(lesson.subject);
     return gain;
   }
@@ -267,6 +283,14 @@ class Game {
   }
 
   void invalidateHand() => _handValid = false;
+
+  /// Drops the Out of Shape trait and the switch its global event waits on.
+  /// Exercising is the cure in the original: the level-up dialogue's closing
+  /// node carries `REMOVE_TRAIT_FROM_EXERCISE`.
+  void clearOutOfShape() {
+    state.switches[GameState.outOfShapeSwitch] = 0;
+    state.removeTrait(GameState.outOfShapeTraitId);
+  }
 
   int get blocksPerTick => pack.rules.number('day', 'blocksPerTick', 4).toInt();
 
@@ -519,11 +543,19 @@ class Game {
     final beforeEvents = <EventRun>[];
     if (state.exerciseLevel.level > exerciseBefore) {
       state.switches['EXERCISE_LEVEL_UP'] = 1;
+      // Levelling up is what shakes Out of Shape off, which is why the
+      // global level-up event ends on REMOVE_TRAIT_FROM_EXERCISE. At the
+      // top of the table it also latches: `setSwitch` refuses to raise
+      // TRAIT_EVENT_7 again while the level is maxed.
+      clearOutOfShape();
       final levelUp = beginSystemEvent('exerciseLevelUp');
       if (levelUp != null) beforeEvents.add(levelUp);
     }
 
-    if (state.hp <= pack.rules.hpMin) {
+    // The final action uses the last slot: there is no remaining day to lose.
+    // Follow normal evening/rollover, without the collapse popup or penalty.
+    if (state.hp <= pack.rules.hpMin &&
+        state.date.tick + 1 < actionTicksPerDay) {
       state.addStat('all', pack.rules.exhaustedPenaltyStat);
       parts.add('You collapse from exhaustion.');
       if (deferExhaustion) {
@@ -560,6 +592,7 @@ class Game {
     var gain = power * pack.rules.studyWeight * state.studyLevel.weight;
     gain += state.studyLevel.plusStat;
     gain += state.passiveSum('studyEfficiency', subject: subject);
+    gain += traits.studyBonus(state, subject: subject);
     if (subject != null) gain += state.stationeryBonus(subject);
     if (subject != null && state.lastStudySubject == subject) {
       final stacks = min(state.studyCombo, pack.rules.comboMaxStacks);
@@ -572,17 +605,23 @@ class Game {
     var pay = pack.rules.partTimeBaseMoney * state.partTimeLevel.weight;
     pay *= pack.partTimeLevels.efficiencyAt(state.locationId);
     pay += state.passiveSum('partTimeEarnings');
+    final (traitFlat, traitFactor) = traits.partTimeMoney(state);
+    pay += traitFlat;
     final percent = state.passiveSum('partTimeEarnings', valueKey: 'percent');
     if (percent != 0) pay *= 1 + percent / 100;
-    return pay;
+    return pay * traitFactor;
   }
 
   num _exerciseGain() {
     var exp = pack.rules.exerciseExp.toDouble();
     exp += state.passiveSum('exerciseEfficiency');
+    final (traitFlat, traitFactor) = traits.exerciseExp(state);
+    exp += traitFlat;
     final percent = state.passiveSum('exerciseEfficiency', valueKey: 'percent');
     if (percent != 0) exp *= 1 + percent / 100;
-    return exp * pack.exerciseLevels.efficiencyAt(state.locationId);
+    return exp *
+        traitFactor *
+        pack.exerciseLevels.efficiencyAt(state.locationId);
   }
 
   num _sleepRecovery() {
@@ -591,7 +630,9 @@ class Game {
     if (here != null && here.type == 'sleep') {
       recovery += pack.rules.sleepLocationBonusHp;
     }
-    return recovery + state.passiveSum('sleepEfficiency');
+    return recovery +
+        state.passiveSum('sleepEfficiency') +
+        traits.sleepHp(state);
   }
 
   /// Stamina is the only real resource, so this is the most load-bearing
@@ -610,8 +651,14 @@ class Game {
       cost = base + perWeight * action.hpWeight;
     }
 
-    // hpCost effects are discounts (negative), and may be gated on the tick.
+    // hpCost effects are discounts (negative), and may be gated on the tick
+    // -- Night Owl is -3 from tick 10, Indestructible a flat -3.
     cost += state.passiveSum('hpCost');
+    cost += traits.hpCostDelta(
+      state,
+      actionType: action.actionType,
+      actionFuncCode: action.funcCode,
+    );
     if (cost < 0) return 0;
     // Whole points, as the reference shows them, so the card and the bar
     // never disagree by a rounding step.
@@ -646,7 +693,8 @@ class Game {
   String _partTimeJob(LocationAction action) {
     final amount = _partTimePay().round();
     state.addMoney(amount);
-    state.partTimeExp += pack.rules.partTimeExp;
+    final (flatExp, expFactor) = traits.partTimeExp(state);
+    state.partTimeExp += (pack.rules.partTimeExp + flatExp) * expFactor;
     _spendHp(action);
     return 'Worked a shift: +$amount.';
   }
@@ -763,6 +811,10 @@ class Game {
     if (!state.date.isWeekend) state.locationId = schoolLocationId;
     state.usedActionKeysToday.clear();
     state.eventsFiredToday = 0;
+    // Temporary traits age overnight: Flu lasts 4 days, Fever Time 2.
+    for (final gone in state.expireTraitsForNewDay()) {
+      state.note('${gone.name} wore off.', 'effect');
+    }
     invalidateHand();
 
     if (state.date.compareTo(pack.manifest.endDate) >= 0) {

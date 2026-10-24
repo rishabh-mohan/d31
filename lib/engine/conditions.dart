@@ -108,9 +108,12 @@ class ConditionEvaluator {
 
     switch (c['targetType'] as String?) {
       case 'event':
-        // EVENT_159 -> how many times event 159 has fired.
+        // EVENT_159 -> how far event 159 has got: 0 never seen, 1 playing,
+        // 2 finished. Not a fired-count -- story 16 compares against 2 in
+        // eleven places (the Readers' Response beats and friends), which a
+        // once-only event's count never reaches.
         final id = int.tryParse(target.replaceFirst('EVENT_', ''));
-        return id == null ? null : (state.eventCounts[id] ?? 0);
+        return id == null ? null : (state.eventStates[id] ?? 0);
 
       case 'eventSwitch':
         return state.switchValue(target);
