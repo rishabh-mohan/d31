@@ -1939,6 +1939,10 @@ class _PressDownState extends State<_PressDown> {
     if (_down != down) setState(() => _down = down);
   }
 
+  /// Short enough that a release still reads as simultaneous with the hand
+  /// being dealt again, long enough not to be a jump cut.
+  static const _travel = Duration(milliseconds: 70);
+
   @override
   Widget build(BuildContext context) {
     final drop = _down ? _PressDown.depth : 0.0;
@@ -1948,20 +1952,26 @@ class _PressDownState extends State<_PressDown> {
       onTapUp: (_) => _set(false),
       onTapCancel: () => _set(false),
       onTap: widget.onTap,
-      child: Transform.translate(
-        offset: Offset(0, drop),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius),
-            boxShadow: [
-              BoxShadow(
-                color: widget.edgeColor,
-                offset: Offset(0, _PressDown.depth - drop),
-              ),
-            ],
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: drop),
+        duration: _travel,
+        curve: Curves.easeOut,
+        builder: (context, value, child) => Transform.translate(
+          offset: Offset(0, value),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.radius),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.edgeColor,
+                  offset: Offset(0, _PressDown.depth - value),
+                ),
+              ],
+            ),
+            child: child,
           ),
-          child: widget.child,
         ),
+        child: widget.child,
       ),
     );
   }
