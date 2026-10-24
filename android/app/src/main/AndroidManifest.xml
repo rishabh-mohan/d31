@@ -1,13 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="d30mode"
+        android:label="30 Days"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- The UI is laid out against a 1080x2340 portrait reference and has
+             no landscape form. Locked here as well as in main.dart, so the
+             launch theme cannot flash sideways before Flutter starts. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
+            android:screenOrientation="portrait"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"

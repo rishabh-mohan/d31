@@ -103,6 +103,30 @@ Future<void> main() async {
     expect(find.text('D-$countdown'), findsOneWidget);
   });
 
+  testWidgets('the handoff out of setup shows a dash, not the goal', (
+    tester,
+  ) async {
+    final game = Game.newRun(pack);
+    final goal = game.state.weeklyGoal!;
+    await tester.pumpWidget(
+      host(
+        DayTransition(
+          game: game,
+          before: DayTransition.snapshot(game.state),
+          initial: true,
+        ),
+      ),
+    );
+    // UIR-08: the objective is announced over the hub afterwards, not here.
+    expect(find.text('-'), findsOneWidget);
+    expect(
+      find.textContaining('Reach ${goal.targetValue}'),
+      findsNothing,
+      reason: 'the initial handoff carries no goal row',
+    );
+    expect(find.text('D-${game.state.daysRemaining}'), findsOneWidget);
+  });
+
   group('the dev panel Traits tab', () {
     /// The tab's own list, which is the last one built: the State tab stays
     /// in the tree behind it.

@@ -566,6 +566,25 @@ Consequences to keep in mind:
   it with `python tools/build_pack.py && python tools/copy_assets.py`, don't
   commit it.
 - The parent repo now ignores `/d30mode/` so it does not see an embedded repo.
+- **The launcher icon is drawn, not cropped.** `android/app/src/main/res` *is*
+  tracked, so anything under it derived from `assets/images/` would publish KSS
+  art through the back door. `tools/make_app_icon.py` draws a cream "30" on the
+  accent orange — legacy PNGs at five densities, an adaptive foreground, the
+  background colour and a monochrome layer. Re-run it rather than hand-editing
+  the PNGs; it needs Pillow and any heavy system sans.
+
+### App identity
+
+The app is **30 Days** to the user: the Android `android:label`, the
+`MaterialApp` title and the Windows window title all say so. The Dart package
+is still `d30mode`, and renaming it would rewrite every `package:d30mode/…`
+import and the Android `applicationId` for nothing the player can see.
+
+Portrait is locked twice on purpose — `android:screenOrientation` on the
+activity, so the launch theme cannot flash sideways before Flutter starts, and
+`SystemChrome.setPreferredOrientations` in `main()` for everything after. Every
+screen is laid out against the 1080x2340 reference and several fit a fixed
+canvas to the viewport, so there is no landscape form to rotate into.
 
 ## 5c. The knowledge graph (graphify)
 
