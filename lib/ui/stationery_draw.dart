@@ -32,7 +32,7 @@ class _StationeryDrawState extends State<StationeryDraw> {
 
   /// How fast the faces cycle. The still frames cannot establish this; it is
   /// chosen to read as motion without strobing.
-  static const _rollInterval = Duration(milliseconds: 110);
+  static const _rollInterval = Duration(milliseconds: 45);
 
   Timer? _roll;
   int _frame = 0;

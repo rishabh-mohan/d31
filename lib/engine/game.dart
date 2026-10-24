@@ -157,12 +157,39 @@ class Game {
       // location keeps at least two other actions, so no pool empties --
       // the Gym, the thinnest at three, still deals sleep and study.
       if (a.actionType == 'exercise' && state.exerciseMaxed) return false;
-      // `conditionFuncCode` gates the special actions (idol practice, etc.)
-      // behind story switches. Without the switch set, hide them.
+      // `conditionFuncCode` gates the special actions (idol practice, game
+      // practice, ...). Without the switch set, hide them.
       final gate = a.conditionFuncCode;
-      if (gate != null && state.switchValue(gate) == 0) return false;
+      if (gate != null && state.switchValue(blockSwitchFor(gate)) == 0) {
+        return false;
+      }
       return true;
     }).toList();
+  }
+
+  /// The switch a special block's gate actually reads.
+  ///
+  /// The gate name is a **compiled predicate** in the original —
+  /// `IDOL_BLOCK_CONDITION` — while the content writes a plainer switch,
+  /// `IDOL_BLOCK`. Reading the gate name as a switch meant every special
+  /// block stayed hidden for ever, because no such switch exists.
+  ///
+  /// Story 16 writes `GAME_BLOCK` and the matching gate is
+  /// `PRO_GAME_BLOCK_CONDITION`, so the `PRO_` prefix is dropped too. Gates
+  /// with no declared switch — mechanic, medical, psychic — belong to other
+  /// campaigns' routes and stay shut here, which is correct: story 16's
+  /// careers are Entrepreneur, Soccer, Cooking and Webtoon.
+  String blockSwitchFor(String gate) {
+    if (pack.switchDefaults.containsKey(gate)) return gate;
+    var name = gate.endsWith('_CONDITION')
+        ? gate.substring(0, gate.length - '_CONDITION'.length)
+        : gate;
+    if (pack.switchDefaults.containsKey(name)) return name;
+    if (name.startsWith('PRO_')) {
+      final shorter = name.substring(4);
+      if (pack.switchDefaults.containsKey(shorter)) return shorter;
+    }
+    return name;
   }
 
   String _key(LocationAction a) =>

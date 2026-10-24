@@ -62,13 +62,32 @@ class EventRun {
       portraitId = null;
       return;
     }
-    final id = node.standingId ?? (node.speakerId > 0 ? node.speakerId : null);
-    // Player speech leaves the previous NPC on screen.
-    if (id == null || id <= 0) return;
-    portraitId = id;
-    portraitExpression = node.standingExpression;
-    portraitClothes = node.standingClothes;
-    portraitOtherLayers = node.otherLayers;
+    // **`standingId` alone decides who is on screen.** `speakerId` names the
+    // chip above the line and is not an actor: five NPCs are called some form
+    // of "Friend", and Master of Massages (event 55) opens with
+    // `standingId: 8` — the heavy-set friend — on a line whose `speakerId` is
+    // 1, the friend in glasses. Falling back to the speaker swapped the art
+    // on the very next line, which carries no standing of its own.
+    final id = node.standingId;
+    if (id != null && id > 0) {
+      portraitId = id;
+      portraitExpression = node.standingExpression;
+      portraitClothes = node.standingClothes;
+      portraitOtherLayers = node.otherLayers;
+      return;
+    }
+    // No new actor. A line that names an expression or outfit restyles
+    // whoever is already there — that is how a reaction shot is written —
+    // but a line that names neither leaves them exactly as they were, which
+    // is also what keeps the NPC on screen while the player speaks.
+    if (portraitId == null) return;
+    if (node.standingExpression != 'defaults') {
+      portraitExpression = node.standingExpression;
+    }
+    if (node.standingClothes != 'defaults') {
+      portraitClothes = node.standingClothes;
+    }
+    if (node.otherLayers.isNotEmpty) portraitOtherLayers = node.otherLayers;
   }
 
   /// Guards against a cycle in hand-edited content. A graph that loops

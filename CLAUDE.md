@@ -573,6 +573,52 @@ Consequences to keep in mind:
   background colour and a monochrome layer. Re-run it rather than hand-editing
   the PNGs; it needs Pillow and any heavy system sans.
 
+### `standingId` is the actor, `speakerId` is only a label
+
+Five NPCs answer to some form of "Friend" — ids 1, 23, 25, 26 and 10002 — so
+the two are not interchangeable. **Master of Massages (event 55)** is the case
+that proves it: node 55000 carries `standingId: 8`, the heavy-set friend, on a
+line whose `speakerId` is 1, the friend in glasses, and node 55001 carries no
+standing at all. Falling back to the speaker when `standingId` was null swapped
+the art on the second line of the conversation.
+
+So: only `standingId` moves the actor, and `standingOff` clears them. A line
+with neither keeps whoever is on screen — which is the same rule that keeps the
+NPC up while the player speaks. A line that names an expression or outfit
+*without* a standing restyles the current actor, because that is how a reaction
+shot is written; a line that names neither leaves them alone, so expressions
+persist instead of resetting to `defaults` every line.
+
+### Special blocks and their gates
+
+A route-specific block (Game Practice, Idol Practice, Soccer Practice …) hangs
+off `conditionFuncCode`, which is a **compiled predicate name** in the original
+— `IDOL_BLOCK_CONDITION` — while the content writes a plainer switch,
+`IDOL_BLOCK`. Reading the predicate name as a switch hid every gated block for
+ever. `Game.blockSwitchFor` maps one to the other, dropping `_CONDITION` and
+the `PRO_` prefix: `PRO_GAME_BLOCK_CONDITION` reads `GAME_BLOCK`, which story
+16 sets to 1 twice.
+
+Gates with no declared switch — mechanic, medical, psychic — belong to other
+campaigns' routes; the user says those are unlocked by the **character you
+pick** (ihyeon unlocks medicine crafting), which lives in the global character
+catalog, not the campaign. That import is still to do.
+
+`UNLOCK_LOCATION` is a **funcCode**, not a change type: `{"funcCode":
+"UNLOCK_LOCATION", "args": [16007]}`. It has always been implemented. Grepping
+for the effect-type spelling `unlockLocation` finds nothing and is misleading —
+the campaign unlocks nine locations this way, the Soccer Practice Field among
+them.
+
+### Retry Year is story 20
+
+`kss/assetpack1_dec/assets/assets/stories/20` — 218 events, 9,072 nodes, 31 MB.
+Its first event is `재수 엔딩` (Retry Year Ending) and its locations are already
+English (Lower Classroom, Dorm, Secret Mountain, Karaoke, Fitness Centre, Study
+Lounge, Arcade, Reflection Room) — but **its event text is Korean**. The
+translation project covers stories 14, 16, 42, 45 and 68 only. Importing it is
+a second pack plus a campaign choice; the engine needs nothing.
+
 ### The Calendar is content
 
 `Game.schedule()` derives the agenda from the campaign's **date-pinned
