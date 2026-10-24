@@ -12,6 +12,7 @@ import '../engine/content_source.dart';
 import '../engine/game.dart';
 import '../engine/goals.dart';
 import '../engine/pack.dart';
+import '../engine/save_store.dart';
 import '../engine/state.dart';
 import 'dev_panel.dart';
 import 'end_screen.dart';
@@ -1556,6 +1557,42 @@ class _MenuSheetState extends State<_MenuSheet> {
   /// The day has to be over before the original lets you leave or save.
   bool get _dayOver => game.state.date.tick == 0;
 
+  /// Leaving mid-run throws away everything since the last Save, so it asks.
+  Future<void> _leave() async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave to the main menu?'),
+        content: const Text('Anything since your last save is lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    if (go == true) widget.onReset();
+  }
+
+  Future<void> _save() async {
+    final slot = game.state.saveSlot;
+    if (slot == null) return;
+    final ok = await SaveStore.write(slot, game.state);
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'Saved to slot ${slot + 1}.' : 'Could not save.'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1577,14 +1614,15 @@ class _MenuSheetState extends State<_MenuSheet> {
                 _restricted(
                   'Main Menu',
                   'You may leave once the day is over.',
-                  onTap: widget.onReset,
+                  onTap: _leave,
                 ),
                 _restricted(
                   'Save',
                   'You may save once the day is over.',
-                  // Run saving is not built; the row stays unavailable rather
-                  // than offering an action that does nothing.
-                  unavailable: 'Not available in this prototype.',
+                  onTap: _save,
+                  unavailable: game.state.saveSlot == null
+                      ? 'This run has no slot.'
+                      : null,
                 ),
                 for (final name in _MenuSheet.settings.keys) _toggleRow(name),
                 _destination(Icons.card_giftcard, 'Store', widget.onStore),
@@ -1669,15 +1707,20 @@ class _MenuSheetState extends State<_MenuSheet> {
         onTap: blocked ? null : onTap,
         child: Row(
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 17,
-                color: blocked ? D30Colors.inkSoft : D30Colors.ink,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 17,
+                  color: blocked ? D30Colors.inkSoft : D30Colors.ink,
+                ),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
+              flex: 2,
               child: Text(
                 blocked ? (unavailable ?? reason) : '',
                 textAlign: TextAlign.right,
@@ -1696,6 +1739,8 @@ class _MenuSheetState extends State<_MenuSheet> {
         Expanded(
           child: Text(
             name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 17, color: D30Colors.ink),
           ),
         ),
@@ -1735,9 +1780,12 @@ class _MenuSheetState extends State<_MenuSheet> {
             ),
           ),
           if (note != null)
-            Text(
-              note,
-              style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+            Flexible(
+              child: Text(
+                note,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 11, color: D30Colors.alert),
+              ),
             ),
         ],
       ),
