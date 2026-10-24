@@ -148,6 +148,10 @@ class GameState {
   /// The current weekly goal, renewed every Monday.
   WeeklyGoal? weeklyGoal;
 
+  /// The save slot this run belongs to, so the in-game Save writes back where
+  /// it was loaded from. `null` for a run that has never been saved.
+  int? saveSlot;
+
   /// Which goal week has already had its announcement dialog shown, so the
   /// reference's "Check your Weekly Goals" popup opens once per goal and not
   /// again on every preparation screen. `null` means none yet.
@@ -570,6 +574,7 @@ class GameState {
     'cookies': cookies,
     'weeklyGoal': weeklyGoal?.toJson(),
     'announcedGoalWeek': announcedGoalWeek,
+    'saveSlot': saveSlot,
     'studyBlocksThisWeek': studyBlocksThisWeek,
     'surplusStudyBlocks': surplusStudyBlocks,
     'finished': finished,
@@ -680,6 +685,7 @@ class GameState {
       (j['weeklyGoal'] as Map?)?.cast<String, dynamic>(),
     );
     state.announcedGoalWeek = (j['announcedGoalWeek'] as num?)?.toInt();
+    state.saveSlot = (j['saveSlot'] as num?)?.toInt();
     state.studyBlocksThisWeek =
         (j['studyBlocksThisWeek'] as num?)?.toInt() ?? 0;
     state.surplusStudyBlocks = (j['surplusStudyBlocks'] as num?)?.toInt() ?? 0;

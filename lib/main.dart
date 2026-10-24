@@ -14,6 +14,7 @@ import 'package:flutter/services.dart';
 import 'engine/content_source.dart';
 import 'engine/game.dart';
 import 'engine/pack.dart';
+import 'engine/save_store.dart';
 import 'ui/day_transition.dart';
 import 'ui/game_screen.dart';
 import 'ui/setup_screen.dart';
@@ -129,6 +130,7 @@ class _TitleScreenState extends State<TitleScreen> {
         _location = location;
         _loading = false;
       });
+      await _loadSaves();
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
@@ -139,7 +141,40 @@ class _TitleScreenState extends State<TitleScreen> {
     }
   }
 
-  Future<void> _start() async {
+  /// Slot summaries for the title list; rebuilt whenever a run returns here.
+  List<SaveSummary?> _saves = const [];
+
+  Future<void> _loadSaves() async {
+    final saves = await SaveStore.list();
+    if (mounted) setState(() => _saves = saves);
+  }
+
+  Future<void> _deleteSlot(int slot) async {
+    await SaveStore.delete(slot);
+    await _loadSaves();
+  }
+
+  /// Opens a saved run. A slot that cannot be read is reported rather than
+  /// silently starting a new game over the top of it.
+  Future<void> _continue(int slot) async {
+    final pack = _pack;
+    final location = _location;
+    if (pack == null || location == null) return;
+    PackImages.use(location);
+    final state = await SaveStore.read(slot, pack);
+    if (!mounted) return;
+    if (state == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save slot ${slot + 1} could not be read.')),
+      );
+      await _loadSaves();
+      return;
+    }
+    state.saveSlot = slot;
+    await _play(Game(pack: pack, state: state), location);
+  }
+
+  Future<void> _start(int slot) async {
     final pack = _pack;
     final location = _location;
     if (pack == null || location == null) return;
@@ -151,6 +186,7 @@ class _TitleScreenState extends State<TitleScreen> {
       ),
     );
     if (game == null || !mounted) return;
+    game.state.saveSlot = slot;
     // The reference hands off from setup through the navy D-31 screen, with a
     // dash where the goal goes; the objective is announced over the hub after
     // it. See docs/ui-reference UIR-08 and UIR-09.
@@ -161,7 +197,13 @@ class _TitleScreenState extends State<TitleScreen> {
       initial: true,
     );
     if (!mounted) return;
-    Navigator.of(context).push(
+    await _play(game, location);
+  }
+
+  /// Runs the game, then refreshes the slot list: whatever the run saved is
+  /// what the title screen should show when it comes back.
+  Future<void> _play(Game game, PackLocation location) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => GameScreen(
           game: game,
@@ -173,6 +215,7 @@ class _TitleScreenState extends State<TitleScreen> {
         ),
       ),
     );
+    await _loadSaves();
   }
 
   @override
@@ -205,18 +248,18 @@ class _TitleScreenState extends State<TitleScreen> {
                 else if (_error != null)
                   _ErrorCard(error: _error!, stack: _stack, onRetry: _load)
                 else ...[
-                  FilledButton(
-                    onPressed: _start,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 48,
-                        vertical: 16,
+                  for (var slot = 0; slot < SaveStore.slots; slot++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _SlotCard(
+                        slot: slot,
+                        summary: _saves.length > slot ? _saves[slot] : null,
+                        onStart: () => _start(slot),
+                        onContinue: () => _continue(slot),
+                        onDelete: () => _deleteSlot(slot),
                       ),
-                      textStyle: const TextStyle(fontSize: 20),
                     ),
-                    child: const Text('Start'),
-                  ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 18),
                   _PackSummary(pack: _pack!, location: _location!),
                   TextButton.icon(
                     onPressed: _load,
@@ -307,5 +350,118 @@ class _ErrorCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// One row of the title screen's slot list.
+///
+/// There is no reference capture of the original's slot list, so this stays in
+/// the project's own plain style rather than guessing at one.
+class _SlotCard extends StatelessWidget {
+  final int slot;
+  final SaveSummary? summary;
+  final VoidCallback onStart;
+  final VoidCallback onContinue;
+  final VoidCallback onDelete;
+
+  const _SlotCard({
+    required this.slot,
+    required this.summary,
+    required this.onStart,
+    required this.onContinue,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final save = summary;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: D30Colors.panel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: D30Colors.panelBorder, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Slot ${slot + 1}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: D30Colors.inkSoft,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  save == null
+                      ? 'Empty'
+                      : '${save.name.isEmpty ? 'Unnamed' : save.name} · '
+                            'D-${save.daysRemaining}',
+                  style: const TextStyle(fontSize: 17, color: D30Colors.ink),
+                ),
+                if (save != null)
+                  Text(
+                    'Saved ${_when(save.savedAt)}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: D30Colors.inkSoft,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (save == null)
+            FilledButton(
+              key: ValueKey('new-run-$slot'),
+              onPressed: onStart,
+              child: const Text('New run'),
+            )
+          else ...[
+            FilledButton(
+              key: ValueKey('continue-$slot'),
+              onPressed: onContinue,
+              child: const Text('Continue'),
+            ),
+            IconButton(
+              tooltip: 'Delete slot ${slot + 1}',
+              onPressed: () => _confirmDelete(context),
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete slot ${slot + 1}?'),
+        content: const Text('The saved run is removed for good.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) onDelete();
+  }
+
+  static String _when(DateTime at) {
+    final local = at.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${local.year}-${two(local.month)}-${two(local.day)} '
+        '${two(local.hour)}:${two(local.minute)}';
   }
 }

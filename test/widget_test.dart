@@ -10,11 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/game.dart';
+import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/ui/day_transition.dart';
 import 'package:d30mode/ui/dev_panel.dart';
 import 'package:d30mode/ui/day_menu.dart';
 import 'package:d30mode/ui/location_picker.dart';
+import 'package:d30mode/ui/game_screen.dart';
 import 'package:d30mode/ui/my_info.dart';
 
 late ContentPack pack;
@@ -126,6 +128,44 @@ Future<void> main() async {
     );
     expect(find.text('D-${game.state.daysRemaining}'), findsOneWidget);
   });
+
+  for (final (label, tick, restricted) in [
+    ('between days', 0, false),
+    ('mid-day', 4, true),
+  ]) {
+    testWidgets('the menu restricts Main Menu and Save $label', (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final game = Game.newRun(pack);
+      game.state.saveSlot = 0;
+      game.state.date = GameDate(game.state.date.day, tick);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GameScreen(
+            game: game,
+            packLocation: PackLocation('kss16', null, false),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      if (tick == 0) {
+        // The goal announcement opens over the hub; dismiss it first.
+        await tester.tap(find.text("Let's do this!"));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Main Menu'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+      // UIR-30: the restriction is explained in words, not just greyed out.
+      final matcher = restricted ? findsOneWidget : findsNothing;
+      expect(find.text('You may leave once the day is over.'), matcher);
+      expect(find.text('You may save once the day is over.'), matcher);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   group('the dev panel Traits tab', () {
     /// The tab's own list, which is the last one built: the State tab stays

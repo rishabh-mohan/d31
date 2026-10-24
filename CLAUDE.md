@@ -573,6 +573,29 @@ Consequences to keep in mind:
   background colour and a monochrome layer. Re-run it rather than hand-editing
   the PNGs; it needs Pillow and any heavy system sans.
 
+### Saved runs
+
+`lib/engine/save_store.dart` writes three slots to `<documents>/saves/
+slot_<n>.json` as `{version, savedAt, summary, state}`. Two things about the
+shape are deliberate:
+
+- The **summary is duplicated** out of the state (name, D-count, stats) so the
+  title screen can list slots without building a `ContentPack`.
+- A write goes to `slot_<n>.json.tmp` and is then renamed. A kill mid-write
+  must not destroy the save that was already there, and a corrupt file reads
+  as an empty slot rather than taking the title screen down.
+
+`GameState.saveSlot` is what the in-game Save writes back to, so a loaded run
+returns to the slot it came from. Saving is only offered between days, which
+is the one part of the original's save system the captures establish (UIR-30);
+there is **no reference capture of a slot list**, so that screen is the
+project's own and should not be presented as recovered.
+
+`SaveStore.directoryOverride` exists for tests. Those are plain `test`s, not
+`testWidgets` — see §5a on why real file I/O inside a widget test hangs for ten
+minutes. With no override and no documents directory, every call degrades to
+"saving is unavailable" rather than throwing.
+
 ### App identity
 
 The app is **30 Days** to the user: the Android `android:label`, the
