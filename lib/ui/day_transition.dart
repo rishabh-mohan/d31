@@ -119,57 +119,71 @@ class DayTransition extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.track_changes,
-                              color: Color(0xFFD5392F),
-                              size: 24,
+                        // UIR-08/19: one compact header row — the label, then
+                        // the target and reward on the same line, or a dash
+                        // before any objective has been announced. It must
+                        // not grow and squeeze the five subject columns.
+                        SizedBox(
+                          height: 30,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.track_changes,
+                                  color: Color(0xFFD5392F),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Weekly Goals',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: D30Colors.ink,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                if (goal == null)
+                                  const Text(
+                                    '-',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: D30Colors.ink,
+                                    ),
+                                  )
+                                else ...[
+                                  D30Chip(
+                                    text:
+                                        '${subjectLabel(goal.targetSubject)} Reach ${goal.targetValue}',
+                                    color: D30Colors.subject(
+                                      goal.targetSubject,
+                                    ),
+                                    fontSize: 13,
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: Icon(
+                                      Icons.arrow_right_alt,
+                                      size: 20,
+                                      color: D30Colors.accent,
+                                    ),
+                                  ),
+                                  D30Chip(
+                                    text:
+                                        '${subjectLabel(goal.rewardSubject)} Reward ${goal.rewardValue}',
+                                    color: D30Colors.subject(
+                                      goal.rewardSubject,
+                                    ),
+                                    fontSize: 13,
+                                  ),
+                                ],
+                              ],
                             ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Weekly Goals',
-                              style: TextStyle(
-                                fontSize: 19,
-                                color: D30Colors.ink,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (goal == null)
-                          const Text('-', style: TextStyle(fontSize: 20))
-                        else
-                          Row(
-                            children: [
-                              Expanded(
-                                child: D30Chip(
-                                  text:
-                                      '${subjectLabel(goal.targetSubject)} Reach ${goal.targetValue}',
-                                  color: D30Colors.subject(goal.targetSubject),
-                                  fontSize: 16,
-                                  padding: const EdgeInsets.all(10),
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                child: Icon(
-                                  Icons.arrow_right_alt,
-                                  color: D30Colors.accent,
-                                ),
-                              ),
-                              Expanded(
-                                child: D30Chip(
-                                  text:
-                                      '${subjectLabel(goal.rewardSubject)} Reward ${goal.rewardValue}',
-                                  color: D30Colors.subject(goal.rewardSubject),
-                                  fontSize: 16,
-                                  padding: const EdgeInsets.all(10),
-                                ),
-                              ),
-                            ],
                           ),
+                        ),
                         const SizedBox(height: 10),
                         Row(
                           children: [

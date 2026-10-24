@@ -502,8 +502,9 @@ def build_rules(out: Path):
                "exhaustedForcedSleep": True},
         "money": {"initial": 0, "min": 0},
         # Refresh Tickets redeal the block hand; cookies are the soft currency
-        # shown in the top bar.
-        "refresh": {"initial": 41},
+        # shown in the top bar. Both are account-level in the original; until
+        # account progression exists, every run simply starts with these.
+        "refresh": {"initial": 50},
         "cookies": {"initial": 20},
         "day": {
             "ticksPerDay": 15,

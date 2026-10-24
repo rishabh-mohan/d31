@@ -573,6 +573,20 @@ Consequences to keep in mind:
   background colour and a monochrome layer. Re-run it rather than hand-editing
   the PNGs; it needs Pillow and any heavy system sans.
 
+### The Calendar is content
+
+`Game.schedule()` derives the agenda from the campaign's **date-pinned
+events** — the 23 listed in `docs/D30-MODE-SPEC.md` §6.6, the Graduation Exam
+among them — by walking each event's condition tree for a `date` condition.
+Nothing about the Calendar is hardcoded, so a storyline that pins a National
+Cooking Contest appears on it without the UI knowing such a thing exists.
+
+Which pinned events to list is **ours, not recovered**: an event belonging to
+a storyline set only shows once the run has met that storyline (some event of
+the set has a non-zero state), because otherwise day one advertises every
+career at once. Finished events and past days drop off, and the hub strip
+shows whichever entry is next rather than always the exam.
+
 ### Saved runs
 
 `lib/engine/save_store.dart` writes three slots to `<documents>/saves/
