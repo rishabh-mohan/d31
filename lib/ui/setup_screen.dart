@@ -27,6 +27,9 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> {
   int step = 0;
+
+  /// Step 2 shows the gender page after the carousel when the pack offers it.
+  bool choosingGender = false;
   bool committed = false;
   late final first = TextEditingController(text: widget.draft.firstName);
   late final last = TextEditingController(text: widget.draft.lastName);
@@ -165,6 +168,15 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
           ],
         );
+      case 1 when choosingGender:
+        return GenderSelectPage(
+          recommendedMale: draft.recommendedMale(pack),
+          onSelect: (male) => setState(() {
+            draft.isMale = male;
+            choosingGender = false;
+            step = 2;
+          }),
+        );
       case 1:
         return CharacterCarousel(
           pack: pack,
@@ -225,40 +237,6 @@ class _SetupScreenState extends State<SetupScreen> {
               ),
               onChanged: (v) => draft.lastName = v,
             ),
-            if (pack.hasFemaleScript) ...[
-              const SizedBox(height: 20),
-              const Text('Gender', style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (final (male, label) in [
-                    (true, 'Male'),
-                    (false, 'Female'),
-                  ])
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: ChoiceChip(
-                        label: Text(
-                          label,
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                        selected: draft.maleFor(pack) == male,
-                        selectedColor: D30Colors.accent,
-                        onSelected: (_) => setState(() => draft.isMale = male),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                draft.maleFor(pack)
-                    ? 'Ji Suin and Jian Lee are girls in this story.'
-                    : 'Ji Suin and Jian Lee are boys in this story.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: D30Colors.inkSoft),
-              ),
-            ],
           ],
         );
     }
@@ -291,6 +269,8 @@ class _SetupScreenState extends State<SetupScreen> {
           onPressed: () {
             if (step == 0) {
               Navigator.pop(context);
+            } else if (choosingGender) {
+              setState(() => choosingGender = false);
             } else {
               setState(() => step--);
             }
@@ -324,7 +304,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                   ),
                 ),
-                if (step != 0)
+                if (step != 0 && !choosingGender)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(45, 6, 45, 14),
                     child: SizedBox(
@@ -334,6 +314,10 @@ class _SetupScreenState extends State<SetupScreen> {
                         onPressed: committed || draft.characterId == null
                             ? null
                             : () {
+                                if (step == 1 && pack.genderSelection) {
+                                  setState(() => choosingGender = true);
+                                  return;
+                                }
                                 if (step < 4) {
                                   setState(() => step++);
                                   return;

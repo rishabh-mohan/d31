@@ -5,6 +5,15 @@ Markdown specifications. Start with the relevant row below, read its state and
 fine-tuning checklist, then open the linked full-resolution image. These are
 original-game targets; they are not screenshots proving the current d30mode UI.
 
+## Main menu additions (2026-10-24)
+
+A separate collection of **27** home/account-menu captures is indexed and specified
+in [MAIN-MENU-REFERENCE.md](MAIN-MENU-REFERENCE.md). It covers Home, Achievements,
+History, Puzzles, trait management/reveals and Select Game. Originals are under
+`screenshots/main-menu-2026-10-24/`, with a hash/dimension manifest. The 33 images
+indexed below remain the earlier in-run/setup reference set. Read the new
+specification's evidence labels before treating navigation as confirmed.
+
 ## How another agent should use this atlas
 
 1. Read `CLAUDE.md`, the relevant TODO and the screen's individual specification.

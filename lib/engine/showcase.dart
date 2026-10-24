@@ -90,7 +90,11 @@ class CharacterShowcase {
     }
     final state = game.state;
     final fired = state.eventsFiredToday;
-    final run = game.events.begin(_event(_nodeBase), state);
+    final run = game.events.begin(
+      _event(_nodeBase),
+      state,
+      genderedCast: false,
+    );
     state.eventsFiredToday = fired;
     state.eventCounts.remove(eventId);
     return run;

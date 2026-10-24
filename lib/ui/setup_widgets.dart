@@ -35,6 +35,118 @@ Widget setupPanel(Widget child, {Color color = const Color(0xFFFFEEDB)}) =>
       child: child,
     );
 
+/// Select Character (2 / 5), second half: the protagonist's gender, for packs
+/// that turn `rules.setup.genderSelection` on (TODO 65/66). The character's
+/// own gender is recommended and its card is the bright one; tapping a card
+/// chooses it and moves on. Layout from the user's reference capture.
+class GenderSelectPage extends StatelessWidget {
+  final bool recommendedMale;
+  final ValueChanged<bool> onSelect;
+  const GenderSelectPage({
+    super.key,
+    required this.recommendedMale,
+    required this.onSelect,
+  });
+
+  static const _pink = Color(0xFFE5508A);
+  static const _blue = Color(0xFF4F6FC4);
+
+  @override
+  Widget build(BuildContext context) {
+    final word = recommendedMale ? 'Male' : 'Female';
+    final colour = recommendedMale ? _blue : _pink;
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          'Select Gender',
+          style: TextStyle(fontSize: 34, color: Color(0xFF4A2E12)),
+        ),
+        const SizedBox(height: 18),
+        Text.rich(
+          TextSpan(
+            style: const TextStyle(fontSize: 16, color: Color(0xFF4A2E12)),
+            children: [
+              const TextSpan(text: 'The selected character’s gender is '),
+              TextSpan(text: word, style: TextStyle(color: colour)),
+              const TextSpan(text: '.\nWe recommend you to select '),
+              TextSpan(text: word, style: TextStyle(color: colour)),
+              const TextSpan(text: '!'),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 22),
+        for (final male in [true, false]) ...[
+          _GenderCard(
+            key: ValueKey('gender-${male ? 'Male' : 'Female'}'),
+            male: male,
+            recommended: male == recommendedMale,
+            onTap: () => onSelect(male),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+}
+
+class _GenderCard extends StatelessWidget {
+  final bool male;
+  final bool recommended;
+  final VoidCallback onTap;
+  const _GenderCard({
+    super.key,
+    required this.male,
+    required this.recommended,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final face = male ? const Color(0xFF919AB3) : const Color(0xFFF0959A);
+    final edge = male ? const Color(0xFF6E7898) : const Color(0xFFE9636C);
+    // The recommended card reads in cream; the other is muted.
+    final ink = recommended ? const Color(0xFFFFF6E6) : const Color(0xFFC9C3B2);
+    return PressFeedback(
+      travel: 6,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 250,
+          height: 168,
+          decoration: BoxDecoration(
+            color: face,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: edge, width: 1.5),
+            boxShadow: [
+              BoxShadow(color: edge, offset: const Offset(0, 6)),
+              const BoxShadow(
+                color: Color(0x264A2B10),
+                blurRadius: 8,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(12),
+          child: FittedBox(
+            child: Column(
+              children: [
+                Icon(male ? Icons.male : Icons.female, size: 96, color: ink),
+                const SizedBox(height: 6),
+                Text(
+                  male ? 'Play as male' : 'Play as female',
+                  style: TextStyle(fontSize: 28, color: ink),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class CharacterCarousel extends StatefulWidget {
   final ContentPack pack;
   final RunSetup draft;

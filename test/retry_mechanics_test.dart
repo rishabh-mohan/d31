@@ -11,6 +11,7 @@ import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/engine/setup.dart';
 import 'package:d30mode/engine/state.dart';
 import 'package:d30mode/ui/csat_screen.dart';
+import 'package:d30mode/ui/setup_screen.dart';
 
 /// Retry Year's compiled mechanics, recovered from the Korean native, and the
 /// exam day both campaigns now share. See docs/RETRY-YEAR.md.
@@ -425,6 +426,53 @@ void main() {
     expect(identical(loaded.pack, game.pack), isTrue);
     final male = (RunSetup(retry)..isMale = true).commit(retry);
     expect(identical(male.pack, retry), isTrue);
+  });
+
+  test('gender selection is a pack switch, and pairs follow the player', () {
+    expect(retry.genderSelection, isTrue);
+    expect(original.genderSelection, isFalse);
+    // Two-form NPCs appear as the opposite gender of the protagonist.
+    expect(retry.npcFor(9, playerIsMale: true), 9);
+    expect(retry.npcFor(9, playerIsMale: false), 27);
+    expect(retry.npcFor(27, playerIsMale: true), 9);
+    expect(retry.npcFor(2, playerIsMale: false), 2);
+    // A pack without the switch ignores a stray choice.
+    final draft = RunSetup(original)..isMale = false;
+    expect(draft.maleFor(original), draft.recommendedMale(original));
+  });
+
+  testWidgets('Select opens the gender page, and a card moves on', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final draft = RunSetup(retry)..difficulty = 'standard';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SetupScreen(pack: retry, draft: draft, campaigns: [retry]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retry Year'));
+    await tester.pumpAndSettle();
+    expect(find.text('Select Character (2 / 5)'), findsOneWidget);
+    await tester.tap(find.text('Select'));
+    await tester.pumpAndSettle();
+    expect(find.text('Select Gender'), findsOneWidget);
+    expect(find.text('Select Character (2 / 5)'), findsOneWidget);
+    final recommended = draft.recommendedMale(retry);
+    expect(
+      find.textContaining(recommended ? 'Male' : 'Female', findRichText: true),
+      findsWidgets,
+    );
+    await tester.tap(
+      find.byKey(ValueKey(recommended ? 'gender-Female' : 'gender-Male')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Select Character (3 / 5)'), findsOneWidget);
+    expect(draft.maleFor(retry), !recommended);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the CSAT screen goes from results to enrolment', (tester) async {

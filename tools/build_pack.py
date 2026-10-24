@@ -173,12 +173,19 @@ def build_items(out: Path):
         (story_normal, "normal", "story"),
     ):
         for it in src:
-            # Passive study efficiency adds one stat per authored unit.
-            # Consumable stat grants retain their separate existing scaling.
-            effect_text = re.sub(r"(CONSUME_STAT_|NORMAL_STAT_)(\d+)",
+            # The text reads as the reference screenshots do: both tokens show
+            # x3 (Book Stand, NORMAL_STAT_1, is "+3"; Weird Workbook,
+            # CONSUME_STAT_30, is "+90"). What a passive item grants is one
+            # stat per authored unit (user playtest: the x3 boost was three
+            # times too strong), so effects are parsed from that scale;
+            # consumable grants keep the x3.
+            source = it.get("effectText") or ""
+            effect_text = re.sub(r"(?:CONSUME_STAT_|NORMAL_STAT_)(\d+)",
+                lambda m: str(int(m.group(1)) * 3), source)
+            granted_text = re.sub(r"(CONSUME_STAT_|NORMAL_STAT_)(\d+)",
                 lambda m: str(int(m.group(2)) * (3 if m.group(1) == "CONSUME_STAT_" else 1)),
-                it.get("effectText") or "")
-            effects, raw, flavour = item_effects.parse(effect_text)
+                source)
+            effects, raw, flavour = item_effects.parse(granted_text)
             if raw:
                 unparsed += 1
             entry = {
@@ -788,6 +795,10 @@ def build_rules(out: Path):
             "rankWeights": {"A": 1.0, "B": 2.0, "C": 4.0},
             "priorityOrder": ["veryHigh", "high", "middle", "low"],
         },
+        # Setup offers a protagonist gender only where a pack turns it on. With
+        # it on, an NPC listed in genderPairs appears as the opposite gender of
+        # the protagonist (forMale is the form a male player meets).
+        "setup": {"genderSelection": False, "genderPairs": []},
         "exam": {
             # The CSAT on the last day, then applications and the endings.
             # Scoring is compiled in the original and NOT recovered: the
@@ -805,6 +816,13 @@ def build_rules(out: Path):
         },
     }
     if STORY_ID == 20:
+        # Retry Year scripts both protagonists; Jian Lee, Ji Suin and Inmul Ko
+        # each have a girl and a boy actor.
+        rules['setup'] = {'genderSelection': True, 'genderPairs': [
+            {'forMale': 9, 'forFemale': 27},
+            {'forMale': 3, 'forFemale': 32},
+            {'forMale': 8, 'forFemale': 28},
+        ]}
         # Keep the observed book baseline (power 5 -> +15 unbuffed). The prior
         # 9x tuning tripled ordinary study to fit exam thresholds; it was not
         # recovered and the user reported inflated beginner-book gains.

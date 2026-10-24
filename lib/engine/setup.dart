@@ -18,7 +18,11 @@ class RunSetup {
   bool? isMale;
 
   bool maleFor(ContentPack pack) =>
-      isMale ?? pack.characters[characterId]?.isMale ?? true;
+      (pack.genderSelection ? isMale : null) ?? recommendedMale(pack);
+
+  /// The selected character's own gender, which setup recommends.
+  bool recommendedMale(ContentPack pack) =>
+      pack.characters[characterId]?.isMale ?? true;
 
   RunSetup(ContentPack pack)
     : firstName = pack.manifest.firstName,

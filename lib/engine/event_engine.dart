@@ -74,7 +74,7 @@ class EventRun {
     // on the very next line, which carries no standing of its own.
     final id = node.standingId;
     if (id != null && id > 0) {
-      portraitId = id;
+      portraitId = _cast(id);
       portraitExpression = node.standingExpression;
       portraitClothes = node.standingClothes;
       portraitOtherLayers = node.otherLayers;
@@ -100,13 +100,21 @@ class EventRun {
   int _steps = 0;
   bool exhausted = false;
 
+  /// Apply the pack's gender pairs to who stands and speaks. Off only for
+  /// the dev panel's showcase, which shows every actor as listed.
+  final bool genderedCast;
+
   EventRun({
     required this.event,
     required this.pack,
     required this.state,
     required this.effects,
     required this.conditions,
+    this.genderedCast = true,
   });
+
+  int _cast(int id) =>
+      genderedCast ? pack.npcFor(id, playerIsMale: state.isMale) : id;
 
   void start() {
     state.quiz = null;
@@ -229,7 +237,9 @@ class EventRun {
             if (quizKind != null && text.trim().isEmpty) continue;
             choices.add(EventChoice(text, option));
           }
-          if (quizKind != null && state.quiz != null) choices.shuffle(state.random);
+          if (quizKind != null && state.quiz != null) {
+            choices.shuffle(state.random);
+          }
           state.quiz?.rewind();
           if (choices.isEmpty) {
             // Every branch gated out: fall through rather than deadlock.
@@ -303,7 +313,7 @@ class EventRun {
   String? _speakerName(EventNode node) {
     if (node.isHideSpeakerName) return node.speakerId > 0 ? '???' : null;
     if (node.speakerId <= 0) return 'Me';
-    final name = pack.speakers[node.speakerId];
+    final name = pack.speakers[_cast(node.speakerId)];
     return name == null || name.trim().isEmpty ? '???' : name;
   }
 
@@ -363,7 +373,7 @@ class EventEngine {
            effects ??
            EffectEngine(conditions: conditions ?? ConditionEvaluator());
 
-  EventRun begin(GameEvent event, GameState state) {
+  EventRun begin(GameEvent event, GameState state, {bool genderedCast = true}) {
     effects.resetTransient();
     final run = EventRun(
       event: event,
@@ -371,6 +381,7 @@ class EventEngine {
       state: state,
       effects: effects,
       conditions: conditions,
+      genderedCast: genderedCast,
     );
     run.start();
     return run;
@@ -407,9 +418,9 @@ class EventEngine {
     }
 
     // Character ability scenes have their own slot (Game._nextCharacterEvent).
-    final candidates = eligible(
-      state,
-    ).where((e) => !e.isCharacterEvent).toList();
+    final candidates = eligible(state)
+        .where((e) => !e.isCharacterEvent)
+        .toList();
     if (candidates.isEmpty) return null;
 
     final order =

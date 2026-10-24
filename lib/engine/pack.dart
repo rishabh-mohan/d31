@@ -775,6 +775,37 @@ class ContentPack {
   bool get hasFemaleScript =>
       _maleScript != null || sourceFiles.containsKey('events/events_female.json');
 
+  /// Whether setup offers a protagonist gender (`rules.setup.genderSelection`).
+  /// A pack switch, so a pack author can turn it on or off.
+  bool get genderSelection => rules.flag('setup', 'genderSelection', false);
+
+  /// NPCs with two gendered forms appear as the opposite gender of the
+  /// protagonist. `rules.setup.genderPairs` lists each pair as
+  /// `{"forMale": id, "forFemale": id}`: the form a male player meets and the
+  /// form a female player meets.
+  late final Map<int, (int, int)> _genderPairs = {
+    for (final p
+        in (rules.section('setup')['genderPairs'] as List? ?? const [])
+            .whereType<Map>())
+      if (p['forMale'] is num && p['forFemale'] is num) ...{
+        (p['forMale'] as num).toInt(): (
+          (p['forMale'] as num).toInt(),
+          (p['forFemale'] as num).toInt(),
+        ),
+        (p['forFemale'] as num).toInt(): (
+          (p['forMale'] as num).toInt(),
+          (p['forFemale'] as num).toInt(),
+        ),
+      },
+  };
+
+  /// The form of NPC [id] a protagonist of this gender meets.
+  int npcFor(int id, {required bool playerIsMale}) {
+    final pair = _genderPairs[id];
+    if (pair == null || !genderSelection) return id;
+    return playerIsMale ? pair.$1 : pair.$2;
+  }
+
   /// This pack with the script a protagonist of that gender plays. Built
   /// once and shared; a pack without a female script returns itself.
   ContentPack forPlayer({required bool isMale}) {
