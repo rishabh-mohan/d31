@@ -1929,20 +1929,18 @@ class _MenuSheetState extends State<_MenuSheet> {
           onTap: blocked ? null : onTap,
           child: Row(
             children: [
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: blocked ? D30Colors.inkSoft : D30Colors.ink,
-                  ),
+              // The label takes its full width (TODO 80: "Main M..." when
+              // squeezed to a third of the row); the reason wraps beside it.
+              Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 17,
+                  color: blocked ? D30Colors.inkSoft : D30Colors.ink,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                flex: 2,
                 child: Text(
                   blocked ? (unavailable ?? reason) : '',
                   textAlign: TextAlign.right,
