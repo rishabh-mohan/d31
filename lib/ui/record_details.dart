@@ -206,6 +206,10 @@ class _RecordDetailsState extends State<RecordDetails> {
               child: PackImage(
                 path: record.portrait,
                 alignment: Alignment.bottomCenter,
+                placeholder: const PackImage(
+                  path: genericPortrait,
+                  alignment: Alignment.bottomCenter,
+                ),
               ),
             ),
             SizedBox(width: 10 * u),
@@ -552,7 +556,10 @@ class _RecordDetailsState extends State<RecordDetails> {
                         SizedBox(
                           width: 80 * u,
                           height: 100 * u,
-                          child: PackImage(path: record.portrait),
+                          child: PackImage(
+                            path: record.portrait,
+                            placeholder: const PackImage(path: genericPortrait),
+                          ),
                         ),
                       ],
                     ),
