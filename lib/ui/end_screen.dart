@@ -87,18 +87,18 @@ class _EndScreenState extends State<EndScreen> {
             Expanded(
               child: SingleChildScrollView(
                 key: const ValueKey('completion-scroll'),
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                padding: const EdgeInsets.fromLTRB(16, 22, 16, 32),
                 child: Column(
                   children: [
                     SizedBox(
                       width: w * .78,
                       child: StudentIdCard.forRun(state),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 28),
                     Container(
                       key: const ValueKey('completion-panel'),
                       width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 16),
+                      padding: const EdgeInsets.fromLTRB(12, 34, 12, 46),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF8EF),
                         borderRadius: BorderRadius.circular(14),
@@ -125,7 +125,7 @@ class _EndScreenState extends State<EndScreen> {
                               color: D30Colors.ink,
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 18),
                           Row(
                             children: [
                               for (final s in state.pack.manifest.subjects)
