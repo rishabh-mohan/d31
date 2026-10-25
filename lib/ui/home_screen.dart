@@ -66,7 +66,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, (ContentPack, PackLocation)> _campaigns = {};
 
   /// MM-02: the four-arrow button hides the menu; a tap anywhere returns it.
+  /// Both ways the menu fades over [_sceneFade] (TODO 91) while the wallpaper
+  /// under it stays put.
   bool _sceneOnly = false;
+
+  static const _sceneFade = Duration(milliseconds: 250);
 
   @override
   void initState() {
@@ -232,9 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
           DailyQuestPanel(catalog: campaigns.first.admissions),
         );
       case 'Achievements':
-        await pushOverlay<void>(
-          context,
-          AchievementsSheet(campaigns: campaigns),
+        // A full page like Records and Puzzles (TODO 94), not a sheet.
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AchievementsPage(campaigns: campaigns),
+          ),
         );
       case 'Traits':
         await pushOverlay<void>(context, ManageTraitsSheet(pack: pack));
@@ -265,14 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_sceneOnly) {
-      return GestureDetector(
-        key: const ValueKey('home-scene-only'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _sceneOnly = false),
-        child: const SizedBox.expand(child: PackImage(path: homeWallpaper)),
-      );
-    }
     return Scaffold(
       backgroundColor: HomeColors.paper,
       body: LayoutBuilder(
@@ -288,139 +286,162 @@ class _HomeScreenState extends State<HomeScreen> {
               // The wallpaper fills the screen and the paper blocks lie over
               // it (the original's wallpaper_block_right/bottom).
               const Positioned.fill(child: PackImage(path: homeWallpaper)),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                height: 32 * u,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: HomeColors.paper,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: HomeColors.outline,
-                        width: 4 * u,
-                      ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: _sceneOnly,
+                  child: AnimatedOpacity(
+                    key: const ValueKey('home-menu-fade'),
+                    opacity: _sceneOnly ? 0 : 1,
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : _sceneFade,
+                    curve: Curves.easeOut,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: _menu(u, y, ready),
                     ),
                   ),
                 ),
               ),
-              Positioned(
-                left: 297 * u,
-                right: 0,
-                top: 0,
-                bottom: 0,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: HomeColors.paper,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0x30000000),
-                        blurRadius: 8 * u,
-                        offset: Offset(-2 * u, 0),
-                      ),
-                    ],
-                  ),
-                  child: const CustomPaint(painter: _RuledPaper()),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 600 * u,
-                bottom: 0,
-                child: DecoratedBox(
-                  position: DecorationPosition.foreground,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: HomeColors.outline, width: 2 * u),
-                    ),
-                  ),
-                  child: const CustomPaint(painter: _RuledPaper()),
-                ),
-              ),
-              Positioned(
-                left: 6 * u,
-                top: y(46),
-                child: _SquareButton(
-                  key: const ValueKey('home-settings'),
-                  u: u,
-                  icon: Icons.settings,
-                  tooltip: 'Settings',
-                  onTap: _openSettings,
-                ),
-              ),
-              Positioned(
-                right: 40 * u,
-                top: y(46),
-                child: _BalancePill(u: u, account: AccountStore.current),
-              ),
-              for (final (i, entry) in [
-                ('Traits', _MenuIcon.icon(Icons.style)),
-                ('Puzzles', _MenuIcon.art('kss/images/puzzle.png')),
-                ('Records', _MenuIcon.icon(Icons.history)),
-                ('Missions', _MenuIcon.icon(Icons.receipt_long)),
-                ('Achievements', _MenuIcon.icon(Icons.workspace_premium)),
-              ].indexed)
-                Positioned(
-                  right: -4 * u,
-                  top: y(275 + 59.3 * i),
-                  child: _MenuButton(
-                    key: ValueKey('home-${entry.$1.toLowerCase()}'),
-                    u: u,
-                    label: entry.$1,
-                    icon: entry.$2,
-                    onTap: ready ? () => _openMenu(entry.$1) : null,
+              if (_sceneOnly)
+                Positioned.fill(
+                  child: GestureDetector(
+                    key: const ValueKey('home-scene-only'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _sceneOnly = false),
                   ),
                 ),
-              Positioned(
-                right: -4 * u,
-                top: y(577),
-                child: _MenuButton(
-                  key: const ValueKey('home-start'),
-                  u: u,
-                  label: 'Start',
-                  icon: _MenuIcon.icon(Icons.edit_outlined),
-                  filled: true,
-                  onTap: ready ? _openStart : null,
-                ),
-              ),
-              Positioned(
-                left: 6 * u,
-                top: y(537),
-                child: _SquareButton(
-                  key: const ValueKey('home-scene'),
-                  u: u,
-                  icon: Icons.zoom_out_map,
-                  tooltip: 'Show the background',
-                  onTap: () => setState(() => _sceneOnly = true),
-                ),
-              ),
-              Positioned(
-                left: 20 * u,
-                right: 140 * u,
-                top: y(612),
-                child: _loading
-                    ? const Align(
-                        alignment: Alignment.centerLeft,
-                        child: CircularProgressIndicator(),
-                      )
-                    : _error != null
-                    ? _LoadError(error: _error!, onRetry: _load)
-                    : Text(
-                        _pack?.manifest.name ?? '',
-                        style: TextStyle(
-                          fontSize: 19.5 * u,
-                          color: HomeColors.ink,
-                        ),
-                      ),
-              ),
             ],
           );
         },
       ),
     );
   }
+
+  /// Everything on Home but the wallpaper: what the four arrows fade away.
+  List<Widget> _menu(double u, double Function(double) y, bool ready) => [
+    Positioned(
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 32 * u,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: HomeColors.paper,
+          border: Border(
+            bottom: BorderSide(color: HomeColors.outline, width: 4 * u),
+          ),
+        ),
+      ),
+    ),
+    Positioned(
+      left: 297 * u,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: HomeColors.paper,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x30000000),
+              blurRadius: 8 * u,
+              offset: Offset(-2 * u, 0),
+            ),
+          ],
+        ),
+        child: const CustomPaint(painter: _RuledPaper()),
+      ),
+    ),
+    Positioned(
+      left: 0,
+      right: 0,
+      top: 600 * u,
+      bottom: 0,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: HomeColors.outline, width: 2 * u),
+          ),
+        ),
+        child: const CustomPaint(painter: _RuledPaper()),
+      ),
+    ),
+    Positioned(
+      left: 6 * u,
+      top: y(46),
+      child: _SquareButton(
+        key: const ValueKey('home-settings'),
+        u: u,
+        icon: Icons.settings,
+        tooltip: 'Settings',
+        onTap: _openSettings,
+      ),
+    ),
+    Positioned(
+      right: 40 * u,
+      top: y(46),
+      child: _BalancePill(u: u, account: AccountStore.current),
+    ),
+    for (final (i, entry) in [
+      ('Traits', _MenuIcon.icon(Icons.style)),
+      ('Puzzles', _MenuIcon.art('kss/images/puzzle.png')),
+      ('Records', _MenuIcon.icon(Icons.history)),
+      ('Missions', _MenuIcon.icon(Icons.receipt_long)),
+      ('Achievements', _MenuIcon.icon(Icons.workspace_premium)),
+    ].indexed)
+      Positioned(
+        right: -4 * u,
+        top: y(275 + 59.3 * i),
+        child: _MenuButton(
+          key: ValueKey('home-${entry.$1.toLowerCase()}'),
+          u: u,
+          label: entry.$1,
+          icon: entry.$2,
+          onTap: ready ? () => _openMenu(entry.$1) : null,
+        ),
+      ),
+    Positioned(
+      right: -4 * u,
+      top: y(577),
+      child: _MenuButton(
+        key: const ValueKey('home-start'),
+        u: u,
+        label: 'Start',
+        icon: _MenuIcon.icon(Icons.edit_outlined),
+        filled: true,
+        onTap: ready ? _openStart : null,
+      ),
+    ),
+    Positioned(
+      left: 6 * u,
+      top: y(537),
+      child: _SquareButton(
+        key: const ValueKey('home-scene'),
+        u: u,
+        icon: Icons.zoom_out_map,
+        tooltip: 'Show the background',
+        onTap: () => setState(() => _sceneOnly = true),
+      ),
+    ),
+    Positioned(
+      left: 20 * u,
+      right: 140 * u,
+      top: y(612),
+      child: _loading
+          ? const Align(
+              alignment: Alignment.centerLeft,
+              child: CircularProgressIndicator(),
+            )
+          : _error != null
+          ? _LoadError(error: _error!, onRetry: _load)
+          : Text(
+              _pack?.manifest.name ?? '',
+              style: TextStyle(fontSize: 19.5 * u, color: HomeColors.ink),
+            ),
+    ),
+  ];
 }
 
 /// The cream paper with its faint rules, every 20 units as in the SVGs.
