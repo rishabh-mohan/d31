@@ -345,6 +345,46 @@ Future<void> main() async {
     expect(find.text('Flu (4 d)'), findsOneWidget);
   });
 
+  for (final reduced in [false, true]) {
+    testWidgets('My Info fades in (reduced motion: $reduced)', (tester) async {
+      final game = Game.newRun(pack);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(disableAnimations: reduced),
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => MyInfoPanel.show(context, game),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final fade = tester.widget<FadeTransition>(
+        find
+            .ancestor(
+              of: find.byType(MyInfoPanel),
+              matching: find.byType(FadeTransition),
+            )
+            .first,
+      );
+      if (reduced) {
+        expect(fade.opacity.value, 1);
+      } else {
+        expect(fade.opacity.value, inExclusiveRange(0.05, 0.95));
+      }
+      await tester.pumpAndSettle();
+      expect(fade.opacity.value, 1);
+      expect(find.text('My Info'), findsOneWidget);
+    });
+  }
+
   testWidgets('My Info renders its content, not just a barrier', (
     tester,
   ) async {

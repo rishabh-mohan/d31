@@ -72,3 +72,33 @@ Route<T> flyUpRoute<T>(WidgetBuilder builder, {Color? barrierColor}) {
         flyUpTransition(animation, child),
   );
 }
+
+/// How long [showFadeDialog] takes to fade in.
+const fadeDuration = Duration(milliseconds: 250);
+
+/// A dialog that fades in where it stands, without the rise.
+///
+/// For panels that report on you rather than take you somewhere — My Info.
+/// `showDialog`'s own fade is a barely visible 150ms with a scale; this one is
+/// a plain opacity ramp, and it is instant when the platform asks for reduced
+/// motion.
+Future<T?> showFadeDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  Color barrierColor = Colors.black54,
+}) {
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: barrierColor,
+    transitionDuration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : fadeDuration,
+    pageBuilder: (context, _, _) => builder(context),
+    transitionBuilder: (_, animation, _, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: child,
+    ),
+  );
+}
