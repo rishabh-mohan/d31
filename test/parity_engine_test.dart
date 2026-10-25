@@ -6,6 +6,7 @@ import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/event_text.dart';
 import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/game_date.dart';
+import 'package:d30mode/engine/goals.dart';
 import 'package:d30mode/engine/pack.dart';
 
 /// Regressions for the original-game parity audit's engine defects
@@ -102,6 +103,55 @@ void main() {
       expect(other.purchase(3005), isNotNull);
       expect(other.state.itemCount(3005), 1);
       expect(other.state.money, 100000);
+    });
+  });
+
+  group('A07 Weekly Goal completion', () {
+    test('an event stat gain meets the goal as it lands', () {
+      final game = Game.newRun(original, random: Random(7));
+      final goal = game.state.weeklyGoal!;
+      final index = original.manifest.subjects.indexOf(goal.targetSubject);
+      final short = goal.targetValue - game.state.stats[goal.targetSubject]!;
+      game.effects.applyChanger({
+        'funcCode': 'INCREASE_STAT',
+        'args': [index, short + 10],
+      }, game.state);
+      expect(goal.met, isTrue);
+    });
+
+    test('a consumable stat gain meets the goal too', () {
+      final game = Game.newRun(original, random: Random(8));
+      final goal = game.state.weeklyGoal!;
+      // Item 16 is Korean +450; aim the goal at Korean just within reach.
+      game.state.weeklyGoal = WeeklyGoal(
+        weekIndex: goal.weekIndex,
+        targetSubject: 'korean',
+        targetValue: (game.state.stats['korean']! + 400).round(),
+        rewardSubject: goal.rewardSubject,
+        rewardValue: goal.rewardValue,
+        startValue: game.state.stats['korean']!,
+      );
+      game.state.addItem(16);
+      expect(game.useItem(16), isTrue);
+      expect(game.state.weeklyGoal!.met, isTrue);
+    });
+
+    test('the action that reaches the goal still announces it', () {
+      final game = Game.newRun(original, random: Random(9));
+      game.state.openingComplete = true;
+      game.state.date = GameDate(game.state.date.day, 7);
+      game.state.locationId = 1000;
+      final goal = game.state.weeklyGoal!;
+      final study = original.locations[1000]!.actions.firstWhere(
+        (action) => action.actionType == 'study',
+      );
+      final book = original
+          .booksFor(goal.targetSubject)
+          .firstWhere((book) => book.bookRank == '1');
+      game.state.stats[goal.targetSubject] = goal.targetValue - 1.0;
+      final outcome = game.act(study, book: book);
+      expect(goal.met, isTrue);
+      expect(outcome.summary, contains('Weekly goal met!'));
     });
   });
 }
