@@ -709,11 +709,13 @@ class StudentIdCard extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Stack(
             children: [
+              // The faint crest watermark runs past the card, so only the card's
+              // rounded border and the title band (drawn after it) clip it.
               Positioned(
-                left: 60 * u,
-                top: 40 * u,
-                width: 110 * u,
-                height: 110 * u,
+                left: 20 * u,
+                top: 8 * u,
+                width: 190 * u,
+                height: 205 * u,
                 child: Opacity(
                   opacity: .10,
                   child: SchoolCrest(university: university),

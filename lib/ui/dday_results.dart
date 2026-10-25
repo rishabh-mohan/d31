@@ -433,6 +433,22 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
       ),
     );
 
+    // Tap anywhere to open the active envelope (TODO 104). Just above the page
+    // tint, below everything else, so the Browse control and fast-forward
+    // keep their own taps; _browse ignores anything but the idle state (no
+    // double start).
+    if (_step == _Step.idle) {
+      children.add(
+        Positioned.fill(
+          child: GestureDetector(
+            key: const ValueKey('results-tap-anywhere'),
+            behavior: HitTestBehavior.opaque,
+            onTap: _browse,
+          ),
+        ),
+      );
+    }
+
     // --- stash: revealed cards peeking out behind the stack ----------------
     final remaining = n - _revealed;
     final ranksBehind = math.max(0, remaining - 1) + (stashing ? 1 - s : 0);
@@ -841,8 +857,19 @@ class _CardsPageState extends State<_CardsPage> {
       if (_results[i].accepted) i,
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    // No separate aggregate Confirm (TODO 105): the page appears spread out,
+    // then settles into the Final Decision layout by itself. Engine
+    // confirmResults() runs once.
+    if (!_reviewed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _confirmAll());
+    }
+  }
+
   void _confirmAll() {
-    if (_reviewed) return;
+    if (_reviewed || !mounted) return;
     game.confirmResults();
     setState(() => _reviewed = true);
   }
@@ -988,16 +1015,7 @@ class _CardsPageState extends State<_CardsPage> {
             left: w * .12,
             right: w * .12,
             bottom: MediaQuery.paddingOf(context).bottom + h * .04,
-            child: !_reviewed
-                ? D30RaisedButton(
-                    key: const ValueKey('results-confirm-all'),
-                    onPressed: _confirmAll,
-                    child: const Text(
-                      'Confirm',
-                      style: TextStyle(fontSize: 21),
-                    ),
-                  )
-                : (anyAccepted && !_choosing)
+            child: (_reviewed && anyAccepted && !_choosing)
                 ? D30RaisedButton(
                     key: const ValueKey('final-decision-button'),
                     onPressed: () => setState(() => _choosing = true),

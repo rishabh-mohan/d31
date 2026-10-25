@@ -94,13 +94,17 @@ none -> the title.
    stack (0.5 s) and brings the next envelope forward; each Confirm calls
    `game.confirmNextResult()` once. Reduced motion jumps straight to the card
    and shows no confetti.
+   A tap anywhere on the idle stack (not only Browse) opens the active
+   envelope (TODO 104); the Browse and fast-forward controls keep their own
+   taps and a second tap while opening is ignored.
    RECONSTRUCTED: the green double-chevron button skips to the revealed card
    of the current envelope (the recording never taps it); it never confirms.
    RECONSTRUCTED: the Accepted card (same layout, green "Accepted"), the
    envelope drawing and all timings.
-4. Combined results: black page, cards stacked in submission order, orange
-   Confirm (`game.confirmResults()`), a step separate from the per-envelope
-   Confirms.
+4. Combined results: black page, cards stacked in submission order. There
+   is no aggregate Confirm (TODO 105): the page settles into the Final Decision
+   layout by itself and calls `game.confirmResults()` once (the per-envelope
+   Confirms stay).
 5. Final Decision (user spec): "Final Decision" fades in. With acceptances the
    cards compact under the title and a "Final Decision" button appears;
    pressing it fades the rejected cards out and slides the accepted ones to
@@ -120,6 +124,8 @@ none -> the title.
    "Upload your photo to your student ID!" (gallery picker); dark panel with
    Instagram / X (snack bar "Not available in this build.") and download
    (saves the card as a PNG to the gallery); wide Confirm -> `onFinished`.
+   The card's faint crest watermark runs past the card and is clipped only by
+   its rounded border and the title band (TODO 109).
    The Student ID number is blank (not in the recording). The layout is fixed
    once built (the card has an aspect ratio, so a late portrait cannot move
    it); the recording frames 51 s and 52 s show no relayout (DDAY-C08).
