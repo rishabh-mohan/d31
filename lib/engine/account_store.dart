@@ -5,7 +5,11 @@
 /// the capture). Cookies come from what the original rewards with them:
 /// reaching an ending for the first time (its Endings List amount), the
 /// achievements that list one, and the daily quest. Refresh tokens have no
-/// recovered source yet and stay at zero.
+/// recovered source yet.
+///
+/// A run spends from this wallet for every currency its rules mark
+/// `shared` (GameState.attachWallet, TODO 84 M04): cookies by default.
+/// The first shared run grants the old per-run `initial` once.
 library;
 
 import 'dart:convert';
@@ -18,6 +22,7 @@ import 'package:path_provider/path_provider.dart';
 import 'account_catalog.dart';
 import 'pack.dart';
 import 'record_store.dart';
+import 'state.dart' show SharedWallet;
 
 /// Which admissions catalog a run applies to (TODO 41).
 enum UniversitySet {
@@ -130,10 +135,44 @@ const dailyQuestCookies = 4;
 /// Mileage that guarantees an S-tier card (MM-14: 490/1000).
 const mileageMax = 1000;
 
-class Account {
+/// Change Username's price and length limits (F07: "2-16 characters",
+/// Change with a cookie and 9).
+const renameCookies = 9;
+const usernameMinLength = 2;
+const usernameMaxLength = 16;
+
+/// Settings' Type of Music (F01/F02). Orchestral and Carol come with paid
+/// entitlements in the original, which this build does not sell.
+enum MusicType {
+  regular('Regular'),
+  orchestral('Orchestral'),
+  carol('Carol');
+
+  final String label;
+  const MusicType(this.label);
+}
+
+class Account implements SharedWallet {
+  @override
   int cookies;
+  @override
   int refreshTokens;
   UniversitySet universities;
+
+  /// Currencies whose one-time starting grant a run has already paid
+  /// (GameState.attachWallet).
+  @override
+  final Set<String> walletGrants;
+
+  /// The name under Home's scene and on the profile (F05/F07).
+  String username;
+
+  /// Settings toggles (F01). Stored for when audio and haptics exist;
+  /// nothing plays or rumbles yet (TODO 85 F02/F03).
+  bool bgm;
+  bool sfx;
+  bool rumble;
+  MusicType music;
 
   /// Ending codes ever reached. Their cookies were paid when first reached.
   final Set<int> endings;
@@ -178,7 +217,14 @@ class Account {
     Set<String>? boughtPuzzles,
     this.background = 'wallpaper0',
     this.quest,
-  }) : endings = endings ?? {},
+    Set<String>? walletGrants,
+    this.username = defaultUsername,
+    this.bgm = true,
+    this.sfx = true,
+    this.rumble = true,
+    this.music = MusicType.regular,
+  }) : walletGrants = walletGrants ?? {},
+       endings = endings ?? {},
        enrollments = enrollments ?? {},
        clears = clears ?? {},
        achievementsPaid = achievementsPaid ?? {},
@@ -203,7 +249,15 @@ class Account {
     'boughtPuzzles': boughtPuzzles.toList(),
     'background': background,
     'quest': ?quest?.toJson(),
+    'walletGrants': walletGrants.toList(),
+    'username': username,
+    'bgm': bgm,
+    'sfx': sfx,
+    'rumble': rumble,
+    'music': music.name,
   };
+
+  static const defaultUsername = 'Student';
 
   static Account fromJson(Map<String, dynamic> j) => Account(
     cookies: (j['cookies'] as num?)?.toInt() ?? 0,
@@ -244,7 +298,46 @@ class Account {
     },
     background: j['background'] as String? ?? 'wallpaper0',
     quest: j['quest'] is Map ? DailyQuest.fromJson(j['quest'] as Map) : null,
+    walletGrants: {
+      for (final v in j['walletGrants'] as List? ?? const []) '$v',
+    },
+    username: switch (j['username']) {
+      final String name when validUsername(name) => name,
+      _ => defaultUsername,
+    },
+    bgm: j['bgm'] as bool? ?? true,
+    sfx: j['sfx'] as bool? ?? true,
+    rumble: j['rumble'] as bool? ?? true,
+    music: MusicType.values.firstWhere(
+      (m) => m.name == j['music'],
+      orElse: () => MusicType.regular,
+    ),
   );
+
+  // ---- Profile --------------------------------------------------------
+
+  static bool validUsername(String name) {
+    final n = name.trim().runes.length;
+    return n >= usernameMinLength && n <= usernameMaxLength;
+  }
+
+  /// Why [name] cannot be taken, or null when Change may go ahead.
+  String? renameProblem(String name) {
+    if (!validUsername(name)) {
+      return 'Use $usernameMinLength-$usernameMaxLength characters.';
+    }
+    if (name.trim() == username) return 'That is already your username.';
+    if (cookies < renameCookies) return 'Not enough cookies.';
+    return null;
+  }
+
+  /// Change Username: costs [renameCookies]. False when refused.
+  bool rename(String name) {
+    if (renameProblem(name) != null) return false;
+    cookies -= renameCookies;
+    username = name.trim();
+    return true;
+  }
 
   // ---- Runs -------------------------------------------------------------
 

@@ -137,6 +137,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     state.saveSlot = save.slot;
+    state.attachWallet(AccountStore.current);
+    if (state.usesAccountWallet) {
+      // Write both at once, so a legacy save's leftover balance moves onto
+      // the account exactly once.
+      await AccountStore.save();
+      await SaveStore.write(save.slot, state);
+      if (!mounted) return;
+    }
     await _play(Game(pack: state.pack, state: state), location);
   }
 
@@ -163,6 +171,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (game == null || !mounted) return;
+    // Shared currencies (cookies by default) spend the account wallet.
+    game.state.attachWallet(AccountStore.current);
+    unawaited(AccountStore.save());
     game.state.saveSlot = await SaveStore.nextSlot();
     if (!mounted) return;
     // The reference hands off from setup through the navy D-31 screen, with a
@@ -199,6 +210,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    // The run may have spent or edited the shared wallet.
+    unawaited(AccountStore.save());
+    if (mounted) setState(() {});
   }
 
   void _open(Widget page) {

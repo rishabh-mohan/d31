@@ -10,6 +10,7 @@
 ///            and the list of verbs the pack used that the engine lacks
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'press_feedback.dart';
@@ -17,6 +18,7 @@ import 'press_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../engine/account_store.dart';
 import '../engine/content_source.dart';
 import '../engine/event_engine.dart';
 import '../engine/game_date.dart';
@@ -104,6 +106,11 @@ class _DevPanelState extends State<DevPanel> {
 
 // ---------------------------------------------------------------------------
 
+/// Persists an edit that landed on the account wallet.
+void _saveWallet(GameState s) {
+  if (s.usesAccountWallet) unawaited(AccountStore.save());
+}
+
 class _StateTab extends StatelessWidget {
   final Game game;
   final void Function(VoidCallback) onChange;
@@ -137,16 +144,28 @@ class _StateTab extends StatelessWidget {
           onChanged: (v) => onChange(() => s.money = v < 0 ? 0 : v),
           steps: const [-10000, -1000, 1000, 10000],
         ),
+        // A shared balance is the account's: editing it edits the wallet
+        // Home shows, and saves it.
         _NumberRow(
-          label: 'Cookies',
+          label: s.usesAccountWallet && s.sharesWallet('cookies')
+              ? 'Cookies (account)'
+              : 'Cookies',
           value: s.cookies,
-          onChanged: (v) => onChange(() => s.cookies = v < 0 ? 0 : v.round()),
+          onChanged: (v) => onChange(() {
+            s.cookies = v < 0 ? 0 : v.round();
+            _saveWallet(s);
+          }),
           steps: const [-50, -5, 5, 50],
         ),
         _NumberRow(
-          label: 'Refresh tickets',
+          label: s.usesAccountWallet && s.sharesWallet('refresh')
+              ? 'Refresh tickets (account)'
+              : 'Refresh tickets',
           value: s.rerolls,
-          onChanged: (v) => onChange(() => s.rerolls = v < 0 ? 0 : v.round()),
+          onChanged: (v) => onChange(() {
+            s.rerolls = v < 0 ? 0 : v.round();
+            _saveWallet(s);
+          }),
           steps: const [-50, -5, 5, 50],
         ),
         const Divider(height: 28),
