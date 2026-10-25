@@ -13,6 +13,7 @@ dependencies:
   # Used to find a writable directory for the editable copy of the content
   # pack, so pack JSON can be changed on-device without a rebuild.
   path_provider: ^2.1.4
+  gal: ^2.3.3
 
 dev_dependencies:
   flutter_test:

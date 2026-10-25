@@ -14,8 +14,10 @@
 library;
 
 import 'admissions.dart';
+import 'event_engine.dart';
 import 'game.dart';
 import 'game_date.dart';
+import 'pack.dart';
 
 /// Where the player is in the D-Day flow (derived from saved state, so a
 /// resumed run lands on the same stage).
@@ -237,6 +239,60 @@ extension DDayFlow on Game {
   /// Takes every remaining card (headless runs and the legacy screen).
   void completeExamCards() {
     while (takeExamSubject() != null) {}
+  }
+
+  /// The one-line scene a tapped exam card plays: [ExamTurn.response] as a
+  /// normal dialogue message from the player, over the current location (the
+  /// existing event presentation). It is presentation only: it has no graph,
+  /// no effects and touches no counters, so showing it twice changes nothing.
+  EventRun examResponseEvent(ExamTurn turn) {
+    final node = EventNode(
+      id: -1,
+      boxId: -1,
+      type: 'last',
+      text: turn.response,
+      elseText: null,
+      optionText: null,
+      nextNodeId: null,
+      nextNodeIdIfTrue: null,
+      nextNodeIdIfFalse: null,
+      options: const [],
+      speakerId: 0,
+      isHideSpeakerName: false,
+      backgroundImg: null,
+      imgPath: null,
+      changer: null,
+      actionChanger: null,
+      conditionSet: null,
+      eventSound: null,
+    );
+    final run = EventRun(
+      event: GameEvent(
+        id: -91001,
+        name: 'Graduation Exam',
+        rootNodeId: -1,
+        priority: 'middle',
+        rank: 'C',
+        section: 'none',
+        eventSetId: null,
+        isRandomDate: false,
+        isFake: true,
+        conditionSet: null,
+      ),
+      pack: pack,
+      state: state,
+      effects: effects,
+      conditions: conditions,
+    );
+    run.current = EventBeat(
+      node: node,
+      text: turn.response,
+      speakerName: 'Me',
+      backgroundImg: null,
+      choices: const [],
+      isEnd: true,
+    );
+    return run;
   }
 
   // --- score announcement --------------------------------------------------
