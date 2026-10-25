@@ -241,12 +241,14 @@ class Game {
     final result = CsatResult(
       standardScore: standard,
       subjectScores: scores,
-      grades: {for (final e in scores.entries) e.key: Admissions.gradeFor(e.value)},
+      grades: {
+        for (final e in scores.entries) e.key: Admissions.gradeFor(e.value),
+      },
     );
     state.csat = result;
     state.note(
       'CSAT: standard score ${standard.toStringAsFixed(1)} '
-      '(top ${(100 - result.percentile).toStringAsFixed(1)}%).',
+          '(top ${(100 - result.percentile).toStringAsFixed(1)}%).',
       'system',
     );
     return result;
@@ -257,11 +259,10 @@ class Game {
 
   /// Every department, hardest first.
   List<Department> departmentsByCutoff() =>
-      pack.admissions.departments.values.toList()
-        ..sort((a, b) {
-          final c = b.deviation.compareTo(a.deviation);
-          return c != 0 ? c : a.id.compareTo(b.id);
-        });
+      pack.admissions.departments.values.toList()..sort((a, b) {
+        final c = b.deviation.compareTo(a.deviation);
+        return c != 0 ? c : a.id.compareTo(b.id);
+      });
 
   /// Whether an application to [department] may be sent at all.
   bool canApply(Department department) =>
@@ -339,8 +340,14 @@ class Game {
 
   void _processAutomaticEvents() {
     if (pack.rules.flag('tasks', 'enabled', false)) {
+      // A task with a tick (Retry Year's tick-14 escape) ends at that tick; a
+      // day-only one lasts through its day, so "is it due today?" can see it.
       final expired = state.taskDeadlines.entries
-          .where((task) => task.value.compareTo(state.date) <= 0)
+          .where(
+            (task) => task.value.tick > 0
+                ? task.value.compareTo(state.date) <= 0
+                : task.value.day.isBefore(state.date.day),
+          )
           .map((task) => task.key)
           .toList();
       for (final id in expired) {
@@ -478,9 +485,13 @@ class Game {
         s.characterId == 74 && !s.traits.contains(160020),
     'PRACTICE_PSYCHIC_CONDITION': (s) =>
         s.characterId == 10044 &&
-        !['skill1', 'skill2', 'skill3', 'skill4', 'skill5'].every(
-          (k) => s.switchValue(k) >= 5,
-        ),
+        ![
+          'skill1',
+          'skill2',
+          'skill3',
+          'skill4',
+          'skill5',
+        ].every((k) => s.switchValue(k) >= 5),
   };
 
   /// The native builds `DATE_2024<MM><DD>00` from BLOCK_TARGET_MONTH/DAY and
@@ -1178,38 +1189,22 @@ class Game {
     return configured.clamp(1, pack.manifest.ticksPerDay);
   }
 
-  /// What the Calendar shows: every date-pinned event still ahead of the run.
-  ///
-  /// The spine is content, not code — 23 of the English campaign's events
-  /// carry a `date` condition (docs/D30-MODE-SPEC.md §6.6), the Graduation
-  /// Exam among them — so nothing here is hardcoded and a storyline that adds
-  /// a National Cooking Contest shows up on its own.
-  ///
-  /// Which of them to list is our rule, not a recovered one: an event that
-  /// belongs to a storyline set only appears once the run has actually met
-  /// that storyline, otherwise day one would advertise every career at once.
+  /// What the Calendar shows: the to-do list, as the original's is. That is
+  /// the story's fixed dates (the CSAT, Retry Year's mock and promotion
+  /// exams, from todos.json) plus whatever events have told the player about
+  /// through ADD_TODO -- Taeyang's challenge, the National Cooking Contest,
+  /// a match with the pros. Events the player has not heard of stay off it
+  /// (TODO 66). Finished and past entries drop off.
   List<ScheduledEntry> schedule() {
-    final seenSets = <int>{
-      for (final entry in state.eventStates.entries)
-        if (entry.value > 0)
-          if (pack.events[entry.key]?.eventSetId case final int set) set,
-    };
-
-    final entries = <ScheduledEntry>[];
-    for (final event in pack.events.values) {
-      if (event.isFake || event.isRandomDate || event.isCharacterEvent) {
-        continue;
-      }
-      if ((state.eventStates[event.id] ?? 0) >= 2) continue;
-      final set = event.eventSetId;
-      if (set != null && !seenSets.contains(set)) continue;
-      final date = _pinnedDate(event.conditionSet);
-      if (date == null || date.day.isBefore(state.date.day)) continue;
-      entries.add(ScheduledEntry(date: date, name: event.name, event: event));
-    }
-
-    // The exam is in the spine, but a pack that drops it should still show the
-    // day the run ends on.
+    final entries = <ScheduledEntry>[
+      for (final task in state.taskDeadlines.entries)
+        if (!task.value.day.isBefore(state.date.day))
+          ScheduledEntry(
+            date: task.value,
+            name: taskLabel(state.taskTitles[task.key] ?? ''),
+          ),
+    ];
+    // A pack without a to-do for its exam still shows the day the run ends.
     if (!entries.any((e) => e.date.day == pack.manifest.endDate.day)) {
       entries.add(
         ScheduledEntry(date: pack.manifest.endDate, name: 'Graduation Exam'),
@@ -1219,26 +1214,15 @@ class Game {
     return entries;
   }
 
-  /// The first `date` condition anywhere in a condition tree.
-  GameDate? _pinnedDate(Map<String, dynamic>? set) {
-    if (set == null) return null;
-    final conditions = set['conditions'];
-    if (conditions is List) {
-      for (final c in conditions) {
-        if (c is Map<String, dynamic> && c['targetType'] == 'date') {
-          final date = GameDate.tryParse(c['target'] as String?);
-          if (date != null) return date;
-        }
-      }
-    }
-    for (final side in ['left', 'right']) {
-      final branch = set[side];
-      if (branch is Map<String, dynamic>) {
-        final found = _pinnedDate(branch);
-        if (found != null) return found;
-      }
-    }
-    return null;
+  /// To-do titles are authored as identifiers ("Date_with_Customer",
+  /// "VisitArtGallery"); a few are placeholders the native fills in
+  /// ("FUNC_1"), which read as a plain appointment.
+  static String taskLabel(String raw) {
+    if (raw.isEmpty || raw.startsWith('FUNC_')) return 'Appointment';
+    return raw
+        .replaceAll('_', ' ')
+        .replaceAllMapped(RegExp(r'(?<=[a-z])(?=[A-Z])'), (_) => ' ')
+        .trim();
   }
 
   /// Runs the evening slot, then advances to the next day.
@@ -1330,10 +1314,7 @@ class Game {
   /// story-event budget.
   EventRun? _nextCharacterEvent() {
     final event =
-        (events
-                .eligible(state)
-                .where((e) => e.isCharacterEvent)
-                .toList()
+        (events.eligible(state).where((e) => e.isCharacterEvent).toList()
               ..sort((a, b) => a.id.compareTo(b.id)))
             .firstOrNull;
     if (event == null) return null;
@@ -1584,7 +1565,13 @@ class Game {
 
   bool useItem(int itemId) {
     if (state.exhaustionPending) return false;
-    final item = pack.items[itemId];
+    return useItemWith(state, effects, itemId);
+  }
+
+  /// Uses a consumable against any state/effect engine -- the event screen
+  /// offers Use on an item an event just handed over, without a Game.
+  static bool useItemWith(GameState state, EffectEngine effects, int itemId) {
+    final item = state.pack.items[itemId];
     if (item == null || state.itemCount(itemId) <= 0) return false;
     if (!item.isConsumable) return false;
     effects.applyItem(item, state);

@@ -61,6 +61,10 @@ class EventRun {
   /// Actual inventory increases from this event, for its reward receipt.
   final Map<int, int> acquiredItems = {};
 
+  /// An ending title the scene just played (SHOW_ENDING, or END_GAME's
+  /// label): the screen shows it on black before going on. Taken by the UI.
+  String? endingCard;
+
   void _updatePortrait(EventNode node) {
     if (node.standingOff) {
       portraitId = null;
@@ -186,6 +190,14 @@ class EventRun {
             ? null
             : Map<int, int>.of(state.inventory);
         effects.applyChanger(node.changer, state);
+        final code = node.changer?['funcCode'];
+        final args = node.changer?['args'];
+        if (args is List && (code == 'SHOW_ENDING' || code == 'END_GAME')) {
+          final title = args.length > (code == 'END_GAME' ? 1 : 0)
+              ? '${args[code == 'END_GAME' ? 1 : 0]}'
+              : '';
+          if (title.trim().isNotEmpty) endingCard = title;
+        }
         if (before != null) {
           for (final entry in state.inventory.entries) {
             final gained = entry.value - (before[entry.key] ?? 0);

@@ -10,6 +10,8 @@ import 'press_feedback.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/event_engine.dart';
+import '../engine/game.dart';
+import 'pack_menus.dart';
 import 'pack_image.dart';
 import 'portrait.dart';
 import '../engine/event_text.dart';
@@ -61,6 +63,10 @@ class _EventScreenState extends State<EventScreen> {
   final List<({String? speaker, String text})> _history = [];
   Timer? _fastForward;
 
+  /// Items already announced, so each one received gets one popup.
+  final Map<int, int> _announced = {};
+  bool _announcing = false;
+
   @override
   void dispose() {
     _fastForward?.cancel();
@@ -78,7 +84,9 @@ class _EventScreenState extends State<EventScreen> {
     _record();
     // An event whose first beat is already the end (everything gated out)
     // should not trap the player on a blank screen.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _announceItems();
+      if (!mounted) return;
       final beat = run.current;
       if (beat != null &&
           beat.isEnd &&
@@ -87,6 +95,40 @@ class _EventScreenState extends State<EventScreen> {
         if (mounted) Navigator.of(context).maybePop();
       }
     });
+  }
+
+  /// The reference shows each item an event hands over in the acquisition
+  /// popup, over the scene, as it is received (TODO 67).
+  Future<void> _announceItems() async {
+    if (_announcing) return;
+    _announcing = true;
+    try {
+      final ending = run.endingCard;
+      if (ending != null && mounted) {
+        run.endingCard = null;
+        _stopFastForward();
+        await showEndingCard(context, ending);
+      }
+      for (final entry in run.acquiredItems.entries.toList()) {
+        if ((_announced[entry.key] ?? 0) >= entry.value) continue;
+        _announced[entry.key] = entry.value;
+        final item = run.pack.items[entry.key];
+        if (item == null || !mounted) continue;
+        _stopFastForward();
+        await showItemAcquired(
+          context,
+          item,
+          onUse: () {
+            Game.useItemWith(run.state, run.effects, item.id);
+            final reports = List<String>.of(run.effects.reports);
+            run.effects.reports.clear();
+            return reports;
+          },
+        );
+      }
+    } finally {
+      _announcing = false;
+    }
   }
 
   void _record() {
@@ -111,6 +153,7 @@ class _EventScreenState extends State<EventScreen> {
       _record();
     });
     if (run.current?.choices.isNotEmpty == true) _stopFastForward();
+    _announceItems();
   }
 
   /// Render every slide for 100ms; choices always require player input.
@@ -127,6 +170,7 @@ class _EventScreenState extends State<EventScreen> {
         }
         // Fast-forward stops on the last line rather than closing the scene,
         // so it can still be read; the player closes it (TODO 60).
+        if (_announcing) return;
         final beat = run.current;
         if (beat == null || beat.isEnd || beat.choices.isNotEmpty) {
           setState(_stopFastForward);
@@ -143,6 +187,7 @@ class _EventScreenState extends State<EventScreen> {
       run.choose(choice);
       _record();
     });
+    _announceItems();
   }
 
   void _showLog() {
@@ -297,47 +342,6 @@ class _EventScreenState extends State<EventScreen> {
                           ),
                         ),
                       ),
-                      if (run.acquiredItems.isNotEmpty)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 100),
-                          child: SingleChildScrollView(
-                            key: const ValueKey('event-item-receipt'),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            child: Column(
-                              children: [
-                                for (final item in run.acquiredItems.entries)
-                                  Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 32,
-                                        height: 32,
-                                        child: PackImage(
-                                          path: 'items/${item.key}.png',
-                                          fit: BoxFit.contain,
-                                          placeholder: const Icon(
-                                            Icons.card_giftcard,
-                                            color: D30Colors.accent,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Received: ${run.pack.items[item.key]?.name ?? 'Item ${item.key}'} x${item.value}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
                       // Scene + dialogue
                       Expanded(
                         child: Padding(
@@ -727,4 +731,48 @@ class _RoundButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// An ending's title alone on black, as the reference shows when an ending
+/// function plays (TODO 68), held for three seconds; a tap skips it.
+Future<void> showEndingCard(BuildContext context, String title) {
+  final navigator = Navigator.of(context);
+  var open = true;
+  final done = Future<void>.delayed(const Duration(seconds: 3), () {
+    if (open) navigator.pop();
+  });
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black,
+    transitionDuration: const Duration(milliseconds: 250),
+    pageBuilder: (context, _, _) => GestureDetector(
+      key: const ValueKey('ending-card'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (open) navigator.pop();
+      },
+      child: ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ).whenComplete(() {
+    open = false;
+    done.ignore();
+  });
 }

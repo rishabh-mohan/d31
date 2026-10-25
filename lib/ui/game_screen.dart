@@ -994,14 +994,23 @@ class _Portrait extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 8),
                 // The portrait canvas has transparent space beneath the torso.
                 // Let that lower edge tuck behind the island instead of float.
+                // Scaled from the bottom edge to the reference's size (hair
+                // ~29% of the screen width at 393dp, crown ~24% down): 12%
+                // larger raises the head ~36px, the offset the last ~6
+                // (TODO 69). Every character shares one canvas size, so this
+                // also lifts the ones that read small, such as the Teacher.
                 child: Transform.translate(
-                  offset: const Offset(0, 76),
-                  child: Portrait(
-                    key: const ValueKey('game-character'),
-                    pack: state.pack,
-                    id: state.characterId,
-                    character: true,
-                    fallback: state.portrait,
+                  offset: const Offset(0, 70),
+                  child: Transform.scale(
+                    scale: 1.12,
+                    alignment: Alignment.bottomCenter,
+                    child: Portrait(
+                      key: const ValueKey('game-character'),
+                      pack: state.pack,
+                      id: state.characterId,
+                      character: true,
+                      fallback: state.portrait,
+                    ),
                   ),
                 ),
               ),

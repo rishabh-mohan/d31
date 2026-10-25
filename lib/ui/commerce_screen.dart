@@ -75,80 +75,15 @@ class _CommerceScreenState extends State<CommerceScreen> {
     }
     final offer = game.pack.shop[id]!;
     final item = game.pack.items[(offer['itemId'] as num).toInt()]!;
-    // The reference's acquisition popup: large artwork, then the name, the
-    // flavour line and the effect on separate lines, then a narrow Use above
-    // a wider Confirm. Both are raised orange buttons.
-    await showDialog<void>(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (context) => Dialog(
-        backgroundColor: D30Colors.panel,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: D30Colors.accent, width: 5),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: 120,
-                  width: 120,
-                  child: PackImage(
-                    path: 'items/${item.id}.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Got a ${item.name}!',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22, color: D30Colors.ink),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  item.description,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: D30Colors.ink),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  item.effectText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15, color: D30Colors.ink),
-                ),
-                const SizedBox(height: 20),
-                if (item.isConsumable)
-                  SizedBox(
-                    width: 120,
-                    child: D30RaisedButton(
-                      onPressed: () {
-                        game.useItem(item.id);
-                        Navigator.pop(context);
-                        setState(() {});
-                        showItemReports(this.context, game);
-                      },
-                      child: const Text('Use'),
-                    ),
-                  ),
-                SizedBox(
-                  width: 200,
-                  child: D30RaisedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Confirm',
-                      style: TextStyle(fontSize: 17),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    // The reference's acquisition popup, shared with event rewards.
+    await showItemAcquired(
+      context,
+      item,
+      onUse: () {
+        game.useItem(item.id);
+        setState(() {});
+        return game.takeItemReports();
+      },
     );
   }
 

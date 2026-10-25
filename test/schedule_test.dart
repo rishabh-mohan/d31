@@ -1,6 +1,5 @@
-/// The Calendar is content, not code: it comes from the campaign's
-/// date-pinned events (docs/D30-MODE-SPEC.md 6.6), so a storyline can add to
-/// it without the UI knowing anything about cooking contests.
+/// The Calendar is the to-do list (TODO 66): the story's fixed dates plus
+/// what events have told the player about, never every date-pinned event.
 library;
 
 import 'dart:io';
@@ -12,56 +11,53 @@ import 'package:d30mode/engine/pack.dart';
 
 void main() {
   late ContentPack pack;
+  late ContentPack retry;
   setUpAll(() async {
     pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
+    retry = await ContentSource.loadFromDirectory(Directory('packs/kss20'));
   });
 
   test('a fresh run is only scheduled for the exam', () {
     final game = Game.newRun(pack);
     final schedule = game.schedule();
     expect(schedule, hasLength(1));
-    expect(schedule.single.name, 'Graduation Exam');
+    expect(schedule.single.name, 'CSAT');
     expect(schedule.single.date.day, pack.manifest.endDate.day);
   });
 
-  test('meeting a storyline puts its pinned events on the calendar', () {
-    final game = Game.newRun(pack);
-    final opener = pack.events.values.firstWhere(
-      (e) => e.name == 'Great News',
-    );
+  test('Retry Year lists its exams, not its pinned scenes', () {
+    final names = Game.newRun(retry).schedule().map((e) => e.name).toList();
     expect(
-      opener.eventSetId,
-      isNotNull,
-      reason: 'the cooking opener should belong to a storyline set',
+      names,
+      containsAll(['Hagwon Mock Exam #31', 'Promotion Exam', 'CSAT']),
     );
-
-    game.state.eventStates[opener.id] = 1;
-    final names = game.schedule().map((e) => e.name).toList();
-    expect(names, contains('National Cooking Contest'));
-    expect(names, contains('First Training Session'));
-    expect(names.last, 'Graduation Exam', reason: 'sorted by date');
+    expect(names, isNot(contains('Geum Taeyang')));
   });
 
-  test('the calendar drops what is finished or already past', () {
+  test('an event that tells the player adds to the calendar', () {
     final game = Game.newRun(pack);
-    final opener = pack.events.values.firstWhere(
-      (e) => e.name == 'Great News',
-    );
-    game.state.eventStates[opener.id] = 1;
-    final before = game.schedule().length;
+    game.effects.applyChanger({
+      'funcCode': 'ADD_TODO',
+      'args': [20, 'National_Cooking_Contest', '2023.11.15.07'],
+    }, game.state);
+    game.effects.applyChanger({
+      'funcCode': 'ADD_TODO_2',
+      'args': [3, 'VisitArtGallery', 7],
+    }, game.state);
+    final names = game.schedule().map((e) => e.name).toList();
+    expect(names, contains('National Cooking Contest'));
+    expect(names, contains('Visit Art Gallery'));
+    expect(names.last, 'CSAT', reason: 'sorted by date');
+  });
 
-    final contest = pack.events.values.firstWhere(
-      (e) => e.name == 'National Cooking Contest',
-    );
-    game.state.eventStates[contest.id] = 2;
-    expect(
-      game.schedule().map((e) => e.name),
-      isNot(contains('National Cooking Contest')),
-    );
-    expect(game.schedule().length, before - 1);
-
-    // Walk the clock past the first training session.
+  test('the calendar drops what is past', () {
+    final game = Game.newRun(pack);
+    game.effects.applyChanger({
+      'funcCode': 'ADD_TODO_2',
+      'args': [3, 'VisitArtGallery', 7],
+    }, game.state);
+    expect(game.schedule(), hasLength(2));
     game.state.date = pack.manifest.endDate;
-    expect(game.schedule().map((e) => e.name), ['Graduation Exam']);
+    expect(game.schedule().map((e) => e.name), ['CSAT']);
   });
 }

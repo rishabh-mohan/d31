@@ -500,8 +500,9 @@ class EffectEngine {
       if (!s.pack.rules.flag('tasks', 'enabled', false)) return;
       final id = _int(a, 0);
       final days = _int(a, 2);
-      final tick = _int(a, 3);
-      if (id == null || days == null || tick == null) return;
+      // Story 16 often names only the day ([7, "Date_with_Customer", 7]).
+      final tick = _int(a, 3) ?? 0;
+      if (id == null || days == null) return;
       s.taskDeadlines[id] = GameDate(
         GameDate.addDays(s.date.day, days),
         tick,

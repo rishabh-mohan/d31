@@ -103,6 +103,12 @@ Re-running overwrites the pack, so copy a tuned `rules.json` aside first.
 
 ## UI reference atlas
 
+For a broader evidence-based description of the **original game's functions**,
+read [docs/ORIGINAL-GAME-FUNCTIONS.md](docs/ORIGINAL-GAME-FUNCTIONS.md).
+It covers account systems, runs, progression, events, exams and campaigns, with
+version boundaries, internet sources and an extracted native-function index.
+Regenerate its source audit with `python tools/audit_original_game.py`.
+
 [docs/UI-REFERENCE.md](docs/UI-REFERENCE.md) indexes all 33 reference screenshots.
 Each has a descriptive image filename and a detailed Markdown specification,
 including visible state, approximate geometry, controls, fine-tuning checklist,

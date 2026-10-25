@@ -8,6 +8,16 @@ edits add quizzes, admissions/endings, character-event imports, campaign
 mechanics, gender-specific scripts, and further UI fixes. Older dated notes
 below are historical checkpoints, not a list of features still missing.
 
+### Original-game functional reference (2026-10-24)
+
+Read [docs/ORIGINAL-GAME-FUNCTIONS.md](docs/ORIGINAL-GAME-FUNCTIONS.md) for the
+broad original-game capability map, source/version distinctions and unresolved
+mechanics. Its native index and JSON source audit are generated directly from
+original reference assets/pseudocode by `tools/audit_original_game.py`, not from
+d30mode packs. Observed, data-backed, native, web and reconstructed claims are
+labeled separately; registry presence does not prove recovered arithmetic.
+Keep the corrected efficiency/cap/task predicate and unresolved scheduler notes.
+
 ### Main menu screenshot reference (2026-10-24)
 
 Read [docs/MAIN-MENU-REFERENCE.md](docs/MAIN-MENU-REFERENCE.md) for the user's

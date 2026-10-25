@@ -847,11 +847,15 @@ def build_rules(out: Path):
             'exitLocationId': 1000,
             'ordinaryLocationIds': [1000, 2000, 20002, 20003, 20004],
         }
-        todos = load(CAMPAIGN / 'data/todos.json')
-        rules['tasks'] = {'enabled': True, 'initial': [
-            row for rows in todos.values() if isinstance(rows, list)
-            for row in rows if isinstance(row, dict) and 'id' in row and 'date' in row
-        ]}
+    # The to-do list: the story's fixed dates (exams) plus what events add
+    # with ADD_TODO / ADD_TODO_2. It is also what the Calendar shows. Story 16
+    # reads it too (FUNC_TODO_DAY(id) == 1, "due tomorrow", ten times).
+    todos_file = CAMPAIGN / 'data/todos.json'
+    todos = load(todos_file) if todos_file.exists() else {}
+    rules['tasks'] = {'enabled': True, 'initial': [
+        row for rows in todos.values() if isinstance(rows, list)
+        for row in rows if isinstance(row, dict) and 'id' in row and 'date' in row
+    ]}
     write(out, "rules.json", rules)
 
 
