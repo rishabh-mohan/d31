@@ -140,6 +140,7 @@ TODO:
    DONE — Follow-up Nord capture exposed a floating torso after the first fix. The portrait now shifts down 76 logical pixels, tucking its bottom behind the island; rendered with both Default Boy and Retaking Boy. Layout regression covers 320x740 and 393x873.
 45. Curve the bottom two corners of each stationery icon when in the larger menu (it's cutting off the black border)
    DONE — Already fixed by the stationery border rework (a real 2px inset with 9px outer / 7px inner clipping); verified by rendering the large-menu grid — the bottom corners are rounded and the black border is intact.
+   REOPENED (user, 2026-10-24) — The border cutoff is still visible on the Nord, so the DONE above was wrong: my check rendered the cards in a test harness, not the device's larger menu. Still open.
 46. Make the opened Schedule/Calendar menu a bit wider and also standardize a name
    DONE — Calendar is now the name on both the hub button and dialog; its horizontal inset is 20px instead of 40px. Existing panel regressions verify the wider window at 320px and 393px.
 47. Rerolling an object should always ensure that it rerolls to the average (rounded up) tier (B and C always makes B or very rarely A, A and C always makes A or very rarely S, etc) Check psuedocode for absolute answer
@@ -215,3 +216,5 @@ TODO:
 77. Remove the shadows and press animation from item-based buttons.
    DONE — The item report's Confirm is flat (no lower face, no press motion: D30RaisedButton(flat: true)), as is the bag's Use. The acquisition popup's buttons follow 75 instead.
 78. Implement every item, and have the shop roll randomly every time, matching the original game's pseudocode for which items appear.
+79. Add a fade in transition for the info menu
+80. In the top left hamburger menu, "Main Menu" instead shows "Main M..." when there is plenty of space for the full title

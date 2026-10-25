@@ -752,18 +752,18 @@ class _PillButton extends StatelessWidget {
     required this.tooltip,
   });
 
+  // No press motion: it is a cell of the gold/cookie bar, and moving it
+  // slid it out of the bar.
   @override
-  Widget build(BuildContext context) => PressFeedback(
-    child: Material(
-      color: D30Colors.accent,
-      child: InkWell(
-        onTap: onTap,
-        child: Tooltip(
-          message: tooltip,
-          child: SizedBox(
-            width: 44,
-            child: Icon(icon, color: D30Colors.onAccent, size: 24),
-          ),
+  Widget build(BuildContext context) => Material(
+    color: D30Colors.accent,
+    child: InkWell(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: SizedBox(
+          width: 44,
+          child: Icon(icon, color: D30Colors.onAccent, size: 24),
         ),
       ),
     ),
