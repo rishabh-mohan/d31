@@ -28,8 +28,18 @@ class EventScreen extends StatefulWidget {
   /// Plays the event as a panel over the game, with the screen behind it
   /// blurred and dimmed, rather than as a separate page.
   static Future<void> show(BuildContext context, EventRun run) {
-    return Navigator.of(context).push(
-      PageRouteBuilder<void>(
+    return Navigator.of(context).push(_EventRoute(run));
+  }
+
+  @override
+  State<EventScreen> createState() => _EventScreenState();
+}
+
+/// The event panel's route. An event that ends on an ending title leaves
+/// without the fade ([leaveInstantly]) so the empty dialogue never shows again.
+class _EventRoute extends PageRouteBuilder<void> {
+  _EventRoute(EventRun run)
+    : super(
         opaque: false,
         barrierDismissible: false,
         barrierColor: Colors.black.withValues(alpha: 0.35),
@@ -48,16 +58,38 @@ class EventScreen extends StatefulWidget {
             ),
           );
         },
-      ),
-    );
-  }
+      );
 
-  @override
-  State<EventScreen> createState() => _EventScreenState();
+  void leaveInstantly() => controller?.reverseDuration = Duration.zero;
 }
 
 class _EventScreenState extends State<EventScreen> {
   EventRun get run => widget.run;
+
+  /// The event has nothing left to show but its ending title: the panel is
+  /// replaced by plain black so the empty dialogue window is never visible
+  /// while the title appears or fades out (DDAY-C02).
+  bool _cover = false;
+  bool _leaving = false;
+
+  bool get _emptyEnd {
+    final beat = run.current;
+    return beat != null && beat.isEnd && beat.text.trim().isEmpty;
+  }
+
+  void _syncCover() => _cover = _emptyEnd && run.endingCard != null;
+
+  /// Leaves the finished event straight away, without a fade.
+  bool _leaveIfEmptyEnd() {
+    if (_leaving) return true;
+    if (!mounted || !_emptyEnd) return false;
+    _leaving = true;
+    final route = ModalRoute.of(context);
+    if (route is _EventRoute) route.leaveInstantly();
+    setState(() => _cover = true);
+    Navigator.of(context).maybePop();
+    return true;
+  }
 
   /// Lines seen in this event, for the log button.
   final List<({String? speaker, String text})> _history = [];
@@ -82,6 +114,7 @@ class _EventScreenState extends State<EventScreen> {
   void initState() {
     super.initState();
     _record();
+    _syncCover();
     // An event whose first beat is already the end (everything gated out)
     // should not trap the player on a blank screen.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -92,7 +125,7 @@ class _EventScreenState extends State<EventScreen> {
           beat.isEnd &&
           beat.text.trim().isEmpty &&
           run.acquiredItems.isEmpty) {
-        if (mounted) Navigator.of(context).maybePop();
+        if (mounted && !_leaving) Navigator.of(context).maybePop();
       }
     });
   }
@@ -104,10 +137,16 @@ class _EventScreenState extends State<EventScreen> {
     _announcing = true;
     try {
       final ending = run.endingCard;
+      var cardShown = false;
       if (ending != null && mounted) {
         run.endingCard = null;
         _stopFastForward();
         await showEndingCard(context, ending);
+        cardShown = true;
+        final itemsPending = run.acquiredItems.entries.any(
+          (e) => (_announced[e.key] ?? 0) < e.value,
+        );
+        if (!itemsPending && _leaveIfEmptyEnd()) return;
       }
       for (final entry in run.acquiredItems.entries.toList()) {
         if ((_announced[entry.key] ?? 0) >= entry.value) continue;
@@ -126,6 +165,7 @@ class _EventScreenState extends State<EventScreen> {
           },
         );
       }
+      if (cardShown) _leaveIfEmptyEnd();
     } finally {
       _announcing = false;
     }
@@ -151,6 +191,7 @@ class _EventScreenState extends State<EventScreen> {
     setState(() {
       run.advance();
       _record();
+      _syncCover();
     });
     if (run.current?.choices.isNotEmpty == true) _stopFastForward();
     _announceItems();
@@ -186,6 +227,7 @@ class _EventScreenState extends State<EventScreen> {
     setState(() {
       run.choose(choice);
       _record();
+      _syncCover();
     });
     _announceItems();
   }
@@ -292,6 +334,7 @@ class _EventScreenState extends State<EventScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_cover) return const ColoredBox(color: Colors.black);
     final beat = run.current;
     final hasChoices = beat != null && beat.choices.isNotEmpty;
     final actor =
@@ -733,46 +776,117 @@ class _RoundButton extends StatelessWidget {
   }
 }
 
+/// How long an ending title is held before its Confirm button fades in
+/// (the original shows it after roughly five seconds; DDAY-C01).
+const Duration endingConfirmDelay = Duration(milliseconds: 4500);
+const Duration _endingConfirmFade = Duration(milliseconds: 400);
+
 /// An ending's title alone on black, as the reference shows when an ending
-/// function plays (TODO 68), held for three seconds; a tap skips it.
+/// function plays (TODO 68). The title waits: nothing dismisses it until the
+/// wide orange Confirm fades in after [endingConfirmDelay] (at once under
+/// reduced motion), and Confirm closes it exactly once.
 Future<void> showEndingCard(BuildContext context, String title) {
-  final navigator = Navigator.of(context);
-  var open = true;
-  final done = Future<void>.delayed(const Duration(seconds: 3), () {
-    if (open) navigator.pop();
-  });
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierColor: Colors.black,
     transitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (context, _, _) => GestureDetector(
-      key: const ValueKey('ending-card'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (open) navigator.pop();
-      },
-      child: ColoredBox(
+    pageBuilder: (context, _, _) => _EndingCard(title: title),
+  );
+}
+
+class _EndingCard extends StatefulWidget {
+  final String title;
+  const _EndingCard({required this.title});
+
+  @override
+  State<_EndingCard> createState() => _EndingCardState();
+}
+
+class _EndingCardState extends State<_EndingCard> {
+  Timer? _timer;
+  bool _ready = false;
+  bool _closed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_ready || _timer != null) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _ready = true;
+    } else {
+      _timer = Timer(endingConfirmDelay, () {
+        if (mounted) setState(() => _ready = true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _confirm() {
+    if (_closed) return;
+    _closed = true;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    return PopScope(
+      canPop: false,
+      child: Material(
+        key: const ValueKey('ending-card'),
         color: Colors.black,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 34,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.none,
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: (width * .092).clamp(26.0, 44.0),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              if (_ready)
+                Positioned(
+                  left: 22,
+                  right: 22,
+                  bottom: 34,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : _endingConfirmFade,
+                    builder: (_, v, child) => Opacity(opacity: v, child: child),
+                    child: D30RaisedButton(
+                      key: const ValueKey('ending-confirm'),
+                      onPressed: _confirm,
+                      child: const SizedBox(
+                        width: double.infinity,
+                        child: Text(
+                          'Confirm',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 22),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
-    ),
-  ).whenComplete(() {
-    open = false;
-    done.ignore();
-  });
+    );
+  }
 }

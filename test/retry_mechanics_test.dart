@@ -491,15 +491,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('an ending function holds its title on black for 3 seconds', (
-    tester,
-  ) async {
+  /// Plays event 1 of the retry pack from a screen with something behind it,
+  /// up to the ending title.
+  Future<EventRun> playToEndingCard(
+    WidgetTester tester, {
+    bool reduceMotion = false,
+  }) async {
     tester.view.physicalSize = const Size(393, 852);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final game = Game.newRun(retry);
     final run = game.events.begin(retry.events[1]!, game.state);
-    await tester.pumpWidget(MaterialApp(home: EventScreen(run: run)));
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, app) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
+          child: app!,
+        ),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => EventScreen.show(context, run),
+                child: const Text('gameplay-behind'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('gameplay-behind'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     for (
       var i = 0;
       i < 40 && find.byKey(const ValueKey('ending-card')).evaluate().isEmpty;
@@ -511,10 +534,67 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
     expect(find.byKey(const ValueKey('ending-card')), findsOneWidget);
+    return run;
+  }
+
+  testWidgets('an ending title waits for a delayed Confirm and advances once', (
+    tester,
+  ) async {
+    final run = await playToEndingCard(tester);
     expect(find.text('Retake Ending'), findsWidgets);
+    expect(find.byKey(const ValueKey('ending-confirm')), findsNothing);
+
+    // Idle: it neither auto-dismisses nor reacts to a tap anywhere.
     await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 1000));
+    expect(find.byKey(const ValueKey('ending-card')), findsOneWidget);
+    await tester.tapAt(const Offset(196, 400));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const ValueKey('ending-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ending-confirm')), findsNothing);
+
+    // The button fades in after the delay.
+    await tester.pump(endingConfirmDelay);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const ValueKey('ending-confirm')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ending-card')), findsOneWidget);
+
+    // Confirm closes it exactly once (a second tap finds nothing to close).
+    await tester.tap(find.byKey(const ValueKey('ending-confirm')));
+    await tester.tap(
+      find.byKey(const ValueKey('ending-confirm')),
+      warnIfMissed: false,
+    );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('ending-card')), findsNothing);
+    expect(run.endingCard, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('under reduced motion the ending Confirm shows at once', (
+    tester,
+  ) async {
+    await playToEndingCard(tester, reduceMotion: true);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('ending-confirm')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('ending-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ending-card')), findsNothing);
+  });
+
+  testWidgets('a mid-event ending title returns to the event afterwards', (
+    tester,
+  ) async {
+    // Retry Year's opening plays "Retake Ending" and then carries on.
+    final run = await playToEndingCard(tester);
+    await tester.pump(endingConfirmDelay);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byKey(const ValueKey('ending-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ending-card')), findsNothing);
+    if (run.current?.isEnd == false) {
+      expect(find.byTooltip('Next'), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   });
 }

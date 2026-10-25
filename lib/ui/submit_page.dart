@@ -23,7 +23,8 @@ import 'university_collection.dart';
 
 class SubmitPage extends StatefulWidget {
   final Game game;
-  const SubmitPage({super.key, required this.game});
+  final EndingsOverScene? endings;
+  const SubmitPage({super.key, required this.game, this.endings});
 
   @override
   State<SubmitPage> createState() => _SubmitPageState();
@@ -82,8 +83,10 @@ class _SubmitPageState extends State<SubmitPage> {
     );
     if (confirmed != true || !mounted || _committing) return;
     _committing = true;
-    await CsatScreen.pushResults(context, game);
-    if (mounted) Navigator.of(context).pop();
+    await CsatScreen.pushResults(context, game, endings: widget.endings);
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
