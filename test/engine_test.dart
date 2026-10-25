@@ -1320,7 +1320,7 @@ Future<void> main() async {
 
     test('finishing a book unlocks exactly the next tier', () {
       final game = Game.newRun(pack, random: Random(92));
-      final korean = pack.booksFor('korean');
+      final korean = game.menuBooks('korean');
       final first = korean.first;
 
       expect(game.isBookComplete(first), isFalse);
