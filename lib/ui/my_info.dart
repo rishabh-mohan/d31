@@ -9,17 +9,20 @@ import '../engine/game.dart';
 import '../engine/state.dart';
 import 'portrait.dart';
 import 'theme.dart';
+import 'transitions.dart';
 import 'stationery_card.dart';
 import 'university_badge.dart';
 
 class MyInfoPanel extends StatelessWidget {
   final Game game;
   const MyInfoPanel({super.key, required this.game});
-  static Future<void> show(BuildContext context, Game game) => showDialog<void>(
-    context: context,
-    barrierColor: Colors.black.withValues(alpha: .4),
-    builder: (_) => MyInfoPanel(game: game),
-  );
+  /// Fades in (TODO 79) rather than popping up.
+  static Future<void> show(BuildContext context, Game game) =>
+      showFadeDialog<void>(
+        context: context,
+        barrierColor: Colors.black.withValues(alpha: .4),
+        builder: (_) => MyInfoPanel(game: game),
+      );
 
   @override
   Widget build(BuildContext context) {
