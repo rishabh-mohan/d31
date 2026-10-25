@@ -42,7 +42,7 @@ void main() {
     );
   });
 
-  test('the US set renames universities and badges, nothing else', () {
+  test('the US set preserves existing majors while adding its own', () {
     final us = pack.withColleges('us');
     expect(us.collegeSet, 'us');
     expect(us.admissions.universities[2]!.name, 'Harvard University');
@@ -54,12 +54,12 @@ void main() {
       'ten',
     ], contains(us.admissions.universities[purdue]!.rank));
     expect(us.badges[purdue]?.name ?? 'Purdue University', 'Purdue University');
-    // Departments, cutoffs and ids are the same catalog.
+    // Existing departments, cutoffs and ids are preserved.
     expect(
       us.admissions.departments.length,
-      pack.admissions.departments.length,
+      pack.admissions.departments.length + 1,
     );
-    for (final d in pack.admissions.departments.values.take(50)) {
+    for (final d in pack.admissions.departments.values) {
       final other = us.admissions.departments[d.id]!;
       expect(other.deviation, d.deviation);
       expect(other.universityId, d.universityId);
@@ -79,6 +79,37 @@ void main() {
     expect(identical(us.withColleges('korean'), pack), isTrue);
     expect(identical(pack.withColleges('mars'), pack), isTrue);
   });
+
+  test(
+    'Ball State offers Teaching Physics only in the US set in both stories',
+    () {
+      for (final base in [pack, retry]) {
+        final us = base.withColleges('us');
+        final ballState = us.admissions.universities.values.singleWhere(
+          (u) => u.name == 'Ball State University',
+        );
+        final major = us.admissions.departments.values.singleWhere(
+          (d) => d.universityId == ballState.id && d.name == 'Teaching Physics',
+        );
+        expect(major.id, 118022);
+        expect(major.deviation, 52.5);
+        expect(major.requiredItems, isEmpty);
+        expect(base.admissions.departments.containsKey(major.id), isFalse);
+        expect(
+          us
+              .withColleges('korean')
+              .admissions
+              .departments
+              .containsKey(major.id),
+          isFalse,
+        );
+        expect(
+          us.admissions.departments.length,
+          base.admissions.departments.length + 1,
+        );
+      }
+    },
+  );
 
   test('the US set carries each school’s own crest', () {
     final us = pack.withColleges('us');

@@ -18,6 +18,13 @@ guides. Quick: ~20-60k tokens. Moderate: ~60-200k. Large: ~200-600k. Very large:
 
 108. Add a Teaching Physics major to Ball State University
    *Estimate: ~20k. The D-Day handoff lists Ball State's Teaching Physics as an existing user choice; check whether the 137-university catalog rebuild dropped it.*
+   DONE — Ball State University (US set, both campaigns) offers Teaching Physics (id 118022, cutoff 52.5, matching its sports major) via `US_DEPARTMENTS` in tools/us_colleges.py; the Korean set is unchanged. Covered by test/colleges_test.dart.
+
+111. The refresh token button (to use one) shouldn't move down when pressed.
+   *Estimate: ~20k. Press feedback on the in-game refresh control.*
+
+110. The sort option in Achievements isn't filled in properly with orange.
+   *Estimate: ~25k. Achievements sort/filter pill styling (lib/ui/achievements_page.dart).*
 
 105. Remove the confirm button from the college decisions system, just have it go straight to showing the final decision button
    *Estimate: ~25k. Results flow only (lib/ui/dday_results.dart).*
