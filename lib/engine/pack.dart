@@ -5,6 +5,8 @@
 /// feature modifiable" true rather than aspirational. See docs/PACK-FORMAT.md.
 library;
 
+import 'pack_mechanics.dart';
+
 import 'dart:convert';
 
 import 'admissions.dart';
@@ -35,6 +37,16 @@ Map<String, dynamic> _obj(String file, String raw) {
     throw PackFormatException(file, 'expected a JSON object at the top level');
   }
   return v;
+}
+
+PackMechanics _mechanics(String? raw) {
+  try {
+    return PackMechanics.parse(raw == null ? {} : _obj('mechanics.json', raw));
+  } on FormatException catch (error) {
+    throw PackFormatException('mechanics.json', error.message);
+  } on TypeError {
+    throw PackFormatException('mechanics.json', 'Invalid mechanics value type');
+  }
 }
 
 List<Map<String, dynamic>> _list(
@@ -181,6 +193,7 @@ class LocationAction {
   final num hpWeight;
   final String? funcCode;
   final String? conditionFuncCode;
+  final Map<String, dynamic>? conditionSet;
   final int? failEventId;
   final bool blockDuplicated;
   final String? duplicatedKey;
@@ -193,6 +206,7 @@ class LocationAction {
     required this.hpWeight,
     required this.funcCode,
     required this.conditionFuncCode,
+    this.conditionSet,
     required this.failEventId,
     required this.blockDuplicated,
     required this.duplicatedKey,
@@ -208,6 +222,7 @@ class LocationAction {
       hpWeight: (j['hpWeight'] as num?) ?? 0,
       funcCode: changer?['funcCode'] as String?,
       conditionFuncCode: j['conditionFuncCode'] as String?,
+      conditionSet: (j['conditionSet'] as Map?)?.cast<String, dynamic>(),
       failEventId: (j['failEventId'] as num?)?.toInt(),
       blockDuplicated: j['blockDuplicated'] as bool? ?? false,
       duplicatedKey: j['duplicatedKey'] as String?,
@@ -575,8 +590,7 @@ class GameCharacter {
   /// One structured effect, in the same vocabulary as a trait's.
   final Map<String, dynamic>? plusEffect;
 
-  /// The two characters whose effect is compiled code rather than data
-  /// (a crafting block each). Carried so the run knows, applied by nothing.
+  /// Optional pack-owned role tag, readable by mechanics expressions.
   final String? specialFuncCode;
 
   GameCharacter({
@@ -759,6 +773,7 @@ class ContentPack {
   final Map<String, dynamic> presentation;
   final PackManifest manifest;
   final Rules rules;
+  final PackMechanics mechanics;
   final Map<int, GameLocation> locations;
   final Map<int, GameEvent> events;
   final Map<int, EventNode> nodes;
@@ -908,6 +923,7 @@ class ContentPack {
     this.presentation = const {},
     required this.manifest,
     required this.rules,
+    this.mechanics = const PackMechanics(),
     required this.locations,
     required this.events,
     required this.nodes,
@@ -1057,6 +1073,7 @@ class ContentPack {
           : _obj('presentation.json', opt('presentation.json')!),
       manifest: manifest,
       rules: rules,
+      mechanics: _mechanics(opt('mechanics.json')),
       locations: locations,
       events: events,
       nodes: nodes,
@@ -1137,6 +1154,7 @@ class ContentPack {
     'events/events.json',
   ];
   static const optionalFiles = [
+    'mechanics.json',
     'presentation.json',
     'events/switches.json',
     'events/sets.json',

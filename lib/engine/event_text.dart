@@ -1,4 +1,4 @@
-import 'conditions.dart';
+import 'pack_mechanics.dart';
 import 'state.dart';
 
 /// The English content retains Korean name macros. Substitute when displaying
@@ -30,6 +30,11 @@ String expandEventText(String source, GameState state) {
   }
   return source.replaceAllMapped(RegExp(r'\{([^{}]+)\}'), (match) {
     final name = match[1]!;
+    if (state.pack.mechanics.section('textMacros').containsKey(name)) {
+      return literal(
+        '${MechanicRuntime(state).value(state.pack.mechanics.section('textMacros')[name]) ?? ''}',
+      );
+    }
     if (quiz != null &&
         (name == '오답' || name == 'MATH_WRONG' || name == 'ENGLISH_WRONG')) {
       return literal(quiz.nextWrong());
@@ -59,8 +64,6 @@ String expandEventText(String source, GameState state) {
       }
     }
     switch (name) {
-      case 'GOLD_SUBJECT':
-        return _subjectAt(state, state.switchValue('GOLD_SUN_SUBJECT'));
       case 'ENTERED_UNIV_NAME' || 'ENTERED_DEPART_NAME':
         final department =
             state.pack.admissions.departments[state.enrolledDepartment];
@@ -68,38 +71,24 @@ String expandEventText(String source, GameState state) {
         return literal(
           name == 'ENTERED_DEPART_NAME'
               ? department.name
-              : state.pack.admissions.universities[department.universityId]
+              : state
+                        .pack
+                        .admissions
+                        .universities[department.universityId]
                         ?.name ??
                     '',
         );
-      // A remedy already brewed is marked in the recipe choice.
-      case 'IS_ALREADY_RED' || 'IS_ALREADY_GREEN' || 'IS_ALREADY_BLUE':
-        return state.switchValue(name.substring(3)) == 1 ? '(Done)' : '';
-      // With the Scouter in the bag, the sing-off choice shows its forecast.
-      case 'IS_SING_WIN':
-        if (state.itemCount(90021) == 0) return '';
-        return ConditionEvaluator.singOffWins(state)
-            ? '(Scouter: you will win)'
-            : '(Scouter: you will lose)';
-      // Not recoverable from the data; drop the marker rather than show it.
-      case 'IS_OK_RED' || 'IS_OK_GREEN' || 'IS_OK_BLUE':
-        return '';
     }
     return variables[name] ?? match[0]!;
   });
 }
 
-const _subjectNames = {
-  'korean': 'Korean',
-  'math': 'Maths',
-  'english': 'English',
-  'science': 'Science',
-  'society': 'Humanities',
-};
-
 String _subjectAt(GameState state, int index) {
   final subjects = state.pack.manifest.subjects;
   if (index < 0 || index >= subjects.length) return '';
   final s = subjects[index];
-  return _subjectNames[s] ?? s;
+  final labels =
+      state.pack.mechanics.section('bindings')['subjectLabels'] as Map? ??
+      const {};
+  return labels[s]?.toString() ?? s;
 }

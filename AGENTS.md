@@ -1,5 +1,10 @@
 # d30mode project guide
 
+Pack modularity is required: campaign-specific trait/character identities,
+special blocks and callback aliases belong in pack data, not engine branches.
+Read `docs/MODULAR-PACKS.md` for the format, validation evidence and
+standalone example before extending these systems.
+
 Read these project documents before changing behavior:
 
 1. `docs/CURRENT-STATE.md` — latest integrated behavior, test/deployment evidence and limits.

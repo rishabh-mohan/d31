@@ -11,6 +11,8 @@
 /// level-table weights. Change rules.json to change the game.
 library;
 
+import 'pack_mechanics.dart';
+
 import 'dart:math';
 
 import 'admissions.dart';
@@ -54,8 +56,9 @@ class ActionPreview {
   /// Money paid, for a part-time shift.
   final int? money;
 
-  final String? bonusSubject;
-  final int? bonusGain;
+  final List<StudyBonus> bonuses;
+  String? get bonusSubject => bonuses.isEmpty ? null : bonuses.first.subject;
+  int? get bonusGain => bonuses.isEmpty ? null : bonuses.first.value;
 
   final num hpCost;
 
@@ -78,8 +81,7 @@ class ActionPreview {
     this.gain,
     this.gainMax,
     this.money,
-    this.bonusSubject,
-    this.bonusGain,
+    this.bonuses = const [],
     this.progress = 0,
     this.showCoin = false,
     this.bookComplete = false,
@@ -460,7 +462,18 @@ class Game {
     if (examEnabled && isExamDay) return const [];
     final here = state.location;
     if (here == null) return const [];
-    return here.actions.where((a) {
+    final runtime = MechanicRuntime(state);
+    final actions = [
+      ...here.actions,
+      for (final block in pack.mechanics.blocks)
+        if (block['catalogOnly'] != true &&
+            (block['locations'] as List).contains(state.locationId) &&
+            runtime.blockEnabled(block))
+          LocationAction.fromJson(
+            (block['action'] as Map).cast<String, dynamic>(),
+          ),
+    ];
+    return actions.where((a) {
       if (a.blockDuplicated && state.usedActionKeysToday.contains(_key(a))) {
         return false;
       }
@@ -471,106 +484,34 @@ class Game {
       if (a.actionType == 'exercise' && state.exerciseMaxed) return false;
       // `conditionFuncCode` gates the special actions (idol practice, game
       // practice, ...). Without the switch set, hide them.
+      if (!conditions.evaluate(a.conditionSet, state)) return false;
       final gate = a.conditionFuncCode;
       if (gate != null && !blockGateOpen(gate)) return false;
       return true;
     }).toList();
   }
 
-  /// Whether a special block's compiled gate is open.
+  /// A block gate is a pack predicate, or an explicitly declared switch.
   bool blockGateOpen(String gate) {
-    final recovered = recoveredBlockGates[gate];
-    if (recovered != null) return recovered(state);
-    return state.switchValue(blockSwitchFor(gate)) != 0;
-  }
-
-  /// Gates read from the Korean native's block-condition table (the
-  /// `Map<String, bool Function()>` built at 0x6cb798). Each body is the
-  /// disassembled closure, not a guess; see docs/RETRY-YEAR.md.
-  static final Map<String, bool Function(GameState)> recoveredBlockGates = {
-    // RJl / SJl / TJl: a friend's trouble block, once their rapport switch is
-    // high enough and the rolling BLOCK_TARGET date has passed.
-    'GO_PRO_CONDITION': (s) =>
-        s.switchValue('GO_BLOCK') == 0 &&
-        s.switchValue('GO_SEE') >= 2 &&
-        _pastBlockTarget(s) &&
-        s.switchValue('EXAM_SW') != 1,
-    'GO_LEE_CONDITION': (s) =>
-        s.switchValue('LEE_BLOCK') == 0 &&
-        s.switchValue('LEE_SEE') >= 3 &&
-        _pastBlockTarget(s) &&
-        s.switchValue('EXAM_SW') != 1,
-    'GO_BANJANG_CONDITION': (s) =>
-        s.switchValue('NA_BLOCK') == 0 &&
-        s.switchValue('BANJANG_HEALTH') >= 2 &&
-        _pastBlockTarget(s) &&
-        s.switchValue('EXAM_SW') != 1,
-    // UJl
-    'HELP_BANJANG_CONDITION': (s) =>
-        s.switchValue('BANJANG_STUDY_BLOCK_ON') == 1 &&
-        s.switchValue('BANJANG_CLEAR') == 0 &&
-        s.switchValue('NA_BLOCK') == 1 &&
-        s.switchValue('EXAM_SW') != 1,
-    // VJl / WJl
-    'SINGKING_CONDITION': (s) =>
-        s.switchValue('SING_POINT') >= 15 && s.switchValue('SING_WIN') != 1,
-    'KARAOKE_CONDITION': (s) => s.switchValue('SING_WIN') != 1,
-    // Story 16. LJl / MJl: the career blocks once their route opens.
-    'IDOL_BLOCK_CONDITION': (s) => s.switchValue('IDOL_BLOCK') == 1,
-    'PRO_GAME_BLOCK_CONDITION': (s) => s.switchValue('GAME_BLOCK') == 1,
-    // NJl / OJl / ZJl: blocks a character brings. Med Student Ihyeon (70)
-    // crafts medicine up to MEDICAL_LEVEL 3; Hyunho Park (74) collects parts
-    // until he holds Robotics Master (160020); psychic practice belongs to a
-    // character (10044) the catalog does not ship, so it stays shut.
-    'MEDICAL_BLOCK_CONDITION': (s) =>
-        s.characterId == 70 && s.switchValue('MEDICAL_LEVEL') <= 3,
-    'MECHANIC_BLOCK_CONDITION': (s) =>
-        s.characterId == 74 && !s.traits.contains(160020),
-    'PRACTICE_PSYCHIC_CONDITION': (s) =>
-        s.characterId == 10044 &&
-        ![
-          'skill1',
-          'skill2',
-          'skill3',
-          'skill4',
-          'skill5',
-        ].every((k) => s.switchValue(k) >= 5),
-  };
-
-  /// The native builds `DATE_2024<MM><DD>00` from BLOCK_TARGET_MONTH/DAY and
-  /// asks whether now is strictly later, so the block opens from tick 1 of
-  /// the target day.
-  static bool _pastBlockTarget(GameState s) {
-    final month = s.switchValue('BLOCK_TARGET_MONTH');
-    final day = s.switchValue('BLOCK_TARGET_DAY');
-    if (month <= 0 || day <= 0) return false;
-    final target = GameDate(DateTime(s.date.day.year, month, day), 0);
-    return s.date.compareTo(target) > 0;
-  }
-
-  /// The switch a special block's gate actually reads.
-  ///
-  /// The gate name is a **compiled predicate** in the original —
-  /// `IDOL_BLOCK_CONDITION` — while the content writes a plainer switch,
-  /// `IDOL_BLOCK`. Reading the gate name as a switch meant every special
-  /// block stayed hidden for ever, because no such switch exists.
-  ///
-  /// Story 16 writes `GAME_BLOCK` and the matching gate is
-  /// `PRO_GAME_BLOCK_CONDITION`, so the `PRO_` prefix is dropped too. Gates
-  /// with no declared switch — mechanic, medical, psychic — belong to other
-  /// campaigns' routes and stay shut here, which is correct: story 16's
-  /// careers are Entrepreneur, Soccer, Cooking and Webtoon.
-  String blockSwitchFor(String gate) {
-    if (pack.switchDefaults.containsKey(gate)) return gate;
-    var name = gate.endsWith('_CONDITION')
-        ? gate.substring(0, gate.length - '_CONDITION'.length)
-        : gate;
-    if (pack.switchDefaults.containsKey(name)) return name;
-    if (name.startsWith('PRO_')) {
-      final shorter = name.substring(4);
-      if (pack.switchDefaults.containsKey(shorter)) return shorter;
+    if (pack.mechanics.section('predicates').containsKey(gate)) {
+      return MechanicRuntime(state).condition({'predicate': gate});
     }
-    return name;
+    if (pack.switchDefaults.containsKey(gate)) {
+      return state.switchValue(gate) != 0;
+    }
+    conditions.unknownTargets.add('block gate: $gate');
+    return false;
+  }
+
+  String blockSwitchFor(String gate) {
+    final expression = pack.mechanics.section('predicates')[gate];
+    if (expression is Map && expression['eq'] is List) {
+      final first = (expression['eq'] as List).first;
+      if (first is Map && first['switch'] is String) {
+        return first['switch'] as String;
+      }
+    }
+    return gate;
   }
 
   String _key(LocationAction a) =>
@@ -600,8 +541,9 @@ class Game {
   // lessons track the same power curve as studying does.
 
   int get classTicks => pack.rules.number('school', 'classTicks', 6).toInt();
-  int get schoolLocationId =>
-      pack.rules.number('school', 'locationId', 1000).toInt();
+  int get schoolLocationId => pack.rules
+      .number('school', 'locationId', pack.manifest.startLocationId)
+      .toInt();
 
   /// True while the player is in class and cannot leave.
   bool get inClass {
@@ -610,7 +552,7 @@ class Game {
     if (suppression != null && state.switchValue(suppression) != 0) {
       return false;
     }
-    if (!pack.rules.flag('school', 'lessonsEnabled', true)) return false;
+    if (!pack.rules.flag('school', 'lessonsEnabled', false)) return false;
     if (state.date.isWeekend) return false;
     if (state.date.tick >= classTicks) return false;
     return state.dayIndex > 0 ||
@@ -697,12 +639,9 @@ class Game {
 
   void invalidateHand() => _handValid = false;
 
-  /// Drops the Out of Shape trait and the switch its global event waits on.
-  /// Exercising is the cure in the original: the level-up dialogue's closing
-  /// node carries `REMOVE_TRAIT_FROM_EXERCISE`.
-  void clearOutOfShape() {
-    state.switches[GameState.outOfShapeSwitch] = 0;
-    state.removeTrait(GameState.outOfShapeTraitId);
+  void runHook(String name) {
+    final callback = pack.mechanics.section('hooks')[name];
+    if (callback is String) effects.applyChanger({'funcCode': callback}, state);
   }
 
   int get blocksPerTick => pack.rules.number('day', 'blocksPerTick', 4).toInt();
@@ -819,16 +758,7 @@ class Game {
     return true;
   }
 
-  /// Walking Enthusiast 77: "50% chance of +20 Stamina when moving
-  /// locations". Rolled on the first move of a tick only.
-  void _walk() {
-    if (state.walkRolledAt == state.date.asInt) return;
-    if (!traits.holds(state, TraitEngine.walkingEnthusiast)) return;
-    state.walkRolledAt = state.date.asInt;
-    if (!traits.rolls(state, TraitEngine.walkingEnthusiast)) return;
-    state.addHp(20);
-    state.note('Walking Enthusiast: +20 stamina.', 'effect');
-  }
+  void _walk() => traits.applyMovement(state);
 
   // --- previewing an action -----------------------------------------------
 
@@ -844,8 +774,7 @@ class Game {
         final gain = _studyGain(action, book, subject);
         return ActionPreview(
           kind: ActionKind.study,
-          bonusSubject: traits.multitaskSubject(state),
-          bonusGain: traits.multitaskSubject(state) == null ? null : 3,
+          bonuses: traits.studyBonuses(state),
           title: book?.name ?? 'Study',
           subject: subject,
           rank: book?.tier,
@@ -981,11 +910,8 @@ class Game {
     final beforeEvents = <EventRun>[];
     if (state.exerciseLevel.level > exerciseBefore) {
       state.switches['EXERCISE_LEVEL_UP'] = 1;
-      // Levelling up is what shakes Out of Shape off, which is why the
-      // global level-up event ends on REMOVE_TRAIT_FROM_EXERCISE. At the
-      // top of the table it also latches: `setSwitch` refuses to raise
-      // TRAIT_EVENT_7 again while the level is maxed.
-      clearOutOfShape();
+      // Pack-owned progression effects run before the level-up dialogue.
+      runHook('exerciseLevelUp');
       final levelUp = beginSystemEvent('exerciseLevelUp');
       if (levelUp != null) beforeEvents.add(levelUp);
     }
@@ -1155,10 +1081,9 @@ class Game {
 
     final amount = gain.round();
     state.addStat(subject, amount);
-    final extraSubject = traits.multitaskSubject(state);
-    if (extraSubject != null) {
-      // The catalog writes STAT_1: one authored unit is three stat points.
-      state.addStat(extraSubject, 3);
+    final bonuses = traits.studyBonuses(state);
+    for (final bonus in bonuses) {
+      state.addStat(bonus.subject, bonus.value);
     }
     state.studyExp += pack.rules.studyExp;
     Goals.recordStudyBlock(state);
@@ -1167,7 +1092,7 @@ class Game {
       state.bookReadCounts[book.id] = (state.bookReadCounts[book.id] ?? 0) + 1;
     }
     return 'Studied ${_pretty(subject)}: +$amount.'
-        '${extraSubject == null ? '' : ' Multitasker: ${_pretty(extraSubject)} +3.'}';
+        '${bonuses.map((b) => ' ${b.source}: ${_pretty(b.subject)} +${b.value}.').join()}';
   }
 
   String _partTimeJob(LocationAction action) {
@@ -1356,7 +1281,8 @@ class Game {
     state.hp = state.hpMax;
     state.lastStudySubject = null;
     state.studyCombo = 0;
-    final confined = state.switchValue('DOK_BANG_ON') == 1;
+    final lockSwitch = pack.mechanics.section('bindings')['movementLockSwitch'];
+    final confined = lockSwitch is String && state.switchValue(lockSwitch) == 1;
     state.movementLocked = confined;
     if (!confined && !state.date.isWeekend) state.locationId = schoolLocationId;
     state.usedActionKeysToday.clear();
@@ -1444,7 +1370,7 @@ class Game {
   /// graph after that scene; its final node clears the pending switch.
   EventRun? beginPendingLevelUpEvent() {
     if (state.switchValue('EXERCISE_LEVEL_UP') == 1) {
-      clearOutOfShape();
+      runHook('exerciseLevelUp');
       return beginSystemEvent('exerciseLevelUp');
     }
     if (state.switchValue('PART_TIME_JOB_LEVEL_UP') == 1) {

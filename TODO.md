@@ -143,7 +143,7 @@ TODO:
    DONE — Checked for a dedicated bank: school_exam_problems.json is the only question data in either install (English asset pack, base APK, and the Korean device's own runtime cache, which holds a copy of exactly this file), and the native's quiz macros ({문제}/{정답}/{오답}, regexes in class gC) have no other data behind them. So the 68-question bank is the original source, not a fallback; Retry Year's {MATH_*}/{ENGLISH_*} generator remains the only stand-in.
 38. The part-time level up event does not play when part time levels up
    DONE — Imported the original English global event 10000003 and trigger it when a block raises the part-time level, before ordinary events/exhaustion/night recap. Its level macro resolves and its completion clears PART_TIME_JOB_LEVEL_UP. Regression covers repeated levels and simultaneous exhaustion.
-39. Don't do this, but remind me at the end of every finished prompt to add the item gatcha after finishing a book
+39. Don't do this, but remind me at the end of every finished prompt to add the item gatcha after finishing a book. Also remind me to add the shop refresh notification and reroll previews, and provide screenshots for both.
 40. Save every run, saving complete runs in a separate menu (Records), and incomplete runs under a Play button. Ask for pictures of the home screen UI before doing this. Note that there will be no leaderboard, and achievements will empty for a while
    NOTE — References now exist: docs/MAIN-MENU-REFERENCE.md with screenshots in references/, and docs/ORIGINAL-GAME-FUNCTIONS.md. Applies to 41 too.
    Reference update (2026-10-24): Home/History/Select Game pictures received in the main-menu collection (26 initial images plus the protection-mode follow-up). Archived originals and per-screen specifications: docs/MAIN-MENU-REFERENCE.md. The picture prerequisite is met; implementation is still open. Some interaction questions remain pending.
@@ -451,6 +451,13 @@ Previously integrated trait proc/discount defaults remain configurable reconstru
 
 
 ## User clarifications implemented — 2026-10-25
+
+96. **DONE — modular pack mechanics.** Custom trait/character abilities, special
+blocks, predicates, callbacks and text macros are pack-owned. Independent
+workshop example proves isolation, persistent block unlock/removal and custom
+action payouts. Both KSS packs regenerate; clean analysis, 323-test full suite
+plus four additional custom regressions. See
+[MODULAR-PACKS.md](docs/MODULAR-PACKS.md) for authoring and supported primitives.
 
 Current evidence/rule record: [CLARIFIED-MECHANICS-2026-10-25.md](docs/CLARIFIED-MECHANICS-2026-10-25.md). This supersedes the A14/I03 blocker entries above.
 

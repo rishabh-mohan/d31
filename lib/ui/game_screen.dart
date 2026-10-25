@@ -1539,9 +1539,9 @@ class _ActionCard extends StatelessWidget {
               children: [
                 _title(onFill),
                 if (_hasBodyRow) _body(onFill),
-                if (preview.bonusSubject case final subject?)
+                for (final bonus in preview.bonuses)
                   Text(
-                    '${subjectLabel(subject)} +${preview.bonusGain}',
+                    '${subjectLabel(bonus.subject)} +${bonus.value}',
                     style: TextStyle(fontSize: 11, color: onFill),
                   ),
                 if (preview.bookComplete)

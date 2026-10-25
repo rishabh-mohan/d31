@@ -5,8 +5,10 @@
 /// edited and reloaded without rebuilding:
 ///
 ///   desktop             (the repo's own packs/ dir)
-///   Android
-///             reachable with `adb push`, then "Reload pack" in the dev panel
+///   Android             app external-storage packs/ or documents packs/
+///
+/// Bundled updates use APK bundle-stamp reseeding. Independent pack IDs load
+/// directly from editable roots; see docs/MODULAR-PACKS.md.
 ///
 /// Reload is live: the dev panel re-reads the directory and rebuilds the
 /// ContentPack, so a JSON edit is one button away from being in the run.
@@ -34,26 +36,54 @@ class PackLocation {
 class ContentSource {
   static const defaultPackId = 'kss16';
 
-  /// Bundled packs plus editable desktop packs. The selector is derived from
+  /// Bundled packs plus editable packs. The selector is derived from
   /// pack manifests, so adding another generated pack does not require a card.
-  static Future<List<String>> availablePackIds() async {
-    final ids = <String>{defaultPackId};
+  @visibleForTesting
+  static List<Directory>? rootsOverride;
+
+  static Future<Set<String>> _bundledIds() async {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-    for (final asset in manifest.listAssets()) {
-      final match = RegExp(r'^packs/([A-Za-z0-9_-]+)/pack\.json$')
-          .firstMatch(asset);
-      if (match != null) ids.add(match[1]!);
-    }
+    return {
+      for (final asset in manifest.listAssets())
+        if (RegExp(r'^packs/([A-Za-z0-9_-]+)/pack\.json$').firstMatch(asset)
+            case final match?)
+          match[1]!,
+    };
+  }
+
+  static Future<List<Directory>> _packRoots() async {
+    if (rootsOverride != null) return rootsOverride!;
+    final roots = <Directory>[];
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      final root = Directory('packs');
-      if (await root.exists()) {
-        await for (final entry in root.list()) {
-          if (entry is Directory &&
-              await File('${entry.path}/pack.json').exists()) {
-            final id = entry.uri.pathSegments.where((s) => s.isNotEmpty).last;
-            if (RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(id)) ids.add(id);
-          }
+      roots.addAll([Directory('packs'), Directory('../packs')]);
+    }
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        final dir = await getExternalStorageDirectory();
+        if (dir != null) roots.add(Directory('${dir.path}/packs'));
+      }
+    } catch (_) {
+      /* Optional platform storage. */
+    }
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      roots.add(Directory('${dir.path}/packs'));
+    } catch (_) {
+      /* Asset-only host. */
+    }
+    return roots;
+  }
+
+  static Future<List<String>> availablePackIds() async {
+    final ids = await _bundledIds();
+    for (final root in await _packRoots()) {
+      if (!await root.exists()) continue;
+      await for (final entry in root.list(followLinks: false)) {
+        if (entry is Directory &&
+            await File('${entry.path}/pack.json').exists()) {
+          final id = entry.uri.pathSegments.where((s) => s.isNotEmpty).last;
+          if (RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(id)) ids.add(id);
         }
       }
     }
@@ -93,30 +123,9 @@ class ContentSource {
   /// Where an editable copy lives. Checked in order; the first that exists
   /// and holds a pack.json wins.
   static Future<Directory?> _findWritableDir(String packId) async {
-    final candidates = <Directory>[];
-
-    if (!kIsWeb &&
-        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      // Running from the repo: edit packs/ in the project and restart or reload.
-      candidates.add(Directory('packs/$packId'));
-      candidates.add(Directory('../packs/$packId'));
-    }
-
-    try {
-      final ext = !kIsWeb && Platform.isAndroid
-          ? await getExternalStorageDirectory()
-          : null;
-      if (ext != null) candidates.add(Directory('${ext.path}/packs/$packId'));
-    } catch (_) {
-      // getExternalStorageDirectory is Android-only and may be unavailable.
-    }
-
-    try {
-      final docs = await getApplicationDocumentsDirectory();
-      candidates.add(Directory('${docs.path}/packs/$packId'));
-    } catch (_) {
-      // No documents dir (some test hosts); fall through to assets.
-    }
+    final candidates = [
+      for (final root in await _packRoots()) Directory('${root.path}/$packId'),
+    ];
 
     for (final dir in candidates) {
       if (await File('${dir.path}/pack.json').exists()) return dir;
@@ -141,12 +150,21 @@ class ContentSource {
   /// Loads a pack, preferring an editable on-disk copy and seeding one from
   /// the bundled assets if none exists yet.
   static Future<(ContentPack, PackLocation)> load({
-    String packId = defaultPackId,
+    String? packId,
     bool seedIfMissing = true,
   }) async {
+    if (packId == null) {
+      final ids = await availablePackIds();
+      if (ids.isEmpty) throw const FormatException('No content packs found');
+      packId = ids.first;
+    }
+    if (!RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(packId)) {
+      throw const FormatException('Invalid pack ID');
+    }
     final existing = await _findWritableDir(packId);
     // The repo's own packs/ folder (desktop) is the source being edited.
-    if (existing != null && !existing.isAbsolute) {
+    if (existing != null &&
+        (!existing.isAbsolute || !(await _bundledIds()).contains(packId))) {
       return (
         await loadFromDirectory(existing),
         PackLocation(packId, existing, true),

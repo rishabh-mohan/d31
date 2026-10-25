@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "blocks": [
+    {
+      "id": "crafting",
+      "aliases": [
+        "bench"
+      ],
+      "locations": [
+        801
+      ],
+      "when": {
+        "predicate": "CAN_CRAFT"
+      },
+      "action": {
+        "locationActionType": "special",
+        "text": "Make a keepsake",
+        "changer": {
+          "funcCode": "CRAFT"
+        }
+      }
+    }
+  ],
+  "predicates": {
+    "CAN_CRAFT": {
+      "eq": [
+        {
+          "field": "characterId"
+        },
+        70
+      ]
+    }
+  },
+  "callbacks": {
+    "CRAFT": [
+      {
+        "op": "addStat",
+        "subject": "craft",
+        "value": 5
+      },
+      {
+        "op": "addSwitch",
+        "name": "CRAFT_COUNT",
+        "value": 1
+      }
+    ]
+  },
+  "traitAbilities": {
+    "69": [
+      {
+        "type": "staminaFree",
+        "chance": 1
+      },
+      {
+        "type": "callback",
+        "callback": "CRAFT",
+        "steps": [
+          {
+            "op": "addMoney",
+            "value": 3
+          }
+        ]
+      }
+    ]
+  },
+  "characterAbilities": {
+    "70": [
+      {
+        "type": "callback",
+        "callback": "CRAFT",
+        "steps": [
+          {
+            "op": "addMoney",
+            "value": 7
+          }
+        ]
+      }
+    ]
+  },
+  "textMacros": {
+    "CRAFT_COUNT": {
+      "switch": "CRAFT_COUNT"
+    }
+  }
+}

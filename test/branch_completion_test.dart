@@ -1,3 +1,4 @@
+import 'support/kss_ids.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -11,7 +12,6 @@ import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/engine/state.dart';
 import 'package:d30mode/engine/record_store.dart';
-import 'package:d30mode/engine/traits.dart';
 import 'package:d30mode/ui/score_card.dart';
 import 'package:d30mode/ui/game_screen.dart';
 import 'package:d30mode/ui/stationery_draw.dart';
@@ -171,7 +171,7 @@ void main() {
     for (final g in [withTrait, plain]) {
       g.state.date = GameDate(DateTime(2023, 10, 18), 7);
     }
-    final subject = withTrait.traits.multitaskSubject(withTrait.state)!;
+    final subject = withTrait.traits.studyBonuses(withTrait.state).first.subject;
     final action = LocationAction.fromJson({
       'locationActionType': 'study',
       'hpWeight': 1,
@@ -194,7 +194,7 @@ void main() {
     final before = s.money;
     game.effects.applyChanger(changer, s);
     final baseline = s.money - before;
-    expect(s.grantTrait(TraitEngine.streetPerformer), isTrue);
+    expect(s.grantTrait(KssIds.streetPerformer), isTrue);
     var old = s.money;
     game.effects.applyChanger(changer, s);
     expect(s.money - old, baseline + 600);
