@@ -163,6 +163,7 @@ TODO:
    DONE — Already fixed by the stationery border rework (a real 2px inset with 9px outer / 7px inner clipping); verified by rendering the large-menu grid — the bottom corners are rounded and the black border is intact.
    REOPENED (user, 2026-10-24) — The border cutoff is still visible on the Nord, so the DONE above was wrong: my check rendered the cards in a test harness, not the device's larger menu. Still open.
    2R — StationeryCard now paints its outline as a foreground layer and the hub's empty slots (_EmptyStationerySlot) clip their contents; renders at 393x873 show intact borders. Awaiting confirmation on the Nord before DONE.
+   DONE (user, 2026-10-25) - Confirmed fixed on the Nord.
 46. Make the opened Schedule/Calendar menu a bit wider and also standardize a name
    DONE — Calendar is now the name on both the hub button and dialog; its horizontal inset is 20px instead of 40px. Existing panel regressions verify the wider window at 320px and 393px.
 47. Rerolling an object should always ensure that it rerolls to the average (rounded up) tier (B and C always makes B or very rarely A, A and C always makes A or very rarely S, etc) Check psuedocode for absolute answer
@@ -431,6 +432,7 @@ SUPERSEDED by "Interrupted branches integrated" below: everything this section l
 See [the branch audit](docs/INTERRUPTED-BRANCH-AUDIT-2026-10-25.md) before resuming: branch tips are merged, but b-flow/c-traits/d-ui/e-account retain uncommitted drafts. In particular A11, Walking Enthusiast, the empty stationery border refactor, and M01 account dialogs are not in main. Free first rename and TODO 92 remain incomplete. Earlier unchecked entries and the difficulty index have not been comprehensively reconciled with merged commits; do not use them alone to infer implementation state.
 
 95. In Select Game, ongoing games character icons look squished. Check portrait aspect ratio/cropping against MM-26 at the Nord phone size; preserve the character proportions.
+   DONE (user, 2026-10-25) - Confirmed fixed on the Nord: image decoding preserves the source aspect ratio before cropping.
 
 ## Home implementation follow-up — 2026-10-25
 
