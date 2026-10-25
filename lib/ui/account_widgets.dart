@@ -1,7 +1,7 @@
 /// Pieces shared by Home's account pages, measured off the main-menu
 /// captures (docs/MAIN-MENU-REFERENCE.md):
 ///
-///   * [AccountSheet]: Achievements and Manage Traits, a near-full-height
+///   * [AccountSheet]: Manage Traits, a near-full-height
 ///     sheet under an orange title strip with a dark X;
 ///   * [ChildPanel]: the cream, orange-outlined panels opened over them
 ///     (Endings List, My Traits, Combine Traits, puzzle detail);
