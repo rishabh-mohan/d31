@@ -47,32 +47,35 @@ Future<void> main() async {
   });
 
   group('stamina-free blocks', () {
-    test('Time Jumper 69 frees about one tick in ten, card and block alike', () {
-      final game = withTraits([TraitEngine.timeJumper]);
-      final plain = withTraits(const []);
-      final study = actionOf(game, 'study');
-      var free = 0;
-      var total = 0;
-      for (final when in ticks(game)) {
-        game.state.date = when;
-        plain.state.date = when;
-        total++;
-        if (game.preview(study).hpCost == 0) free++;
-        expect(plain.preview(study).hpCost, greaterThan(0));
-      }
-      // 420 seeded ticks; the stated rate is 10%.
-      expect(free / total, inInclusiveRange(0.05, 0.16));
+    test(
+      'Time Jumper 69 frees about one tick in ten, card and block alike',
+      () {
+        final game = withTraits([TraitEngine.timeJumper]);
+        final plain = withTraits(const []);
+        final study = actionOf(game, 'study');
+        var free = 0;
+        var total = 0;
+        for (final when in ticks(game)) {
+          game.state.date = when;
+          plain.state.date = when;
+          total++;
+          if (game.preview(study).hpCost == 0) free++;
+          expect(plain.preview(study).hpCost, greaterThan(0));
+        }
+        // 420 seeded ticks; the stated rate is 10%.
+        expect(free / total, inInclusiveRange(0.05, 0.16));
 
-      // On a free tick the block really costs nothing.
-      final freeTick = ticks(game).firstWhere((when) {
-        game.state.date = when;
-        return when.tick >= 6 && game.preview(study).hpCost == 0;
-      });
-      game.state.date = freeTick;
-      game.state.hp = 50;
-      game.act(study, book: game.bookForSlot(0));
-      expect(game.state.hp, 50);
-    });
+        // On a free tick the block really costs nothing.
+        final freeTick = ticks(game).firstWhere((when) {
+          game.state.date = when;
+          return when.tick >= 6 && game.preview(study).hpCost == 0;
+        });
+        game.state.date = freeTick;
+        game.state.hp = 50;
+        game.act(study, book: game.bookForSlot(0));
+        expect(game.state.hp, 50);
+      },
+    );
 
     test('Energizer 84 frees a whole day or none of it', () {
       final game = withTraits([TraitEngine.energizer]);
@@ -92,6 +95,88 @@ Future<void> main() async {
       }
       // "Low chance": 5% of days by default.
       expect(freeDays, inInclusiveRange(8, 40));
+    });
+  });
+
+  group('holding on at 1 stamina', () {
+    /// Share of action ticks on which [game] would hold on.
+    double holdRate(Game game, bool Function(Game) holds) {
+      var hits = 0;
+      var total = 0;
+      for (final when in ticks(game)) {
+        game.state.date = when;
+        total++;
+        if (holds(game)) hits++;
+      }
+      return hits / total;
+    }
+
+    /// Spends the last stamina point on a block at [when].
+    Game spendLast(Game game, GameDate when) {
+      game.state.date = when;
+      game.state.hp = 1;
+      game.act(actionOf(game, 'study'), book: game.bookForSlot(0));
+      return game;
+    }
+
+    test('Stubborn 41 and I will not falter! 51 roll distinct chances', () {
+      final stubborn = withTraits([TraitEngine.stubborn]);
+      final falter = withTraits([TraitEngine.willNotFalter]);
+      final s = holdRate(stubborn, (g) => g.traits.survivesExhaustion(g.state));
+      final f = holdRate(falter, (g) => g.traits.survivesExhaustion(g.state));
+      expect(s, inInclusiveRange(0.22, 0.38)); // "random chance": 30%
+      expect(f, inInclusiveRange(0.62, 0.78)); // "high chance": 70%
+      expect(
+        holdRate(
+          withTraits(const []),
+          (g) => g.traits.survivesExhaustion(g.state),
+        ),
+        0,
+      );
+    });
+
+    test('a held-on block leaves 1 stamina; a failed roll collapses', () {
+      final probe = withTraits([TraitEngine.stubborn]);
+      final afternoon = ticks(probe).where((w) => w.tick >= 6 && w.tick < 12);
+      final lucky = afternoon.firstWhere((w) {
+        probe.state.date = w;
+        return probe.traits.survivesExhaustion(probe.state);
+      });
+      final unlucky = afternoon.firstWhere((w) {
+        probe.state.date = w;
+        return !probe.traits.survivesExhaustion(probe.state);
+      });
+
+      final held = spendLast(withTraits([TraitEngine.stubborn]), lucky);
+      expect(held.state.hp, 1);
+      expect(held.state.date.day, lucky.day, reason: 'the day goes on');
+
+      final fell = spendLast(withTraits([TraitEngine.stubborn]), unlucky);
+      expect(fell.state.date.day, isNot(unlucky.day), reason: 'collapsed');
+    });
+
+    test('Pet Rock 30207 holds on at its parsed 50%', () {
+      expect(pack.items[30207]!.effects.single, {
+        'type': 'surviveExhaustion',
+        'chance': 0.5,
+      });
+      final afternoon = <GameDate>[];
+      final probe = withTraits(const []);
+      for (final w in ticks(probe)) {
+        if (w.tick >= 6 && w.tick < 12) afternoon.add(w);
+      }
+      var held = 0;
+      for (final w in afternoon) {
+        final game = withTraits(const []);
+        game.state.addItem(30207);
+        if (spendLast(game, w).state.date.day == w.day) held++;
+      }
+      expect(held / afternoon.length, inInclusiveRange(0.38, 0.62));
+
+      // Without the rock, every one of those blocks collapses.
+      for (final w in afternoon.take(20)) {
+        expect(spendLast(withTraits(const []), w).state.date.day, isNot(w.day));
+      }
     });
   });
 }

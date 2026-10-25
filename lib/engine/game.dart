@@ -970,8 +970,12 @@ class Game {
 
     // The final action uses the last slot: there is no remaining day to lose.
     // Follow normal evening/rollover, without the collapse popup or penalty.
-    if (state.hp <= pack.rules.hpMin &&
-        state.date.tick + 1 < actionTicksPerDay) {
+    final wouldCollapse =
+        state.hp <= pack.rules.hpMin && state.date.tick + 1 < actionTicksPerDay;
+    if (wouldCollapse && _holdsOn()) {
+      state.hp = pack.rules.hpMin + 1;
+      parts.add('You hold on at 1 stamina.');
+    } else if (wouldCollapse) {
       state.addStat('all', pack.rules.exhaustedPenaltyStat);
       parts.add('You collapse from exhaustion.');
       _releasePulses();
@@ -999,6 +1003,22 @@ class Game {
     }
 
     return _tick(parts.join(' '), beforeEvents: beforeEvents);
+  }
+
+  /// Stubborn 41, I will not falter! 51 and a held Pet Rock 30207
+  /// (`surviveExhaustion`) each roll their own chance to keep the player at
+  /// 1 stamina instead of collapsing. Seeded on the tick, like the traits'.
+  bool _holdsOn() {
+    if (traits.survivesExhaustion(state)) return true;
+    for (final id in state.inventory.keys) {
+      for (final e in pack.items[id]?.effects ?? const <Map>[]) {
+        if (e['type'] != 'surviveExhaustion') continue;
+        final chance = (e['chance'] as num?) ?? 0;
+        final roll = Random(state.date.asInt * 31 + id * 101).nextDouble();
+        if (roll < chance) return true;
+      }
+    }
+    return false;
   }
 
   // The formulas live in these four helpers so that `preview` and the
