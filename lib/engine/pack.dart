@@ -464,6 +464,10 @@ class GameItem {
   final bool flavour;
   final int? maxCount;
 
+  /// The pack's own item categories (`food`, `caffeine`, `milk`), which
+  /// the compiled traits key off: Solitary Gourmet reads `food`.
+  final List<String> detailTypes;
+
   GameItem({
     required this.id,
     required this.name,
@@ -474,6 +478,7 @@ class GameItem {
     required this.effects,
     required this.flavour,
     required this.maxCount,
+    this.detailTypes = const [],
   });
 
   bool get isConsumable => kind == 'consume';
@@ -490,6 +495,9 @@ class GameItem {
         .toList(),
     flavour: j['flavour'] as bool? ?? false,
     maxCount: (j['maxCount'] as num?)?.toInt(),
+    detailTypes: (j['detailTypes'] as List? ?? const [])
+        .whereType<String>()
+        .toList(),
   );
 }
 

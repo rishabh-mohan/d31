@@ -39,11 +39,13 @@ class _CommerceScreenState extends State<CommerceScreen> {
   final List<int> materials = [];
   bool combining = false;
   bool priceAscending = true;
+  int priceOf(Map<String, dynamic> offer) =>
+      game.priceOf((offer['id'] as num).toInt());
   List<Map<String, dynamic>> get offers => game.pack.shop.values.toList()
     ..sort(
       (a, b) => priceAscending
-          ? (a['price'] as num).compareTo(b['price'] as num)
-          : (b['price'] as num).compareTo(a['price'] as num),
+          ? priceOf(a).compareTo(priceOf(b))
+          : priceOf(b).compareTo(priceOf(a)),
     );
   ButtonStyle get orangeButton => FilledButton.styleFrom(
     backgroundColor: D30Colors.accent,
@@ -323,7 +325,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                   ? 'Owned (max)'
                                   : stock == 0
                                   ? 'Sold out'
-                                  : '${offer['price']} Gold ($stock/${offer['stock']})',
+                                  : '${game.priceOf(id)} Gold ($stock/${offer['stock']})',
                             ),
                           ),
                         ),

@@ -974,8 +974,12 @@ class Game {
 
     // The final action uses the last slot: there is no remaining day to lose.
     // Follow normal evening/rollover, without the collapse popup or penalty.
-    if (state.hp <= pack.rules.hpMin &&
-        state.date.tick + 1 < actionTicksPerDay) {
+    final wouldCollapse =
+        state.hp <= pack.rules.hpMin && state.date.tick + 1 < actionTicksPerDay;
+    if (wouldCollapse && _holdsOn()) {
+      state.hp = pack.rules.hpMin + 1;
+      parts.add('You hold on at 1 stamina.');
+    } else if (wouldCollapse) {
       state.addStat('all', pack.rules.exhaustedPenaltyStat);
       parts.add('You collapse from exhaustion.');
       _releasePulses();
@@ -1003,6 +1007,22 @@ class Game {
     }
 
     return _tick(parts.join(' '), beforeEvents: beforeEvents);
+  }
+
+  /// Stubborn 41, I will not falter! 51 and a held Pet Rock 30207
+  /// (`surviveExhaustion`) each roll their own chance to keep the player at
+  /// 1 stamina instead of collapsing. Seeded on the tick, like the traits'.
+  bool _holdsOn() {
+    if (traits.survivesExhaustion(state)) return true;
+    for (final id in state.inventory.keys) {
+      for (final e in pack.items[id]?.effects ?? const <Map>[]) {
+        if (e['type'] != 'surviveExhaustion') continue;
+        final chance = (e['chance'] as num?) ?? 0;
+        final roll = Random(state.date.asInt * 31 + id * 101).nextDouble();
+        if (roll < chance) return true;
+      }
+    }
+    return false;
   }
 
   // The formulas live in these four helpers so that `preview` and the
@@ -1061,6 +1081,9 @@ class Game {
   /// from. Sleep never costs; it restores.
   num _hpCostOf(LocationAction action) {
     if (action.actionType == 'sleep') return 0;
+    // Time Jumper / Energizer: seeded on the tick (the day, for Energizer),
+    // so the card's 0 is the block's 0.
+    if (traits.staminaFree(state)) return 0;
 
     final base = pack.rules.number('staminaCost', 'base', 9.5);
     final perWeight = pack.rules.number('staminaCost', 'perWeight', 6.25);
@@ -1426,13 +1449,23 @@ class Game {
     ];
   }
 
+  /// What an offer costs today: the listed price after Limited Offer's 50%
+  /// and Solitary Gourmet's food discount. The Store shows this number.
+  int priceOf(int offerId) {
+    final offer = pack.shop[offerId];
+    if (offer == null) return 0;
+    final listed = offer['price'] as num;
+    final item = pack.items[(offer['itemId'] as num?)?.toInt()];
+    return (listed * traits.priceFactor(state, item)).round();
+  }
+
   String? purchase(int offerId) {
     final offer = pack.shop[offerId];
     if (offer == null) return 'This item is unavailable.';
     final week =
         (state.dayIndex + 2) ~/ 7; // run begins Monday; restock Saturday.
     final key = '$week:$offerId';
-    final price = (offer['price'] as num).toInt();
+    final price = priceOf(offerId);
     final limit = (offer['stock'] as num?)?.toInt() ?? 1;
     if ((state.shopPurchases[key] ?? 0) >= limit) {
       return 'Sold out until Saturday.';
@@ -1622,7 +1655,20 @@ class Game {
     final item = state.pack.items[itemId];
     if (item == null || state.itemCount(itemId) <= 0) return false;
     if (!item.isConsumable) return false;
-    effects.applyItem(item, state);
+    // Developer doubles the stamina a coffee restores.
+    final hpFactor = TraitEngine(pack: state.pack).itemHpFactor(state, item);
+    if (hpFactor == 1) {
+      effects.applyItem(item, state);
+    } else {
+      for (final e in item.effects) {
+        if (e['trigger'] != null) continue;
+        final v = e['value'];
+        effects.applyItemEffect(
+          e['type'] == 'hp' && v is num ? {...e, 'value': v * hpFactor} : e,
+          state,
+        );
+      }
+    }
     state.itemUseCounts[itemId] = (state.itemUseCounts[itemId] ?? 0) + 1;
     // A checking tool (the Promotion Exam Kit) is read, not used up.
     if (!item.effects.any((e) => e['keepItem'] == true)) {
