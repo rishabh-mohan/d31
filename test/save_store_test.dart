@@ -44,12 +44,17 @@ void main() {
     expect(await SaveStore.write(1, game.state), isTrue);
 
     final summaries = await SaveStore.list();
-    expect(summaries.length, SaveStore.slots);
-    expect(summaries[0], isNull);
-    expect(summaries[2], isNull);
-    expect(summaries[1]!.name, 'Greg Fiasco');
-    expect(summaries[1]!.daysRemaining, game.state.daysRemaining);
-    expect(summaries[1]!.stats['korean'], 527);
+    expect(summaries, hasLength(1));
+    expect(summaries[0].slot, 1);
+    expect(summaries[0].name, 'Greg Fiasco');
+    expect(summaries[0].daysRemaining, game.state.daysRemaining);
+    expect(summaries[0].stats['korean'], 527);
+    expect(summaries[0].modeTitle, pack.manifest.name);
+    expect(summaries[0].portrait, game.state.portrait);
+    expect(
+      summaries[0].statTotal,
+      game.state.stats.values.fold<num>(0, (a, b) => a + b).round(),
+    );
 
     final loaded = await SaveStore.read(1, pack);
     expect(loaded, isNotNull);
@@ -66,11 +71,11 @@ void main() {
     await SaveStore.write(0, a.state);
     await SaveStore.write(2, b.state);
 
-    expect((await SaveStore.list()).map((s) => s?.name), [
-      'A ${a.state.lastName}'.trim(),
-      null,
-      'B ${b.state.lastName}'.trim(),
-    ]);
+    expect(
+      (await SaveStore.list()).map((s) => s.name).toSet(),
+      {'A ${a.state.lastName}'.trim(), 'B ${b.state.lastName}'.trim()},
+    );
+    expect(await SaveStore.nextSlot(), 3);
 
     await SaveStore.delete(0);
     expect(await SaveStore.summary(0), isNull);
@@ -104,7 +109,7 @@ void main() {
     await File('${temp.path}/slot_0.json').writeAsString('{not json');
     expect(await SaveStore.summary(0), isNull);
     expect(await SaveStore.read(0, pack), isNull);
-    expect((await SaveStore.list())[0], isNull);
+    expect(await SaveStore.list(), isEmpty);
   });
 
   test('a half-written slot cannot destroy the previous save', () async {
@@ -135,6 +140,24 @@ void main() {
     // nowhere to write; it must report that rather than throw.
     final game = Game.newRun(pack);
     expect(await SaveStore.write(0, game.state), isFalse);
-    expect(await SaveStore.list(), everyElement(isNull));
+    expect(await SaveStore.list(), isEmpty);
+  });
+
+  test('saves are unlimited and list most recently played first', () async {
+    expect(await SaveStore.nextSlot(), 0);
+    for (var i = 0; i < 6; i++) {
+      final game = Game.newRun(pack)..state.firstName = 'Run$i';
+      final slot = await SaveStore.nextSlot();
+      expect(slot, i);
+      expect(await SaveStore.write(slot, game.state), isTrue);
+      // savedAt has millisecond resolution; keep the order unambiguous.
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    final saves = await SaveStore.list();
+    expect(saves, hasLength(6));
+    expect(saves.first.name, startsWith('Run5'));
+    expect(saves.last.name, startsWith('Run0'));
+    await SaveStore.delete(5);
+    expect(await SaveStore.nextSlot(), 5);
   });
 }

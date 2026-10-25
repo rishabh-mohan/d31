@@ -1,13 +1,13 @@
 /// Saved runs on disk.
 ///
 /// The original restricts saving to the end of a day ("You may save once the
-/// day is over", UIR-30), and that is the only part of its save system the
-/// captures establish: there is **no reference screenshot of the slot list**,
-/// so the shape here is the project's own. What it deliberately does not do is
-/// invent account progression — a slot holds one run and nothing else.
+/// day is over", UIR-30). Its run list is Select Game (MM-26): a new-game tile
+/// over one card per unfinished run, with no visible limit, so every run gets
+/// its own file as it starts and keeps it until it finishes. A finished run
+/// leaves this list for History (see record_store.dart).
 ///
-/// A slot file is `{version, savedAt, summary, state}`. The summary is
-/// duplicated out of the state so the title screen can list slots without
+/// A save file is `slot_<id>.json`, `{version, savedAt, summary, state}`. The
+/// summary is duplicated out of the state so Select Game can list runs without
 /// loading a ContentPack; the state itself is `GameState.toJson()`, which is
 /// already round-tripped by the engine tests.
 library;
@@ -21,7 +21,7 @@ import 'package:path_provider/path_provider.dart';
 import 'pack.dart';
 import 'state.dart';
 
-/// What the slot list shows without reading a pack.
+/// What a Select Game card shows without reading a pack.
 class SaveSummary {
   final int slot;
   final String name;
@@ -30,6 +30,12 @@ class SaveSummary {
   final Map<String, num> stats;
   final String packId;
 
+  /// Pack-relative portrait path, drawn as the card's bust.
+  final String portrait;
+
+  /// The campaign's title, e.g. "31-Day Mode".
+  final String modeTitle;
+
   const SaveSummary({
     required this.slot,
     required this.name,
@@ -37,13 +43,21 @@ class SaveSummary {
     required this.savedAt,
     required this.stats,
     this.packId = 'kss16',
+    this.portrait = '',
+    this.modeTitle = '',
   });
+
+  /// The card's small number: the five study stats summed, so five 50s read
+  /// 250 (MM-26, user-confirmed).
+  int get statTotal => stats.values.fold<num>(0, (a, b) => a + b).round();
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'daysRemaining': daysRemaining,
     'stats': stats,
     'packId': packId,
+    'portrait': portrait,
+    'modeTitle': modeTitle,
   };
 
   static SaveSummary? fromJson(int slot, Map<String, dynamic>? j, DateTime at) {
@@ -57,6 +71,8 @@ class SaveSummary {
       stats: ((j['stats'] as Map?) ?? const {}).map(
         (k, v) => MapEntry('$k', (v as num?) ?? 0),
       ),
+      portrait: j['portrait'] as String? ?? '',
+      modeTitle: j['modeTitle'] as String? ?? '',
     );
   }
 }
@@ -64,11 +80,9 @@ class SaveSummary {
 class SaveStore {
   SaveStore._();
 
-  /// Three, as the original's slot wording implies a small fixed set. Raising
-  /// this is safe; the files are independent.
-  static const slots = 3;
-
   static const _version = 1;
+
+  static final _slotFile = RegExp(r'^slot_(\d+)\.json$');
 
   /// Overridden by tests, which must not touch the real documents directory.
   @visibleForTesting
@@ -89,10 +103,33 @@ class SaveStore {
   static File? _file(Directory? dir, int slot) =>
       dir == null ? null : File('${dir.path}/slot_$slot.json');
 
-  /// Every slot, lowest first; `null` where a slot is empty or unreadable.
-  static Future<List<SaveSummary?>> list() async {
+  static Future<List<int>> _ids(Directory? dir) async {
+    if (dir == null || !await dir.exists()) return const [];
+    final ids = <int>[];
+    await for (final entry in dir.list()) {
+      final match = _slotFile.firstMatch(entry.uri.pathSegments.last);
+      if (entry is File && match != null) ids.add(int.parse(match[1]!));
+    }
+    return ids;
+  }
+
+  /// Every readable save, most recently played first. A corrupt file is left
+  /// out rather than taking the list down with it.
+  static Future<List<SaveSummary>> list() async {
     final dir = await _directory();
-    return [for (var i = 0; i < slots; i++) await summary(i, dir)];
+    final saves = <SaveSummary>[];
+    for (final id in await _ids(dir)) {
+      final save = await summary(id, dir);
+      if (save != null) saves.add(save);
+    }
+    saves.sort((a, b) => b.savedAt.compareTo(a.savedAt));
+    return saves;
+  }
+
+  /// An id no save uses yet, for a run that is just starting.
+  static Future<int> nextSlot() async {
+    final ids = await _ids(await _directory());
+    return ids.isEmpty ? 0 : ids.reduce((a, b) => a > b ? a : b) + 1;
   }
 
   static Future<SaveSummary?> summary(int slot, [Directory? known]) async {
@@ -107,8 +144,7 @@ class SaveStore {
             await file.lastModified(),
       );
     } catch (_) {
-      // A corrupt or half-written slot reads as empty rather than taking the
-      // title screen down with it.
+      // A corrupt or half-written save reads as missing.
       return null;
     }
   }
@@ -125,6 +161,8 @@ class SaveStore {
         savedAt: DateTime.now(),
         stats: Map<String, num>.from(state.stats),
         packId: state.pack.manifest.id,
+        portrait: state.portrait,
+        modeTitle: state.modeTitle,
       );
       // Written to a neighbour first: a kill mid-write must not destroy the
       // save that was already there.

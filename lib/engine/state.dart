@@ -34,6 +34,11 @@ class GameState {
   String get portrait =>
       pack.characters[characterId]?.portrait ?? 'character/portrait.png';
 
+  /// The campaign as Select Game and History title it.
+  String get modeTitle => difficulty == 'elite'
+      ? '${pack.manifest.name} (Elite)'
+      : pack.manifest.name;
+
   Iterable<GameTrait> get setupModifiers sync* {
     final character = pack.characters[characterId];
     if (character != null) {
