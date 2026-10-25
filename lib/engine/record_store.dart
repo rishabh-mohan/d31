@@ -33,6 +33,15 @@ class RunRecord {
 
   /// "University — Department", when the run enrolled anywhere.
   final String? enrolled;
+  final int? enrolledDepartmentId;
+  final int? enrolledUniversityId;
+
+  /// The ending code an END_GAME set (Achievements' Endings List).
+  final int? endingCode;
+
+  /// Levels reached, for Gym Rat and Work Addict.
+  final int exerciseLevel;
+  final int partTimeLevel;
 
   const RunRecord({
     required this.id,
@@ -45,6 +54,11 @@ class RunRecord {
     required this.stats,
     this.csatStandardScore,
     this.enrolled,
+    this.enrolledDepartmentId,
+    this.enrolledUniversityId,
+    this.endingCode,
+    this.exerciseLevel = 0,
+    this.partTimeLevel = 0,
   });
 
   int get statTotal => stats.values.fold<num>(0, (a, b) => a + b).round();
@@ -72,6 +86,11 @@ class RunRecord {
               university?.name,
               department.name,
             ].whereType<String>().where((s) => s.isNotEmpty).join(' — '),
+      enrolledDepartmentId: department?.id,
+      enrolledUniversityId: department?.universityId,
+      endingCode: state.endingCode,
+      exerciseLevel: state.exerciseLevel.level,
+      partTimeLevel: state.partTimeLevel.level,
     );
   }
 
@@ -86,6 +105,11 @@ class RunRecord {
     'stats': stats,
     'csatStandardScore': ?csatStandardScore,
     'enrolled': ?enrolled,
+    'enrolledDepartmentId': ?enrolledDepartmentId,
+    'enrolledUniversityId': ?enrolledUniversityId,
+    'endingCode': ?endingCode,
+    'exerciseLevel': exerciseLevel,
+    'partTimeLevel': partTimeLevel,
   };
 
   static RunRecord fromJson(int id, Map<String, dynamic> j) => RunRecord(
@@ -102,6 +126,11 @@ class RunRecord {
     ),
     csatStandardScore: (j['csatStandardScore'] as num?)?.toDouble(),
     enrolled: j['enrolled'] as String?,
+    enrolledDepartmentId: (j['enrolledDepartmentId'] as num?)?.toInt(),
+    enrolledUniversityId: (j['enrolledUniversityId'] as num?)?.toInt(),
+    endingCode: (j['endingCode'] as num?)?.toInt(),
+    exerciseLevel: (j['exerciseLevel'] as num?)?.toInt() ?? 0,
+    partTimeLevel: (j['partTimeLevel'] as num?)?.toInt() ?? 0,
   );
 }
 
@@ -155,7 +184,10 @@ class RecordStore {
   }
 
   /// Records a finished run. Returns null when there is nowhere to write.
-  static Future<RunRecord?> add(GameState state, {required String ending}) async {
+  static Future<RunRecord?> add(
+    GameState state, {
+    required String ending,
+  }) async {
     final dir = await _directory();
     if (dir == null) return null;
     try {

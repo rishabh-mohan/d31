@@ -53,19 +53,11 @@ void main() {
     expect(find.text('Start'), findsOneWidget);
   });
 
-  testWidgets('Achievements opens empty and the chevron returns', (
-    tester,
-  ) async {
-    await pumpPhone(tester, const HomeScreen());
+  testWidgets('History lays out under its header', (tester) async {
+    await pumpPhone(tester, const HistoryPage());
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('home-achievements')));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.text('No achievements yet.'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('menu-back')));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('History'), findsOneWidget);
+    expect(find.byKey(const ValueKey('menu-back')), findsOneWidget);
   });
 
   testWidgets('Select Game lays out its plus tile', (tester) async {

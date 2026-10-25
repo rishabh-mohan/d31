@@ -11,8 +11,12 @@
 /// Settings work from them.
 library;
 
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../engine/account_catalog.dart';
 import '../engine/account_store.dart';
 import '../engine/content_source.dart';
 import '../engine/game.dart';
@@ -21,7 +25,12 @@ import '../engine/save_store.dart';
 import '../engine/setup.dart';
 import 'day_transition.dart';
 import 'game_screen.dart';
+import 'account_widgets.dart';
+import 'achievements_page.dart';
+import 'daily_quest.dart';
 import 'home_pages.dart';
+import 'puzzles_page.dart';
+import 'traits_page.dart';
 import 'pack_image.dart';
 import 'setup_screen.dart';
 
@@ -72,6 +81,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     try {
       await AccountStore.load();
+      try {
+        AccountStore.catalog = AccountCatalog.parse(
+          await rootBundle.loadString('assets/account/catalog.json'),
+        );
+      } catch (_) {
+        // No catalog built: the account pages show empty lists.
+      }
       final (pack, location) = await ContentSource.load();
       _campaigns[pack.manifest.id] = (pack, location);
       for (final id in await ContentSource.availablePackIds()) {
@@ -184,6 +200,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _open(Widget page) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
+
+  /// The campaigns as the account pages show them, in the Settings set.
+  List<ContentPack> get _campaignPacks => [
+    for (final (pack, _) in _campaigns.values)
+      pack.withColleges(AccountStore.current.universities.name),
+  ];
+
+  Future<void> _openMenu(String label) async {
+    final pack = _pack;
+    if (pack == null) return;
+    final campaigns = _campaignPacks;
+    final installed = {for (final p in campaigns) ?p.manifest.storyId};
+    switch (label) {
+      case 'Records':
+        await Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const HistoryPage()));
+      case 'Puzzles':
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PuzzlesPage(installedStories: installed),
+          ),
+        );
+      case 'Missions':
+        await pushOverlay<void>(
+          context,
+          DailyQuestPanel(catalog: campaigns.first.admissions),
+        );
+      case 'Achievements':
+        await pushOverlay<void>(
+          context,
+          AchievementsSheet(campaigns: campaigns),
+        );
+      case 'Traits':
+        await pushOverlay<void>(context, ManageTraitsSheet(pack: pack));
+    }
+    unawaited(AccountStore.save());
+    if (mounted) setState(() {});
   }
 
   void _openStart() => _open(
@@ -313,17 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     u: u,
                     label: entry.$1,
                     icon: entry.$2,
-                    onTap: () => _open(switch (entry.$1) {
-                      'Records' => const HistoryPage(),
-                      'Achievements' => const EmptyMenuPage(
-                        title: 'Achievements',
-                        message: 'No achievements yet.',
-                      ),
-                      final title => EmptyMenuPage(
-                        title: title,
-                        message: 'Not built yet.',
-                      ),
-                    }),
+                    onTap: ready ? () => _openMenu(entry.$1) : null,
                   ),
                 ),
               Positioned(
