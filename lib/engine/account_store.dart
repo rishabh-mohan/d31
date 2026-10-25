@@ -361,6 +361,9 @@ class Account implements SharedWallet {
       paid += catalog.endings[code]?.cookies ?? 0;
     }
     if (record.enrolledUniversityId case final uni?) {
+      if ((enrollments[uni] ?? 0) == 0) {
+        paid += catalog.firstUniversityEnrollmentCookies;
+      }
       enrollments[uni] = (enrollments[uni] ?? 0) + 1;
     }
     clears[record.packId] = (clears[record.packId] ?? 0) + 1;

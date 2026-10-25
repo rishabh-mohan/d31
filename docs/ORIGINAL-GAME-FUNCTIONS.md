@@ -17,6 +17,13 @@ infer account persistence for stationery from other collection systems.
 
 ## Contents
 
+Implementation follow-up (2026-10-25): [History details](HISTORY-DETAILS.md)
+recreates the three-tab record view from F17/F18 and retains new completion
+snapshots. First university enrollment now pays the confirmed two cookies once
+per school. [University names](UNIVERSITY-NAMES.md) documents the user's requested
+real-name overlay for Global/Taiwan, including identity inferences. These are
+d30mode implementation notes, not changes to the original-game evidence below.
+
 Evening evidence supplement:
 [30 screenshots, three recordings and trait-pack probabilities](ORIGINAL-GAME-FOLLOWUP-2026-10-24.md).
 User corrections override older uncertain notes: protection persists after

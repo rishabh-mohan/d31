@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import item_effects  # noqa: E402
 import presentation_assets  # noqa: E402
 import us_colleges  # noqa: E402
+import university_names  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -442,12 +443,13 @@ def build_badges(out: Path):
     badges = clean(load(GLOBAL / "university_badges.json"))["badges"]
     unis = {u["id"]: u for u in
             clean(load(GLOBAL / "university/universities.json"))["universities"]}
+    university_names.check(unis.values())
     out_badges = []
     for b in badges:
         uni = unis.get(b["universityId"], {})
         out_badges.append({
             "universityId": b["universityId"],
-            "name": uni.get("engName") or uni.get("korName") or
+            "name": university_names.display_name(uni) or
                     f"University {b['universityId']}",
             "rank": uni.get("rank", "none"),
             "colorCode": uni.get("colorCode"),
