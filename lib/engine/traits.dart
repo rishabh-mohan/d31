@@ -7,7 +7,9 @@
 ///
 /// Study efficiency is a flat stat bonus, one point per authored unit.
 /// Prefer nonzero `storyStat` over the alternate scaled `extraStat` field.
-/// Effects with no story value retain their explicit `extraStat` amount.
+/// Effects with no story value retain their explicit `extraStat` amount,
+/// unless the description writes the `STAT_<n>` placeholder, which marks that
+/// `extraStat` as the x3-scaled field (High Potential: `+STAT_5`, extraStat 15).
 library;
 
 import 'dart:math';
@@ -101,7 +103,7 @@ class TraitEngine {
           continue;
         }
         if (!conditionsHold(e, state, ctx, rollKey: _key(trait, i))) continue;
-        total += statValue(e);
+        total += statValue(e, description: trait.description);
       }
     }
     return total;
@@ -239,7 +241,8 @@ class TraitEngine {
   // --- reading one effect ---------------------------------------------------
 
   /// Shared with setup labels so displayed efficiency matches the payout.
-  num statValue(Map<String, dynamic> e) => studyEfficiencyValue(e);
+  num statValue(Map<String, dynamic> e, {String description = ''}) =>
+      studyEfficiencyValue(e, description: description);
 
   bool _subjectMatches(
     Map<String, dynamic> e,
@@ -424,8 +427,23 @@ class GameDateCodes {
 }
 
 /// One stat per efficiency unit; never add the two alternative data fields.
-num studyEfficiencyValue(Map<String, dynamic> effect) {
+///
+/// [description] is the owning trait's. Two traits ship storyStat 0 with a
+/// scaled extraStat, and only their descriptions tell them apart from the
+/// literal ones: High Potential "+STAT_5" is extraStat 15 and Entrepreneur
+/// "+STAT_2" is extraStat 6, while Worth the Wait "+3" is extraStat 3. The
+/// placeholder is the description's unit, so the scaled field is divided back.
+num studyEfficiencyValue(
+  Map<String, dynamic> effect, {
+  String description = '',
+}) {
   final story = (effect['storyStat'] as num?) ?? 0;
   if (story != 0) return story;
-  return (effect['extraStat'] as num?) ?? 0;
+  final extra = (effect['extraStat'] as num?) ?? 0;
+  if (_statPlaceholder.hasMatch(description)) {
+    return extra % 3 == 0 ? extra ~/ 3 : extra / 3;
+  }
+  return extra;
 }
+
+final _statPlaceholder = RegExp(r'STAT_\d');
