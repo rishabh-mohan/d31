@@ -27,11 +27,13 @@ String? collegesFile(Map<String, String> files) =>
 /// `colleges_<set>.json`: `{"universities": [{"id", "name", "colorCode"?,
 /// "crest"?}]}`. Each listed university is renamed (recoloured, and given its
 /// own emblem, a path under the images folder) in the catalog and in
-/// `badges.json`; anything unlisted, and every department, stays as it was.
+/// `badges.json`. Optional `departments` adds majors for this set; existing
+/// departments retain their IDs and cutoffs.
 Map<String, String> overlayColleges(Map<String, String> files, String overlay) {
+  final overlayData = jsonDecode(overlay) as Map<String, dynamic>;
   final replace = <int, Map<String, dynamic>>{
     for (final u
-        in ((jsonDecode(overlay) as Map)['universities'] as List? ?? const [])
+        in (overlayData['universities'] as List? ?? const [])
             .whereType<Map<String, dynamic>>())
       if (u['id'] is num) (u['id'] as num).toInt(): u,
   };
@@ -53,7 +55,16 @@ Map<String, String> overlayColleges(Map<String, String> files, String overlay) {
   final out = Map<String, String>.of(files);
   final catalog = collegesFile(files);
   if (catalog != null) {
-    out[catalog] = rewrite(files[catalog]!, 'universities', 'id');
+    final data = jsonDecode(
+      rewrite(files[catalog]!, 'universities', 'id'),
+    ) as Map<String, dynamic>;
+    if (overlayData['departments'] case final List additions) {
+      data['departments'] = [
+        ...data['departments'] as List? ?? const [],
+        ...additions,
+      ];
+    }
+    out[catalog] = jsonEncode(data);
   }
   if (files['badges.json'] case final badges?) {
     out['badges.json'] = rewrite(badges, 'badges', 'universityId');
@@ -220,7 +231,40 @@ class Admissions {
     return 9;
   }
 
-  /// Fitted, not recovered: `50 + 10 * (total - mean) / sd`.
+  /// The curve a pack gets when its rules name none: calibrated so 10k in
+  /// every subject is ~10% at the hardest regular cutoff (73.24) and ~50%
+  /// one tier down, 15k ~50% at the top, 25k ~99% (admission spread 2).
+  static const defaultCurve = <List<num>>[
+    [0, 20],
+    [1000, 38],
+    [3000, 50],
+    [6000, 60],
+    [10000, 68.94],
+    [15000, 73.24],
+    [25000, 81.84],
+    [50000, 95],
+  ];
+
+  static const defaultSpread = 2.0;
+
+  /// Fitted, not recovered: one subject's standard score from its stat,
+  /// read off [curve], a list of `[stat, score]` points in rising order and
+  /// joined by straight lines (flat past either end).
+  static double subjectScoreFor(num stat, List<List<num>> curve) {
+    if (curve.isEmpty) return 50;
+    if (stat <= curve.first[0]) return curve.first[1].toDouble();
+    for (var i = 1; i < curve.length; i++) {
+      final x0 = curve[i - 1][0], y0 = curve[i - 1][1];
+      final x1 = curve[i][0], y1 = curve[i][1];
+      if (stat <= x1) {
+        return (y0 + (y1 - y0) * (stat - x0) / (x1 - x0)).toDouble();
+      }
+    }
+    return curve.last[1].toDouble();
+  }
+
+  /// Fitted, not recovered: `50 + 10 * (total - mean) / sd`. The older
+  /// curve, used by packs whose rules still name meanTotal/sdTotal.
   static double standardScoreFor(
     num total, {
     required num mean,

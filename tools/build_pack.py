@@ -514,6 +514,8 @@ def build_admissions(out: Path):
          **({"crest": crest} if crest else {})}
         for uid, (name, color, crest) in us_colleges.US_COLLEGES.items()
         if uid in keep
+    ], "departments": [
+        d for d in us_colleges.US_DEPARTMENTS if d["universityId"] in keep
     ]})
 
 
@@ -816,18 +818,25 @@ def build_rules(out: Path):
         "setup": {"genderSelection": False, "genderPairs": []},
         "exam": {
             # The CSAT on the last day, then applications and the endings.
-            # Scoring is compiled in the original and NOT recovered: the
-            # standard score is 50 + 10 * (total - meanTotal) / sdTotal over
-            # the summed stats, fitted so a study-focused run reaches the top
-            # departments (cutoffs run 25.3 .. 80.85) and an idle one does not.
+            # Scoring is compiled in the original and NOT recovered. Fitted:
+            # each subject's score is read off `curve` ([stat, score] points
+            # joined by straight lines) and the CSAT is their average, so a
+            # balanced student beats a lopsided one with the same total.
+            # Calibrated to the user's targets against the cutoffs (25.3 ..
+            # 73.24 for regular colleges, median 60), with admissionSpread 2:
+            #   10k each: ~10% at the top cutoff, ~50% one tier down (~69);
+            #   15k each: ~50% at the top; 15-17k gets into most places;
+            #   25k each: ~99% at the top (Korea Dream / Harvard medicine).
+            # Below 10k the curve bends down so a weak run lands low.
             "enabled": True,
-            "meanTotal": 2600,
-            "sdTotal": 1300,
+            "curve": [[0, 20], [1000, 38], [3000, 50], [6000, 60],
+                      [10000, 68.94], [15000, 73.24], [25000, 81.84],
+                      [50000, 95]],
             # How many departments one CSAT can be sent to.
             "applications": 3,
             # Spread of the admission draw around a cutoff, in standard-score
             # points: a score exactly at the cutoff is a coin flip.
-            "admissionSpread": 1.5,
+            "admissionSpread": 2,
         },
     }
     if STORY_ID == 20:
@@ -843,7 +852,6 @@ def build_rules(out: Path):
         # recovered and the user reported inflated beginner-book gains.
         # Exam progression balance remains open; do not alter book payouts to
         # conceal that gap. Recovered exam thresholds remain unchanged.
-        rules['exam'].update({'meanTotal': 8000, 'sdTotal': 4000})
         rules['school']['lessonsOnFirstDay'] = False
         rules['school']['suppressedBySwitch'] = 'DOK_BANG_ON'
         rules['events'].update({

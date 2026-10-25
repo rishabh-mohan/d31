@@ -79,6 +79,16 @@ class D30RaisedButton extends StatelessWidget {
     this.flat = false,
   });
 
+  /// A disabled button is gray through its face, edge and lower face;
+  /// Material's own disabled face over a coloured lower face looked broken.
+  static const disabledColor = Color(0xFFB9B1A8);
+
+  Color get _face => onPressed == null ? disabledColor : color;
+
+  Color get _edge => onPressed == null
+      ? Color.lerp(disabledColor, Colors.black, .22)!
+      : edgeColor ?? Color.lerp(color, Colors.black, .22)!;
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.only(bottom: flat ? 0 : depth),
@@ -88,10 +98,7 @@ class D30RaisedButton extends StatelessWidget {
         boxShadow: flat
             ? const []
             : [
-                BoxShadow(
-                  color: edgeColor ?? Color.lerp(color, Colors.black, .22)!,
-                  offset: Offset(0, depth),
-                ),
+                BoxShadow(color: _edge, offset: Offset(0, depth)),
                 BoxShadow(
                   color: const Color(0x264A2B10),
                   blurRadius: 8,
@@ -104,8 +111,10 @@ class D30RaisedButton extends StatelessWidget {
         child: FilledButton(
           onPressed: onPressed,
           style: FilledButton.styleFrom(
-            backgroundColor: color,
+            backgroundColor: _face,
             foregroundColor: Colors.white,
+            disabledBackgroundColor: _face,
+            disabledForegroundColor: Colors.white,
             // The lower face is drawn under this box, so the button must be
             // exactly its painted face. Material's 48px tap-target padding
             // made the face smaller than the box: the lower face read 10px
@@ -117,7 +126,7 @@ class D30RaisedButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
-                color: edgeColor ?? Color.lerp(color, Colors.black, .22)!,
+                color: _edge,
                 width: 2,
               ),
             ),

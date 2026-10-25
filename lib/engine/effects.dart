@@ -524,7 +524,7 @@ class EffectEngine {
     // The Graduation Exam's last line. The host sits the CSAT and takes the
     // applications once the scene closes; see Game.takeCsat.
     'START_SAT': (s, a, e) {
-      if (s.pack.rules.flag('exam', 'enabled', false) && s.csat == null) {
+      if (s.pack.examEnabled && s.csat == null) {
         s.csatPending = true;
       }
     },

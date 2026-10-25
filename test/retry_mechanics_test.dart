@@ -307,7 +307,7 @@ void main() {
     test('Medicine needs the Elite recommendation, and opens its ending', () {
       final game = examDay(retry);
       for (final s in retry.manifest.subjects) {
-        game.state.stats[s] = 6000;
+        game.state.stats[s] = 25000;
       }
       finish(game.beginDay()!);
       final medicine = retry.admissions.departments[54001]!;
@@ -324,7 +324,7 @@ void main() {
     test('story 16 sits the CSAT too, and its endings read the result', () {
       final game = examDay(original);
       for (final s in original.manifest.subjects) {
-        game.state.stats[s] = 2000;
+        game.state.stats[s] = 16000;
       }
       final exam = game.beginDay();
       expect(exam, isNotNull, reason: 'Graduation Exam opens exam day');
@@ -523,7 +523,7 @@ void main() {
     await tester.tap(find.byType(ListTile).first);
     await tester.pump();
     expect(find.textContaining('Applications (1 / 3)'), findsOneWidget);
-    await tester.tap(find.text('Submit applications'));
+    await tester.tap(find.text('Submit 1 application'));
     await tester.pumpAndSettle();
     expect(find.text('Admission Results'), findsOneWidget);
     expect(tester.takeException(), isNull);

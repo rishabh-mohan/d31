@@ -791,9 +791,28 @@ class ContentPack {
   ContentPack? _collegeBase;
   final Map<String, ContentPack> _collegeVariants = {};
 
+  /// The CSAT, applications and endings run on the last day in every pack
+  /// that has a college catalog, unless `rules.exam.enabled` turns them off.
+  bool get examEnabled =>
+      rules.flag('exam', 'enabled', true) && !admissions.isEmpty;
+
+  /// A pack without a college catalog borrows [donor]'s (both university
+  /// sets), so its runs still end on the CSAT. Packs with their own keep
+  /// them.
+  ContentPack withCollegesFrom(ContentPack donor) {
+    if (!admissions.isEmpty || donor.admissions.isEmpty) return this;
+    final catalog = collegesFile(donor.sourceFiles);
+    if (catalog == null) return this;
+    return ContentPack.fromFiles({
+      ...sourceFiles,
+      'colleges.json': donor.sourceFiles[catalog]!,
+      'colleges_us.json': ?donor.sourceFiles['colleges_us.json'],
+    }, collegeSet: collegeSet);
+  }
+
   /// This pack with another university set's names and colours laid over
-  /// the catalog and the badges. Departments, cutoffs and ids are untouched,
-  /// so content that asks where you enrolled still works. Built once per set;
+  /// the catalog and the badges, plus any set-specific majors. Existing
+  /// departments, cutoffs and ids are untouched. Built once per set;
   /// a set the pack does not ship gives the pack's own. Call before
   /// [forPlayer], which keeps the set.
   ContentPack withColleges(String set) {

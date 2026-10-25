@@ -175,8 +175,7 @@ class Game {
 
   // --- exam day -----------------------------------------------------------
 
-  bool get examEnabled =>
-      pack.rules.flag('exam', 'enabled', false) && !pack.admissions.isEmpty;
+  bool get examEnabled => pack.examEnabled;
 
   bool get isExamDay => state.date.compareTo(pack.manifest.endDate) >= 0;
 
@@ -215,29 +214,47 @@ class Game {
     return pinned.firstOrNull;
   }
 
+  /// `rules.exam.curve`: `[stat, score]` points for one subject's score.
+  /// A pack that names neither a curve nor the older meanTotal/sdTotal gets
+  /// the calibrated default.
+  List<List<num>> get examCurve {
+    final exam = pack.rules.section('exam');
+    final curve = [
+      for (final p in exam['curve'] as List? ?? const [])
+        if (p is List && p.length == 2 && p[0] is num && p[1] is num)
+          [p[0] as num, p[1] as num],
+    ];
+    if (curve.isNotEmpty) return curve;
+    return exam.containsKey('meanTotal') ? const [] : Admissions.defaultCurve;
+  }
+
   /// Sits the CSAT once; later calls return the same result.
   CsatResult takeCsat() {
     final existing = state.csat;
     if (existing != null) return existing;
+    final subjects = pack.manifest.subjects;
+    final curve = examCurve;
     final mean = pack.rules.number('exam', 'meanTotal', 2600);
     final sd = pack.rules.number('exam', 'sdTotal', 1300);
-    final subjects = pack.manifest.subjects;
-    var standard = Admissions.standardScoreFor(
-      state.totalStat,
-      mean: mean,
-      sd: sd,
-    );
+    // Each subject is scored on its own stat and the CSAT is their average,
+    // so a lopsided student does worse than a balanced one with the same
+    // total. (Older packs: one linear curve over the total.)
+    double scoreOf(num stat) => curve.isNotEmpty
+        ? Admissions.subjectScoreFor(stat, curve)
+        : Admissions.standardScoreFor(
+            stat * subjects.length,
+            mean: mean,
+            sd: sd,
+          );
+    final scores = <String, double>{
+      for (final s in subjects) s: scoreOf(state.stats[s] ?? 0),
+    };
+    var standard = curve.isNotEmpty && scores.isNotEmpty
+        ? scores.values.reduce((a, b) => a + b) / scores.length
+        : Admissions.standardScoreFor(state.totalStat, mean: mean, sd: sd);
     // "University acceptance rate +1%" items move the score by the points
     // that are worth around the middle of the curve.
     standard += state.passiveSum('acceptanceRate', valueKey: 'percent') * 0.25;
-    final scores = <String, double>{
-      for (final s in subjects)
-        s: Admissions.standardScoreFor(
-          (state.stats[s] ?? 0) * subjects.length,
-          mean: mean,
-          sd: sd,
-        ),
-    };
     final result = CsatResult(
       standardScore: standard,
       subjectScores: scores,
@@ -268,19 +285,36 @@ class Game {
   bool canApply(Department department) =>
       department.requiredItems.every((id) => state.itemCount(id) > 0);
 
+  /// One application per university: a second department of a school
+  /// already chosen in [chosen] is refused.
+  bool sameSchoolChosen(Department department, Iterable<int> chosen) =>
+      chosen.any(
+        (id) =>
+            id != department.id &&
+            pack.admissions.departments[id]?.universityId ==
+                department.universityId,
+      );
+
   double admissionChance(Department department) => Admissions.acceptanceChance(
     takeCsat().standardScore,
     department.deviation,
-    spread: pack.rules.number('exam', 'admissionSpread', 1.5).toDouble(),
+    spread: pack.rules
+        .number('exam', 'admissionSpread', Admissions.defaultSpread)
+        .toDouble(),
   );
 
   /// Sends the applications and decides each one. Returns the departments
   /// that accepted.
   List<int> submitApplications(List<int> departmentIds) {
     if (state.applications.isNotEmpty) return state.admittedDepartments;
-    for (final id in departmentIds.take(applicationLimit)) {
+    for (final id in departmentIds) {
+      if (state.applications.length >= applicationLimit) break;
       final department = pack.admissions.departments[id];
-      if (department == null || !canApply(department)) continue;
+      if (department == null ||
+          !canApply(department) ||
+          sameSchoolChosen(department, state.applications)) {
+        continue;
+      }
       state.applications.add(id);
       if (state.random.nextDouble() < admissionChance(department)) {
         state.admittedDepartments.add(id);

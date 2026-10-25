@@ -90,9 +90,11 @@ report card, up to three applications, results, enrolment. Enrolling raises
   the deluxe purchase Pharmacy also names is treated as owned.
 - `FUNC_GET_SUCCESS_LENGTH` counts acceptances, `FUNC_IS_ENTER_UNIV*` read the
   enrolment. With none, "Third Try"/"Second Retake" (160) plays.
-- The CSAT score is **not** recovered: a standard score over the stat total,
-  `rules.exam.meanTotal`/`sdTotal`, graded on the real CSAT bands. Admission is
-  a draw around each department's cutoff (`admissionSpread`).
+- The CSAT score is **not** recovered. Fitted: each subject's score is read
+  off `rules.exam.curve` (`[stat, score]` points joined by straight lines),
+  the CSAT is their average, graded on the real CSAT bands. Admission is
+  a draw around each department's cutoff (`admissionSpread`), shown to the
+  player as a percent; one application per university, three in all.
 
 ## Remaining work
 
