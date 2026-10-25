@@ -270,6 +270,27 @@ plus four additional custom regressions. See
 98. Correct the Global and Taiwan school names.
    DONE — Shared tracked name overlay corrects 80 account/badge labels in both campaigns, preserving IDs and mechanics. See docs/UNIVERSITY-NAMES.md for sources and the explicitly inferred Bombay counterpart.
 
+101. Beggar event is broken, even with enough gold he will claim you are broke
+   DONE — Root cause: the Beggar's branch checks MONEY < 500, but MONEY was an unset content switch that always read 0. GameState.switchValue now maps MONEY to the wallet (and events cannot overwrite it); this also fixes the other MONEY conditions in both campaigns.
+
+104. Should be able to click anywhere on the screen to open the envelopes
+   DONE — A tap anywhere on the idle envelope stack opens the active envelope; Browse and fast-forward keep their own taps; a second tap while opening is ignored.
+
+105. Remove the confirm button from the college decisions system, just have it go straight to showing the final decision button
+   DONE — The combined-results page has no aggregate Confirm; it settles straight into the Final Decision layout and calls confirmResults() once (resume-safe). Per-envelope Confirms are unchanged.
+
+107. character icons from the retry year pack do not appear to show up in Records
+   DONE — Root cause: tools/copy_assets.py copied portraits only for kss16's roster, so the 20 Retry Year portraits never existed in assets/images/characters. The script now covers every pack (the 20 missing files were copied without overwriting anything), and Records/Select Game fall back to the generic portrait when a file is missing.
+
+108. Add a Teaching Physics major to Ball State University
+   DONE — Ball State University (US set, both campaigns) offers Teaching Physics (id 118022, cutoff 52.5, matching its sports major) via `US_DEPARTMENTS` in tools/us_colleges.py; the Korean set is unchanged. Covered by test/colleges_test.dart.
+
+109. For the college ID picture, have the seal in the background not be cutoff prematurely (have it be cutoff by the edges of the card and the title of the ID, but it currently cuts off a few pixels above and beloe)
+   DONE — The Student ID crest watermark now runs to the card edge and under the title band, clipped only by the card border and the title.
+
+111. The refresh token button (to use one) shouldn't move down when pressed.
+   DONE — The in-game Refresh control uses PressFeedback(travel: 0): it no longer moves down when pressed; the ink ripple still shows the press.
+
 ## Finished parity-audit items (entries 81-87)
 
 Each parent entry's heading and notes are kept for context; its open sub-items are in TODO.md.
@@ -338,6 +359,8 @@ Each parent entry's heading and notes are kept for context; its open sub-items a
 
 85. Other missing original functions, within agreed scope.
    - [x] F04: Stationery roulette/result confetti with the different tier colors; distinguish trait-pack mixed brown/gray/gold and combine's result-tier confetti.
+- **F03** (audit 85): Effective Rumble/haptics with verified trigger points.
+  DONE — Rumble drives HapticFeedback through lib/ui/haptics.dart, gated by the Settings toggle, at five reconstructed triggers (collapse, level-up, envelope reveal, stationery draw stop, trait-pack roulette stop) listed in docs/MAIN-MENU-REFERENCE.md.
 
 86. Latent engine hazards to fix before dependent ports.
    - [x] L01: INCREASE_TAMGOO_STAT / DECREASE_TAMGOO_STAT affect all subjects; DECREASE_TAMGOO_HIGH_STAT picks global highest (effects.dart). Respect elective subset. Not exercised by current two main graphs.
