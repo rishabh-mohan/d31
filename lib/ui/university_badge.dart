@@ -25,7 +25,9 @@ class UniversityBadgeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final badge = pack.badges[id];
     final color = badgeColor(badge);
-    final path = (pack.presentation['badges'] as Map?)?['$id'] as String?;
+    final path =
+        badge?.crest ??
+        (pack.presentation['badges'] as Map?)?['$id'] as String?;
     return Semantics(
       label: badge?.name ?? 'Empty university badge',
       button: onTap != null,

@@ -12,7 +12,12 @@ import 'game_date.dart';
 import 'quiz.dart';
 
 export 'admissions.dart'
-    show AdmissionsCatalog, University, Department, collegesFile, overlayColleges;
+    show
+        AdmissionsCatalog,
+        University,
+        Department,
+        collegesFile,
+        overlayColleges;
 
 /// Thin wrapper so hand-edited JSON yields a useful message instead of a cast
 /// error ten frames deep.
@@ -603,6 +608,9 @@ class UniversityBadge {
   final String name;
   final String rank;
   final String? colorCode;
+
+  /// The pack's own emblem for it (a US set's seal), if any.
+  final String? crest;
   final List<Map<String, dynamic>> effects;
 
   UniversityBadge({
@@ -610,6 +618,7 @@ class UniversityBadge {
     required this.name,
     required this.rank,
     required this.colorCode,
+    this.crest,
     required this.effects,
   });
 
@@ -618,6 +627,7 @@ class UniversityBadge {
     name: j['name'] as String? ?? 'University',
     rank: j['rank'] as String? ?? 'none',
     colorCode: j['colorCode'] as String?,
+    crest: j['crest'] as String?,
     effects: (j['effects'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
         .toList(),
@@ -801,7 +811,8 @@ class ContentPack {
   /// (`events_female.json`): the same story with the friends' genders
   /// swapped -- a male Ji Suin and Jian Lee, for one -- and lines to match.
   bool get hasFemaleScript =>
-      _maleScript != null || sourceFiles.containsKey('events/events_female.json');
+      _maleScript != null ||
+      sourceFiles.containsKey('events/events_female.json');
 
   /// Whether setup offers a protagonist gender (`rules.setup.genderSelection`).
   /// A pack switch, so a pack author can turn it on or off.
@@ -846,6 +857,7 @@ class ContentPack {
       'events/events.json': female,
     }, collegeSet: collegeSet).._maleScript = this;
   }
+
   final LevelTable studyLevels;
   final LevelTable exerciseLevels;
   final LevelTable partTimeLevels;

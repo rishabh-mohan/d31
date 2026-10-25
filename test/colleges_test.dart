@@ -80,6 +80,24 @@ void main() {
     expect(identical(pack.withColleges('mars'), pack), isTrue);
   });
 
+  test('the US set carries each school’s own crest', () {
+    final us = pack.withColleges('us');
+    final purdue = purdueIn(us);
+    expect(
+      us.admissions.universities[purdue]!.crestPath,
+      'colleges/us/$purdue.png',
+    );
+    expect(us.badges[purdue]?.crest, anyOf(isNull, 'colleges/us/$purdue.png'));
+    // The Korean set keeps the original crests.
+    expect(pack.admissions.universities[purdue]!.crest, isNull);
+    expect(
+      pack.admissions.universities[purdue]!.crestPath,
+      'kss/images/university/$purdue.png',
+    );
+    // Story-only universities keep theirs in both.
+    expect(us.admissions.universities[56]!.crest, isNull);
+  });
+
   test('a run keeps its university set through a save', () {
     final game = Game.newRun(pack.withColleges('us'));
     final json = jsonDecode(jsonEncode(game.state.toJson()));
