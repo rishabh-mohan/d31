@@ -407,6 +407,8 @@ class EventEngine {
       if (e.isCharacterEvent && !e.characterIds.contains(state.characterId)) {
         return false;
       }
+      // Only this run's career storyline plays (TODO 36).
+      if (!state.eventSetActive(e.eventSetId)) return false;
       if (e.rootNodeId < 0 || !pack.nodes.containsKey(e.rootNodeId)) {
         return false;
       }
