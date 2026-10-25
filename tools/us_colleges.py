@@ -2,9 +2,11 @@
 
 Every regular Korean university is renamed to a US one, keeping its id,
 departments and cutoffs. The rows run from the most selective Korean
-university down, so selectivity stays in order, except that Purdue takes the
-top slot (Korea Dream University) by request. The arts and sports schools
-(Korea Movie, Drama, Music, ...) get US schools known for the same thing.
+university down, so selectivity stays in order. Purdue is asked to be a
+top-level college: it takes North Chungcheong University, a rank-eight
+(top general tier) catalog whose aerospace, agriculture and robotics
+departments fit it. The arts and sports schools (Korea Movie, Drama, Music,
+...) get US schools known for the same thing.
 
 Left alone, as the request asks:
   - Basakan and the other story-only "special" universities (Santa, the two
@@ -16,7 +18,7 @@ Left alone, as the request asks:
 # id: (name, colorCode), in the original's rank order (ten .. one).
 US_COLLEGES = {
     # ten
-    2: ("Purdue University", "CEB888"),
+    2: ("Harvard University", "A51C30"),
     # nine: the arts, culture, sports, music and food schools
     1: ("University of Southern California", "990000"),
     4: ("New York University", "57068C"),
@@ -25,10 +27,10 @@ US_COLLEGES = {
     8: ("Juilliard School", "1F2A44"),
     9: ("Cornell University", "B31B1B"),
     # eight
-    3: ("Harvard University", "A51C30"),
+    3: ("Yale University", "00356B"),
     6: ("Massachusetts Institute of Technology", "A31F34"),
-    11: ("Yale University", "00356B"),
-    101: ("Princeton University", "E77500"),
+    11: ("Princeton University", "E77500"),
+    101: ("Purdue University", "CEB888"),
     # seven
     10: ("University of Chicago", "800000"),
     12: ("Columbia University", "1D4F91"),

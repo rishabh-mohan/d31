@@ -37,8 +37,11 @@ void main() {
   test('the US set renames universities and badges, nothing else', () {
     final us = pack.withColleges('us');
     expect(us.collegeSet, 'us');
-    expect(us.admissions.universities[2]!.name, 'Purdue University');
-    expect(us.badges[2]?.name ?? 'Purdue University', 'Purdue University');
+    expect(us.admissions.universities[2]!.name, 'Harvard University');
+    // Purdue sits in the top general tier.
+    expect(us.admissions.universities[101]!.name, 'Purdue University');
+    expect(us.admissions.universities[101]!.rank, 'eight');
+    expect(us.badges[101]?.name ?? 'Purdue University', 'Purdue University');
     // Departments, cutoffs and ids are the same catalog.
     expect(us.admissions.departments.length, pack.admissions.departments.length);
     for (final d in pack.admissions.departments.values.take(50)) {
@@ -68,12 +71,12 @@ void main() {
     expect(json['collegeSet'], 'us');
     final loaded = GameState.fromJson(pack, json as Map<String, dynamic>);
     expect(loaded.pack.collegeSet, 'us');
-    expect(loaded.pack.admissions.universities[2]!.name, 'Purdue University');
+    expect(loaded.pack.admissions.universities[101]!.name, 'Purdue University');
   });
 
   test('the female script keeps the set', () {
     final female = retry.withColleges('us').forPlayer(isMale: false);
     expect(female.collegeSet, 'us');
-    expect(female.admissions.universities[2]?.name, 'Purdue University');
+    expect(female.admissions.universities[101]?.name, 'Purdue University');
   });
 }
