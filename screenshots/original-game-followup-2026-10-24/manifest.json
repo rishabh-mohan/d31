@@ -1,0 +1,240 @@
+{
+  "source": "User-supplied originals copied unmodified",
+  "specification": "../../docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md",
+  "files": [
+    {
+      "filename": "Screen_Recording_20261024_215300_Korean Student Simulator.mp4",
+      "bytes": 5096376,
+      "sha256": "5078f96a788ea86b0c61aaff81e54d35c263388c767d963b3f80823209fc1838",
+      "ffmpeg_metadata": "ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers\n  built with gcc 14.2.0 (Rev1, Built by MSYS2 project)\n  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-zlib --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-sdl2 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libgme --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-libvo-amrwbenc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-librubberband\n  libavutil      59. 39.100 / 59. 39.100\n  libavcodec     61. 19.100 / 61. 19.100\n  libavformat    61.  7.100 / 61.  7.100\n  libavdevice    61.  3.100 / 61.  3.100\n  libavfilter    10.  4.100 / 10.  4.100\n  libswscale      8.  3.100 /  8.  3.100\n  libswresample   5.  3.100 /  5.  3.100\n  libpostproc    58.  3.100 / 58.  3.100\nInput #0, mov,mp4,m4a,3gp,3g2,mj2, from 'screenshots\\original-game-followup-2026-10-24\\Screen_Recording_20261024_215300_Korean Student Simulator.mp4':\n  Metadata:\n    major_brand     : mp42\n    minor_version   : 0\n    compatible_brands: isommp42\n    creation_time   : 2026-10-25T01:53:00.000000Z\n    com.android.version: 16\n    com.samsung.android.utc_offset: -0400\n  Duration: 00:00:09.91, start: 0.000000, bitrate: 4114 kb/s\n  Stream #0:0[0x1](eng): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 192 kb/s (default)\n      Metadata:\n        creation_time   : 2026-10-25T01:53:00.000000Z\n        handler_name    : SoundHandle\n        vendor_id       : [0][0][0][0]\n  Stream #0:1[0x2](eng): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2340, 3918 kb/s, 28.36 fps, 60 tbr, 90k tbn (default)\n      Metadata:\n        creation_time   : 2026-10-25T01:53:00.000000Z\n        handler_name    : VideoHandle\n        vendor_id       : [0][0][0][0]\nAt least one output file must be specified\n",
+      "sample_interval_seconds": 5,
+      "sample_frames": 2
+    },
+    {
+      "filename": "Screen_Recording_20261024_220239_Korean Student Simulator.mp4",
+      "bytes": 58873872,
+      "sha256": "c7a24fa89dc50543fd9e4c327fe380d8627139dc1f1c5e4a79c52bf3249de797",
+      "ffmpeg_metadata": "ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers\n  built with gcc 14.2.0 (Rev1, Built by MSYS2 project)\n  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-zlib --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-sdl2 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libgme --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-libvo-amrwbenc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-librubberband\n  libavutil      59. 39.100 / 59. 39.100\n  libavcodec     61. 19.100 / 61. 19.100\n  libavformat    61.  7.100 / 61.  7.100\n  libavdevice    61.  3.100 / 61.  3.100\n  libavfilter    10.  4.100 / 10.  4.100\n  libswscale      8.  3.100 /  8.  3.100\n  libswresample   5.  3.100 /  5.  3.100\n  libpostproc    58.  3.100 / 58.  3.100\nInput #0, mov,mp4,m4a,3gp,3g2,mj2, from 'screenshots\\original-game-followup-2026-10-24\\Screen_Recording_20261024_220239_Korean Student Simulator.mp4':\n  Metadata:\n    major_brand     : mp42\n    minor_version   : 0\n    compatible_brands: isommp42\n    creation_time   : 2026-10-25T02:02:39.000000Z\n    com.android.version: 16\n    com.samsung.android.utc_offset: -0400\n  Duration: 00:00:54.62, start: 0.000000, bitrate: 8623 kb/s\n  Stream #0:0[0x1](eng): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 192 kb/s (default)\n      Metadata:\n        creation_time   : 2026-10-25T02:02:39.000000Z\n        handler_name    : SoundHandle\n        vendor_id       : [0][0][0][0]\n  Stream #0:1[0x2](eng): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2340, 8426 kb/s, 36.21 fps, 60 tbr, 90k tbn (default)\n      Metadata:\n        creation_time   : 2026-10-25T02:02:39.000000Z\n        handler_name    : VideoHandle\n        vendor_id       : [0][0][0][0]\nAt least one output file must be specified\n",
+      "sample_interval_seconds": 5,
+      "sample_frames": 11
+    },
+    {
+      "filename": "Screen_Recording_20261024_220428_Korean Student Simulator.mp4",
+      "bytes": 49474866,
+      "sha256": "da3875ad9901cc51ec39957f005022fad694e8411e3bdc5ffde079ba167b5068",
+      "ffmpeg_metadata": "ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers\n  built with gcc 14.2.0 (Rev1, Built by MSYS2 project)\n  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-zlib --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-sdl2 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libgme --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-libvo-amrwbenc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-librubberband\n  libavutil      59. 39.100 / 59. 39.100\n  libavcodec     61. 19.100 / 61. 19.100\n  libavformat    61.  7.100 / 61.  7.100\n  libavdevice    61.  3.100 / 61.  3.100\n  libavfilter    10.  4.100 / 10.  4.100\n  libswscale      8.  3.100 /  8.  3.100\n  libswresample   5.  3.100 /  5.  3.100\n  libpostproc    58.  3.100 / 58.  3.100\nInput #0, mov,mp4,m4a,3gp,3g2,mj2, from 'screenshots\\original-game-followup-2026-10-24\\Screen_Recording_20261024_220428_Korean Student Simulator.mp4':\n  Metadata:\n    major_brand     : mp42\n    minor_version   : 0\n    compatible_brands: isommp42\n    creation_time   : 2026-10-25T02:04:28.000000Z\n    com.android.version: 16\n    com.samsung.android.utc_offset: -0400\n  Duration: 00:00:24.73, start: 0.000000, bitrate: 16002 kb/s\n  Stream #0:0[0x1](eng): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 192 kb/s (default)\n      Metadata:\n        creation_time   : 2026-10-25T02:04:28.000000Z\n        handler_name    : SoundHandle\n        vendor_id       : [0][0][0][0]\n  Stream #0:1[0x2](eng): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2340, 15804 kb/s, 49.77 fps, 90k tbr, 90k tbn (default)\n      Metadata:\n        creation_time   : 2026-10-25T02:04:28.000000Z\n        handler_name    : VideoHandle\n        vendor_id       : [0][0][0][0]\nAt least one output file must be specified\n",
+      "sample_interval_seconds": 5,
+      "sample_frames": 5
+    },
+    {
+      "filename": "Screenshot_20261024_214331_Korean Student Simulator.jpg",
+      "bytes": 452542,
+      "sha256": "ed572fab635fba469dadf749732221150ccfc9d9079b555790aaea6b222ececa",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214340_Korean Student Simulator.jpg",
+      "bytes": 453111,
+      "sha256": "da2eec77e116d4d1ae855d18e30565264aa2ba021cee1be48c3a8f2d89e8cc45",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214350_Korean Student Simulator.jpg",
+      "bytes": 189834,
+      "sha256": "dff3a8f58e6487280555feb0bb4c66c248fc88740fcb01ca15453316e554e7eb",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214358_Korean Student Simulator.jpg",
+      "bytes": 399168,
+      "sha256": "e1e016305f5e67811ca74848ccf86c252bbf7e3f0a2845defad0e0c30ddebf96",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214418_Korean Student Simulator.jpg",
+      "bytes": 440800,
+      "sha256": "79812de776cdb4cf96c0a24503198e6a8f5bf238716fc3f2f347505ae23c388d",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214452_Gallery.jpg",
+      "bytes": 60531,
+      "sha256": "e0029e0bb994015a4aa935dff8fe05b4055a7c69ea4030001166b0c12c64d00c",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214513_Korean Student Simulator.jpg",
+      "bytes": 357556,
+      "sha256": "c01310a8dff37b6d0f89fcc1ba4574dcc5abfdaa4640f3a43df55b8fa0185ecf",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214528_Korean Student Simulator.jpg",
+      "bytes": 573003,
+      "sha256": "858fee01a4ce0d06c00f5abdc8d1cb93f9c2b3b06158b4922d144cfaac4220e4",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214534_Korean Student Simulator.jpg",
+      "bytes": 553964,
+      "sha256": "4688b4b1749d97dd88d6af54397bd62f2c85b87ff0f4a5fd982f3c29dcccca16",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214549_Korean Student Simulator.jpg",
+      "bytes": 646130,
+      "sha256": "f550dac54b45c16d229399a470c304e94e82cb26ea50d9b8018e812ee8256265",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214555_Korean Student Simulator.jpg",
+      "bytes": 1098925,
+      "sha256": "8df6a119b8175132122539b6d4205e24f8e0dbc30f42a755cf95ffa9ae2ea3a5",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214601_Korean Student Simulator.jpg",
+      "bytes": 1169579,
+      "sha256": "8062801f6773e201cee2d28f1ab4ef020b70b0ff8631dac24a177277bff0ff31",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214612_Korean Student Simulator.jpg",
+      "bytes": 433247,
+      "sha256": "c1fb413016492adf87b62bffae58c8facd36e8a0fe17e2678cde4c451634891e",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214617_Korean Student Simulator.jpg",
+      "bytes": 702130,
+      "sha256": "8568dc47e28d29bbbd13e30ae814b51378786da6dfb99ec8b22ee4bfefece855",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214623_Korean Student Simulator.jpg",
+      "bytes": 1196031,
+      "sha256": "b3905951135d3cb85731ce26df95f88aba741626c4d1a96d4344a2e0c83d3992",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214627_Korean Student Simulator.jpg",
+      "bytes": 926916,
+      "sha256": "590d8cbaf8c5ce480f1b4365288d5fddfd050790ce42aa1688980c3b7c8a7f07",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214648_Korean Student Simulator.jpg",
+      "bytes": 493416,
+      "sha256": "bf5d7232ab9646d1667cecedc256fdbd7974c98f9348c4764847a54876aab2a7",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214656_Korean Student Simulator.jpg",
+      "bytes": 488613,
+      "sha256": "aa3bbc7069e68c3d14dbb55f1334d4edbd51cf6fa0826406518bbf4d00a97a9e",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214700_Korean Student Simulator.jpg",
+      "bytes": 191624,
+      "sha256": "ea8e1e358641a0ae5c666a95aabd122131f8fa60b4a655056a65d092246962a5",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214733_Korean Student Simulator.jpg",
+      "bytes": 431383,
+      "sha256": "766cab4cc913c97a71bf81169d85de89d859fe71dad945c8f3f1a3881b1b954d",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_214830_Korean Student Simulator.jpg",
+      "bytes": 432518,
+      "sha256": "45542ec1ac96608463fbf2a5cd17ce72048282dcfd856acbfb4178b0c7ee58b3",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_215200_Korean Student Simulator.jpg",
+      "bytes": 464854,
+      "sha256": "f3c6528d672cab128515be3f8118c4aa90efe253924d45043b7c182f6ac230a9",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_215228_Korean Student Simulator.jpg",
+      "bytes": 424987,
+      "sha256": "284162dcec2379a4caa3fda9c951533870d8c3025196fca5232f3e71ae22276d",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_215348_Korean Student Simulator.jpg",
+      "bytes": 481672,
+      "sha256": "fc35fbe646147e4c10e140f7ac005e1c93eaf2cb332358b32d602bad40bde980",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_215415_Korean Student Simulator.jpg",
+      "bytes": 464685,
+      "sha256": "71230447ff5b72fc14835d13a7d84c5f9a2dbf65a1d0733f3d252456427487cd",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_215434_Korean Student Simulator.jpg",
+      "bytes": 494792,
+      "sha256": "6de106d300a96ca3e56e64c4c08366f07eff1915254e155dac30487d62fe52e6",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_220004_Korean Student Simulator.jpg",
+      "bytes": 526732,
+      "sha256": "31a5932646d55798dca6236fcb963a6be03d4b91e22457c0a36d5dffb65119a7",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_220310_Korean Student Simulator.jpg",
+      "bytes": 487266,
+      "sha256": "0246190d1088e8074af53f1046f0f2d18348898d5571b34b671fac14220c3c69",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_220323_Korean Student Simulator.jpg",
+      "bytes": 407040,
+      "sha256": "5c5beb357bc226773d94819d0d2b64c0ef089b0c71bf39532298b20f497a8fc0",
+      "width": 1080,
+      "height": 2340
+    },
+    {
+      "filename": "Screenshot_20261024_220336_Korean Student Simulator.jpg",
+      "bytes": 146889,
+      "sha256": "99a030c632e7c2d889ec2c8237f604a1bf802e61603c05ad580b95eb22200222",
+      "width": 1080,
+      "height": 2340
+    }
+  ]
+}
