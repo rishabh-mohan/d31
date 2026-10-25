@@ -423,7 +423,7 @@ def _rule_meta(t: str, ctx: dict) -> list:
                     "value": int(_n(m.group(1)))})
     if re.search(r"check\s+current\s+promotion\s+exam\s+proficiency", t, re.I):
         out.append({"type": "report", "switch": "EXAM_POINT",
-                    "label": "Promotion Exam proficiency", "suffix": "%",
+                    "label": "Promotion Exam Proficiency", "suffix": "%",
                     "keepItem": True})
     if re.search(r"check\s+predicted\s+grades", t, re.I):
         out.append({"type": "ui", "action": "predictedGrades"})

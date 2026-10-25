@@ -206,8 +206,12 @@ TODO:
    Item text vs. effect (failing test): store text now matches the reference screenshots (Book Stand "Study Efficiency for All Subjects +3", NORMAL_STAT x3 as displayed), while passive items grant one stat per authored unit (+1), per the playtest. Consumables keep x3 in both.
 
 73. Select Gender page does not appear (the protagonist's gender follows the character's recommended gender instead). Fix the Select Character (2 / 5) flow so the page shows. (Follows 72.)
+   DONE — Not a UI bug: on Android the first launch copies the bundled pack to editable storage, and every later launch loaded that copy, so no APK update since then had reached the phone's pack data (the gender switch, character events, admissions catalog, quiz bank and female script included). The loader now records a stamp of the bundled files beside the copy and re-seeds it whenever the bundled pack changes; the repo's packs/ folder still wins on desktop. Dev-panel edits to the phone's copy are replaced on the next update.
 74. Reorganize the Retry Year characters.
 75. "Got a X!" popup: the Use and Confirm buttons overlap slightly. Shift Use up and shrink its shadow a bit (and the press animation with it).
+   DONE — Use and Confirm in the acquisition popup now have a shallower 3px lower face (with matching 3px press travel) and 10px between them, so they no longer touch. D30RaisedButton takes the depth as a parameter.
 76. Capitalize "Proficiency" in the Promotion Exam Kit's reading.
+   DONE — The kit now reads "Promotion Exam Proficiency: N%".
 77. Remove the shadows and press animation from item-based buttons.
+   DONE — The item report's Confirm is flat (no lower face, no press motion: D30RaisedButton(flat: true)), as is the bag's Use. The acquisition popup's buttons follow 75 instead.
 78. Implement every item, and have the shop roll randomly every time, matching the original game's pseudocode for which items appear.

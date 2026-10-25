@@ -74,6 +74,7 @@ Future<void> showItemAcquired(
                 SizedBox(
                   width: 120,
                   child: D30RaisedButton(
+                    depth: 3,
                     onPressed: () {
                       reports = onUse();
                       Navigator.pop(context);
@@ -81,9 +82,12 @@ Future<void> showItemAcquired(
                     child: const Text('Use'),
                   ),
                 ),
+              if (item.isConsumable && onUse != null)
+                const SizedBox(height: 10),
               SizedBox(
                 width: 200,
                 child: D30RaisedButton(
+                  depth: 3,
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Confirm', style: TextStyle(fontSize: 17)),
                 ),
@@ -112,6 +116,7 @@ Future<void> showReportLines(BuildContext context, List<String> reports) async {
       ),
       actions: [
         D30RaisedButton(
+          flat: true,
           onPressed: () => Navigator.pop(context),
           child: const Text('Confirm'),
         ),
@@ -490,15 +495,15 @@ class _BagsMenuState extends State<BagsMenu> {
                           ),
                           const Divider(),
                           Text(item.effectText, textAlign: TextAlign.center),
+                          // Item buttons are flat: no lower face or press
+                          // motion (TODO 77).
                           if (item.isConsumable)
-                            PressFeedback(
-                              child: TextButton(
-                                onPressed: () {
-                                  setState(() => game.useItem(item.id));
-                                  showItemReports(context, game);
-                                },
-                                child: const Text('Use'),
-                              ),
+                            TextButton(
+                              onPressed: () {
+                                setState(() => game.useItem(item.id));
+                                showItemReports(context, game);
+                              },
+                              child: const Text('Use'),
                             ),
                         ],
                       ),

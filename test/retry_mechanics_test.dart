@@ -271,7 +271,7 @@ void main() {
       }
       expect(game.state.switchValue('EXAM_POINT'), 50);
       expect(game.useItem(80042), isTrue);
-      expect(game.takeItemReports(), ['Promotion Exam proficiency: 50%']);
+      expect(game.takeItemReports(), ['Promotion Exam Proficiency: 50%']);
       expect(game.state.itemCount(80042), 1, reason: 'the kit is kept');
     });
   });

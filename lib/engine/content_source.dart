@@ -68,6 +68,28 @@ class ContentSource {
     );
   }
 
+  static const _stampName = '.bundle-stamp';
+
+  /// A fingerprint of the bundled pack files, recorded beside an editable
+  /// copy when it is seeded. FNV-1a over each name and length, every
+  /// character of small files and every 61st of the multi-megabyte event
+  /// scripts, so a launch does not hash ~12 MB of text.
+  static String bundleStamp(Map<String, String> files) {
+    var hash = 0xcbf29ce484222325;
+    const prime = 0x100000001b3;
+    void add(int unit) => hash = (hash ^ unit) * prime;
+    for (final name in files.keys.toList()..sort()) {
+      final text = files[name]!;
+      name.codeUnits.forEach(add);
+      add(text.length);
+      final step = text.length > 65536 ? 61 : 1;
+      for (var i = 0; i < text.length; i += step) {
+        add(text.codeUnitAt(i));
+      }
+    }
+    return hash.toUnsigned(64).toRadixString(16);
+  }
+
   /// Where an editable copy lives. Checked in order; the first that exists
   /// and holds a pack.json wins.
   static Future<Directory?> _findWritableDir(String packId) async {
@@ -123,7 +145,8 @@ class ContentSource {
     bool seedIfMissing = true,
   }) async {
     final existing = await _findWritableDir(packId);
-    if (existing != null) {
+    // The repo's own packs/ folder (desktop) is the source being edited.
+    if (existing != null && !existing.isAbsolute) {
       return (
         await loadFromDirectory(existing),
         PackLocation(packId, existing, true),
@@ -131,12 +154,43 @@ class ContentSource {
     }
 
     final files = await _readAssets(packId);
+    final stamp = bundleStamp(files);
+    if (existing != null) {
+      // An editable copy seeded from an older APK would otherwise shadow
+      // every pack update for good (the gender page, character events and
+      // admissions never reached the phone). Re-seed when the bundled pack
+      // changed; edits made to the copy since are replaced.
+      final stampFile = File('${existing.path}/$_stampName');
+      final seeded = await stampFile.exists()
+          ? await stampFile.readAsString()
+          : null;
+      if (seeded == stamp) {
+        return (
+          await loadFromDirectory(existing),
+          PackLocation(packId, existing, true),
+        );
+      }
+      try {
+        await _writeFiles(existing, files);
+        await stampFile.writeAsString(stamp);
+        return (
+          ContentPack.fromFiles(files),
+          PackLocation(packId, existing, true),
+        );
+      } catch (_) {
+        return (
+          ContentPack.fromFiles(files),
+          PackLocation(packId, null, false),
+        );
+      }
+    }
 
     if (seedIfMissing) {
       final target = await _writableTarget(packId);
       if (target != null) {
         try {
           await _writeFiles(target, files);
+          await File('${target.path}/$_stampName').writeAsString(stamp);
           return (
             ContentPack.fromFiles(files),
             PackLocation(packId, target, true),
