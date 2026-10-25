@@ -12,6 +12,7 @@ import 'package:d30mode/engine/setup.dart';
 import 'package:d30mode/engine/state.dart';
 import 'package:d30mode/ui/csat_screen.dart';
 import 'package:d30mode/ui/setup_screen.dart';
+import 'package:d30mode/ui/event_screen.dart';
 
 /// Retry Year's compiled mechanics, recovered from the Korean native, and the
 /// exam day both campaigns now share. See docs/RETRY-YEAR.md.
@@ -472,6 +473,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Select Character (3 / 5)'), findsOneWidget);
     expect(draft.maleFor(retry), !recommended);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an ending function holds its title on black for 3 seconds', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final game = Game.newRun(retry);
+    final run = game.events.begin(retry.events[1]!, game.state);
+    await tester.pumpWidget(MaterialApp(home: EventScreen(run: run)));
+    for (
+      var i = 0;
+      i < 40 && find.byKey(const ValueKey('ending-card')).evaluate().isEmpty;
+      i++
+    ) {
+      if (run.current == null || run.current!.isEnd) break;
+      if (find.byTooltip('Next').evaluate().isEmpty) break;
+      await tester.tap(find.byTooltip('Next'));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    expect(find.byKey(const ValueKey('ending-card')), findsOneWidget);
+    expect(find.text('Retake Ending'), findsWidgets);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ending-card')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

@@ -3,13 +3,103 @@ import 'press_feedback.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
+import '../engine/pack.dart';
 import 'pack_image.dart';
 import 'theme.dart';
 
 /// Shows whatever the item just used asked to tell the player — the
 /// Promotion Exam Kit's reading, for one.
-Future<void> showItemReports(BuildContext context, Game game) async {
-  final reports = game.takeItemReports();
+Future<void> showItemReports(BuildContext context, Game game) =>
+    showReportLines(context, game.takeItemReports());
+
+/// The acquisition popup from the reference: large artwork, "Got a X!", the
+/// description and the effect on separate lines, then a narrow Use (for a
+/// consumable) above a wider Confirm. Shared by the store and by events that
+/// hand over an item. [onUse] applies the item and returns what it reported.
+Future<void> showItemAcquired(
+  BuildContext context,
+  GameItem item, {
+  List<String> Function()? onUse,
+}) async {
+  List<String>? reports;
+  await showDialog<void>(
+    context: context,
+    barrierColor: Colors.black54,
+    builder: (context) => Dialog(
+      backgroundColor: D30Colors.panel,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: D30Colors.accent, width: 5),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 120,
+                width: 120,
+                child: PackImage(
+                  path: 'items/${item.id}.png',
+                  fit: BoxFit.contain,
+                  placeholder: const Icon(
+                    Icons.card_giftcard,
+                    size: 72,
+                    color: D30Colors.accent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Got a ${item.name}!',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 22, color: D30Colors.ink),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                item.description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: D30Colors.ink),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                item.effectText,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 15, color: D30Colors.ink),
+              ),
+              const SizedBox(height: 20),
+              if (item.isConsumable && onUse != null)
+                SizedBox(
+                  width: 120,
+                  child: D30RaisedButton(
+                    onPressed: () {
+                      reports = onUse();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Use'),
+                  ),
+                ),
+              SizedBox(
+                width: 200,
+                child: D30RaisedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Confirm', style: TextStyle(fontSize: 17)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  if (reports != null && context.mounted) {
+    await showReportLines(context, reports!);
+  }
+}
+
+Future<void> showReportLines(BuildContext context, List<String> reports) async {
   if (reports.isEmpty || !context.mounted) return;
   await showDialog<void>(
     context: context,

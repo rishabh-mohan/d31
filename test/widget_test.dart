@@ -155,7 +155,8 @@ Future<void> main() async {
         find.byKey(const ValueKey('game-character')),
       );
       final panel = tester.getRect(find.byKey(const ValueKey('action-panel')));
-      expect(portrait.bottom - panel.top, closeTo(76, 1));
+      // Scaled 1.12x from the bottom edge (TODO 69), so only the offset moves it.
+      expect(portrait.bottom - panel.top, closeTo(70, 1));
       expect(portrait.height, greaterThan(120));
       expect(tester.takeException(), isNull);
     });

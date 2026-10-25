@@ -197,7 +197,7 @@ void main() {
     }
   });
 
-  testWidgets('event receipt and bag both show the Promotion Exam Kit', (
+  testWidgets('the event hands over the kit in the acquisition popup', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(320, 740);
@@ -210,7 +210,11 @@ void main() {
     }
     await tester.pumpWidget(MaterialApp(home: EventScreen(run: run)));
     await tester.pumpAndSettle();
-    expect(find.text('Received: Promotion Exam Kit x1'), findsOneWidget);
+    expect(find.text('Got a Promotion Exam Kit!'), findsOneWidget);
+    expect(find.text('Use'), findsOneWidget);
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Got a Promotion Exam Kit!'), findsNothing);
     expect(tester.takeException(), isNull);
     finish(run);
     await tester.pumpWidget(
