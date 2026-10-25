@@ -213,9 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
         key: const ValueKey('home-scene-only'),
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(() => _sceneOnly = false),
-        child: const SizedBox.expand(
-          child: PackImage(path: homeWallpaper, alignment: Alignment.topCenter),
-        ),
+        child: const SizedBox.expand(child: PackImage(path: homeWallpaper)),
       );
     }
     return Scaffold(
@@ -223,47 +221,65 @@ class _HomeScreenState extends State<HomeScreen> {
       body: LayoutBuilder(
         builder: (context, box) {
           final u = box.maxWidth / 390;
-          final top = MediaQuery.paddingOf(context).top;
-          double y(double v) => top + v * u;
+          // The canvas is the whole screen, status bar included, as in the
+          // capture: the status bar sits over the top paper strip.
+          double y(double v) => v * u;
           final ready = !_loading && _error == null;
           return Stack(
             clipBehavior: Clip.hardEdge,
             children: [
-              const Positioned.fill(child: CustomPaint(painter: _RuledPaper())),
-              // The scene: left three quarters, under a peach top rule.
+              // The wallpaper fills the screen and the paper blocks lie over
+              // it (the original's wallpaper_block_right/bottom).
+              const Positioned.fill(child: PackImage(path: homeWallpaper)),
               Positioned(
                 left: 0,
-                top: y(32),
-                width: 297 * u,
-                height: 568 * u,
+                right: 0,
+                top: 0,
+                height: 32 * u,
                 child: DecoratedBox(
-                  position: DecorationPosition.foreground,
                   decoration: BoxDecoration(
+                    color: HomeColors.paper,
                     border: Border(
-                      top: BorderSide(color: HomeColors.outline, width: 4 * u),
                       bottom: BorderSide(
                         color: HomeColors.outline,
-                        width: 2 * u,
+                        width: 4 * u,
                       ),
                     ),
-                  ),
-                  child: const PackImage(
-                    path: homeWallpaper,
-                    alignment: Alignment.topCenter,
                   ),
                 ),
               ),
               Positioned(
                 left: 297 * u,
-                top: y(32),
-                width: 10 * u,
-                height: 568 * u,
-                child: const DecoratedBox(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0x26000000), Color(0x00000000)],
+                    color: HomeColors.paper,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0x30000000),
+                        blurRadius: 8 * u,
+                        offset: Offset(-2 * u, 0),
+                      ),
+                    ],
+                  ),
+                  child: const CustomPaint(painter: _RuledPaper()),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 600 * u,
+                bottom: 0,
+                child: DecoratedBox(
+                  position: DecorationPosition.foreground,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: HomeColors.outline, width: 2 * u),
                     ),
                   ),
+                  child: const CustomPaint(painter: _RuledPaper()),
                 ),
               ),
               Positioned(
@@ -328,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _SquareButton(
                   key: const ValueKey('home-scene'),
                   u: u,
-                  icon: Icons.open_in_full,
+                  icon: Icons.zoom_out_map,
                   tooltip: 'Show the background',
                   onTap: () => setState(() => _sceneOnly = true),
                 ),
@@ -336,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Positioned(
                 left: 20 * u,
                 right: 140 * u,
-                top: y(660),
+                top: y(612),
                 child: _loading
                     ? const Align(
                         alignment: Alignment.centerLeft,

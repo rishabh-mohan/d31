@@ -40,12 +40,7 @@ class MenuPage extends StatelessWidget {
           final u = box.maxWidth / 390;
           return Stack(
             children: [
-              const Positioned.fill(
-                child: PackImage(
-                  path: homeWallpaper,
-                  alignment: Alignment.topCenter,
-                ),
-              ),
+              const Positioned.fill(child: PackImage(path: homeWallpaper)),
               Positioned.fill(
                 child: ColoredBox(
                   color: HomeColors.paper.withValues(alpha: wash),
@@ -153,7 +148,11 @@ class _TrashCorner extends StatelessWidget {
           child: SizedBox(
             width: 40 * u,
             height: 40 * u,
-            child: Icon(Icons.delete_outline, color: Colors.white, size: 26 * u),
+            child: Icon(
+              Icons.delete_outline,
+              color: Colors.white,
+              size: 26 * u,
+            ),
           ),
         ),
       ),
