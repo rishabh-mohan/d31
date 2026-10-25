@@ -700,10 +700,13 @@ def build_rules(out: Path):
                "exhaustedForcedSleep": True},
         "money": {"initial": 0, "min": 0},
         # Refresh Tickets redeal the block hand; cookies are the soft currency
-        # shown in the top bar. Both are account-level in the original; until
-        # account progression exists, every run simply starts with these.
-        "refresh": {"initial": 50},
-        "cookies": {"initial": 20},
+        # shown in the top bar. Both are account-level in the original.
+        # `shared` spends the account wallet instead of a per-run counter;
+        # `initial` is then a one-time grant to the account (TODO 84 M04).
+        # Refresh stays per-run (50 every run, TODO 31) until something
+        # earns refresh tickets account-wide.
+        "refresh": {"initial": 50, "shared": False},
+        "cookies": {"initial": 20, "shared": True},
         "day": {
             "ticksPerDay": 15,
             # How many action blocks are dealt per tick. Compiled in the

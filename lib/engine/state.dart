@@ -12,6 +12,18 @@ import 'goals.dart';
 import 'quiz.dart';
 import 'pack.dart';
 
+/// The account balances a run can draw on instead of its own counters
+/// (TODO 84 M04). `Account` implements it; the engine never loads one.
+abstract interface class SharedWallet {
+  int get cookies;
+  set cookies(int value);
+  int get refreshTokens;
+  set refreshTokens(int value);
+
+  /// Currencies whose one-time starting grant has been paid.
+  Set<String> get walletGrants;
+}
+
 class LogEntry {
   final GameDate at;
   final String text;
@@ -155,8 +167,13 @@ class GameState {
   bool movementLocked = false;
   bool exhaustionPending = false;
 
-  /// The reroll counter beside the stamina bar.
-  int rerolls = 0;
+  /// The reroll counter beside the stamina bar: the account's refresh
+  /// tokens when [sharesWallet] says so, otherwise this run's own.
+  int get rerolls => _shares('refresh') ? _wallet!.refreshTokens : _rerolls;
+  set rerolls(int value) => _shares('refresh')
+      ? _wallet!.refreshTokens = value
+      : _rerolls = value;
+  int _rerolls = 0;
 
   /// The current weekly goal, renewed every Monday.
   WeeklyGoal? weeklyGoal;
@@ -178,8 +195,71 @@ class GameState {
   /// Of those, the ones clicked after the goal was already met.
   int surplusStudyBlocks = 0;
 
-  /// The soft currency in the top bar, separate from in-run money.
-  int cookies = 0;
+  /// The soft currency in the top bar, separate from in-run money: the
+  /// account's cookies when [sharesWallet] says so.
+  int get cookies => _shares('cookies') ? _wallet!.cookies : _cookies;
+  set cookies(int value) =>
+      _shares('cookies') ? _wallet!.cookies = value : _cookies = value;
+  int _cookies = 0;
+
+  // ---- Shared wallet (TODO 84 M04) -------------------------------------
+  //
+  // A currency whose rules section has `shared: true` is spent from the
+  // account once [attachWallet] has run; before that (engine tests, a
+  // dev-panel run) the run keeps its own counter, started from `initial`
+  // as always. Cookies default to shared: the account already earns them.
+  // Refresh tickets default to per-run: nothing earns them account-wide
+  // yet, so a shared pool would run dry after the first run or two.
+
+  SharedWallet? _wallet;
+
+  /// Currencies a save recorded as already drawn from the account. One a
+  /// save does not list held a run-only balance (a legacy save).
+  final Set<String> _savedShared = {};
+
+  /// A new run's counters are only the rules' `initial`, not a balance.
+  bool _freshRun = false;
+
+  static const walletCurrencies = ['cookies', 'refresh'];
+
+  /// Whether the rules route [currency] through the account.
+  bool sharesWallet(String currency) =>
+      pack.rules.flag(currency, 'shared', currency == 'cookies');
+
+  bool _shares(String currency) => _wallet != null && sharesWallet(currency);
+
+  /// Whether any balance currently lives on an attached account.
+  bool get usesAccountWallet =>
+      _wallet != null && walletCurrencies.any(sharesWallet);
+
+  /// Routes the shared currencies through [wallet]. The first time a
+  /// currency is shared, the account is granted that currency's old
+  /// per-run `initial` once. A legacy save's leftover run balance moves
+  /// onto the account when it is resumed; a new run's starting counter is
+  /// dropped, since the grant replaces it.
+  void attachWallet(SharedWallet wallet) {
+    if (_wallet != null) return;
+    for (final c in walletCurrencies) {
+      if (!sharesWallet(c)) continue;
+      var add = 0;
+      if (wallet.walletGrants.add(c)) {
+        add += pack.rules.number(c, 'initial', 0).toInt();
+      }
+      if (!_freshRun && !_savedShared.contains(c)) {
+        add += c == 'cookies' ? _cookies : _rerolls;
+      }
+      if (c == 'cookies') {
+        wallet.cookies += add;
+        _cookies = 0;
+      } else {
+        wallet.refreshTokens += add;
+        _rerolls = 0;
+      }
+      _savedShared.add(c);
+    }
+    _freshRun = false;
+    _wallet = wallet;
+  }
 
   /// The career storylines (rank-A event sets) this run plays. The original
   /// keeps one selected A set per story (`eventset_selected_a_<story>`);
@@ -295,8 +375,9 @@ class GameState {
     state.unlockedLocations.add(state.locationId);
     state._seedInitialTasks();
     state.chooseCareerSets();
-    state.rerolls = r.number('refresh', 'initial', 0).toInt();
-    state.cookies = r.number('cookies', 'initial', 0).toInt();
+    state._rerolls = r.number('refresh', 'initial', 0).toInt();
+    state._cookies = r.number('cookies', 'initial', 0).toInt();
+    state._freshRun = true;
     state.applyStartingTraitEffects();
     state.weeklyGoal = Goals.issue(state);
     state.note('Day 1. ${pack.manifest.name} begins.', 'system');
@@ -679,8 +760,13 @@ class GameState {
     'usedActionKeysToday': usedActionKeysToday.toList(),
     'movementLocked': movementLocked,
     'exhaustionPending': exhaustionPending,
-    'rerolls': rerolls,
-    'cookies': cookies,
+    // A balance held by the account is not the run's to save.
+    'rerolls': _shares('refresh') ? 0 : _rerolls,
+    'cookies': _shares('cookies') ? 0 : _cookies,
+    'sharedWallet': [
+      for (final c in walletCurrencies)
+        if (_savedShared.contains(c) && sharesWallet(c)) c,
+    ],
     'weeklyGoal': weeklyGoal?.toJson(),
     'announcedGoalWeek': announcedGoalWeek,
     'saveSlot': saveSlot,
@@ -813,8 +899,23 @@ class GameState {
     );
     state.movementLocked = j['movementLocked'] as bool? ?? false;
     state.exhaustionPending = j['exhaustionPending'] as bool? ?? false;
-    state.rerolls = (j['rerolls'] as num?)?.toInt() ?? 0;
-    state.cookies = (j['cookies'] as num?)?.toInt() ?? 0;
+    state._rerolls = (j['rerolls'] as num?)?.toInt() ?? 0;
+    state._cookies = (j['cookies'] as num?)?.toInt() ?? 0;
+    state._savedShared.addAll(
+      (j['sharedWallet'] as List? ?? const []).whereType<String>(),
+    );
+    // Shared when saved, per-run now (the rules switch was turned off): the
+    // run starts that counter again from the rules' initial, not from zero.
+    for (final c in [...state._savedShared]) {
+      if (state.sharesWallet(c)) continue;
+      state._savedShared.remove(c);
+      final initial = pack.rules.number(c, 'initial', 0).toInt();
+      if (c == 'cookies') {
+        state._cookies = initial;
+      } else {
+        state._rerolls = initial;
+      }
+    }
     state.weeklyGoal = WeeklyGoal.fromJson(
       (j['weeklyGoal'] as Map?)?.cast<String, dynamic>(),
     );
