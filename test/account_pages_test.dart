@@ -101,6 +101,22 @@ void main() {
   testWidgets('Puzzles: categories, collection and detail', (tester) async {
     await pumpPhone(tester, const PuzzlesPage(installedStories: {16, 20}));
     expect(find.byKey(const ValueKey('puzzle-category-3')), findsOneWidget);
+    // Every banner's art is bundled and decodes: the category name only
+    // appears as text when its title image fails to load (TODO 93).
+    for (var i = 0; i < 3; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)),
+      );
+      await tester.pump();
+    }
+    for (final name in [
+      'Amnesia',
+      'Endless Winter',
+      'The Year I Retook',
+      'Event Limited',
+    ]) {
+      expect(find.text(name), findsNothing, reason: '$name banner art');
+    }
     await tester.tap(find.byKey(const ValueKey('puzzle-category-3')));
     await settle(tester);
     expect(find.text('Ihyeon’s Break (F)'), findsOneWidget);

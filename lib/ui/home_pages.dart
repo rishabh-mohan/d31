@@ -83,7 +83,11 @@ class _Header extends StatelessWidget {
       ),
       child: SafeArea(
         bottom: false,
+        // Full width: the page's Column centres its children loosely, so
+        // without it the strip, its rule and the back chevron shrank to the
+        // title's width in the middle of the screen (TODO 93).
         child: SizedBox(
+          width: double.infinity,
           height: 62 * u,
           child: Stack(
             alignment: Alignment.center,
