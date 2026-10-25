@@ -247,6 +247,10 @@ class EffectEngine {
     return subs[index.clamp(0, subs.length - 1)];
   }
 
+  /// The elective (tamgoo) subjects: positions 3 and 4 of the pack's list.
+  static Iterable<String> _tamgoos(GameState s) =>
+      s.pack.manifest.subjects.skip(3).take(2);
+
   /// Advances one of the special side tracks: [counter] is the switch its
   /// storyline reads. The step comes from `rules.specialTracks.stepPerSession`
   /// (1, as the native) so it can be retuned.
@@ -289,14 +293,27 @@ class EffectEngine {
       );
       s.addStat(_subjectAt(s, i.toInt()), _num(a, 0));
     },
-    'DECREASE_TAMGOO_STAT': (s, a, e) => s.addStat('all', -_num(a, 0)),
-    'INCREASE_TAMGOO_STAT': (s, a, e) => s.addStat('all', _num(a, 0)),
+    // Tamgoo is the two elective slots, positions 3 and 4 (CLAUDE.md §1),
+    // which story 16 fills with science and society -- never the core three.
+    'DECREASE_TAMGOO_STAT': (s, a, e) {
+      for (final subject in _tamgoos(s)) {
+        s.addStat(subject, -_num(a, 0));
+      }
+    },
+    'INCREASE_TAMGOO_STAT': (s, a, e) {
+      for (final subject in _tamgoos(s)) {
+        s.addStat(subject, _num(a, 0));
+      }
+    },
+    // The higher of the two electives; the first on a tie.
     'DECREASE_TAMGOO_HIGH_STAT': (s, a, e) {
-      final i = ConditionEvaluator.defaultFuncs['FUNC_GET_HIGH_STAT']!(
-        s,
-        const [],
-      );
-      s.addStat(_subjectAt(s, i.toInt()), -_num(a, 0));
+      String? high;
+      for (final subject in _tamgoos(s)) {
+        if (high == null || (s.stats[subject] ?? 0) > (s.stats[high] ?? 0)) {
+          high = subject;
+        }
+      }
+      if (high != null) s.addStat(high, -_num(a, 0));
     },
     'SET_RANDOM_SUBJECT': (s, a, e) =>
         s.randomSubject = s.randomOf(s.pack.manifest.subjects),

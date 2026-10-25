@@ -154,4 +154,43 @@ void main() {
       expect(outcome.summary, contains('Weekly goal met!'));
     });
   });
+
+  group('L01 tamgoo effects', () {
+    test('touch only the two elective subjects, positions 3 and 4', () {
+      final game = Game.newRun(original, random: Random(10));
+      final subjects = original.manifest.subjects;
+      expect(subjects.sublist(3), ['science', 'society']);
+      for (final s in subjects) {
+        game.state.stats[s] = 1000;
+      }
+      // Korean is the global highest, which must not be the one cut.
+      game.state.stats['korean'] = 5000;
+      game.state.stats['society'] = 1200;
+
+      game.effects.applyChanger({
+        'funcCode': 'INCREASE_TAMGOO_STAT',
+        'args': [50],
+      }, game.state);
+      expect(game.state.stats['science'], 1050);
+      expect(game.state.stats['society'], 1250);
+      expect(game.state.stats['math'], 1000);
+      expect(game.state.stats['korean'], 5000);
+
+      game.effects.applyChanger({
+        'funcCode': 'DECREASE_TAMGOO_STAT',
+        'args': [20],
+      }, game.state);
+      expect(game.state.stats['science'], 1030);
+      expect(game.state.stats['society'], 1230);
+      expect(game.state.stats['english'], 1000);
+
+      game.effects.applyChanger({
+        'funcCode': 'DECREASE_TAMGOO_HIGH_STAT',
+        'args': [100],
+      }, game.state);
+      expect(game.state.stats['society'], 1130);
+      expect(game.state.stats['science'], 1030);
+      expect(game.state.stats['korean'], 5000);
+    });
+  });
 }
