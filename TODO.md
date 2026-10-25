@@ -18,7 +18,7 @@ guides. Quick: ~20-60k tokens. Moderate: ~60-200k. Large: ~200-600k. Very large:
 
 110. The sort option in Achievements isn't filled in properly with orange.
    *Estimate: ~25k. Achievements sort/filter pill styling (lib/ui/achievements_page.dart).*
-   DONE (confirm on the Nord) — The orange arrow cell sat unclipped inside the rounded bordered pill, so it did not follow the corners or fill to the border; the pill now clips it (antiAlias), matching MM-03.
+   1R — Clipped the orange arrow cell to the pill's rounded border (antiAlias). REOPENED (user, 2026-10-25): still incomplete on the Nord; the fill still does not match MM-03. Previous attempt: the orange arrow cell sat unclipped inside the rounded bordered pill, so it did not follow the corners or fill to the border; the pill now clips it (antiAlias), matching MM-03.
 
 ## Moderate (~60-200k tokens each)
 
