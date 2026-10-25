@@ -92,7 +92,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _campaigns[pack.manifest.id] = (pack, location);
       for (final id in await ContentSource.availablePackIds()) {
         if (id != pack.manifest.id) {
-          _campaigns[id] = await ContentSource.load(packId: id);
+          final (other, where) = await ContentSource.load(packId: id);
+          // Every campaign ends on the CSAT; one without colleges borrows
+          // the default campaign's.
+          _campaigns[id] = (other.withCollegesFrom(pack), where);
         }
       }
       if (!mounted) return;

@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 
 import '../engine/admissions.dart';
 import '../engine/game.dart';
-import 'press_feedback.dart';
 import 'theme.dart';
 
 enum _Phase { results, apply, verdict }
@@ -179,16 +178,19 @@ class _CsatScreenState extends State<CsatScreen> {
           child: Row(
             children: [
               Expanded(
-                child: PressFeedback(
-                  child: TextButton(
-                    onPressed: () => setState(() {
-                      game.submitApplications(const []);
-                      _phase = _Phase.verdict;
-                    }),
-                    child: const Text('Retake the year'),
+                child: D30RaisedButton(
+                  color: const Color(0xFF9A8F86),
+                  onPressed: () => setState(() {
+                    game.submitApplications(const []);
+                    _phase = _Phase.verdict;
+                  }),
+                  child: const Text(
+                    'Retake the year',
+                    style: TextStyle(fontSize: 16),
                   ),
                 ),
               ),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: D30RaisedButton(
@@ -198,7 +200,13 @@ class _CsatScreenState extends State<CsatScreen> {
                           game.submitApplications(_chosen);
                           _phase = _Phase.verdict;
                         }),
-                  child: const Text('Submit applications'),
+                  child: Text(
+                    _chosen.isEmpty
+                        ? 'Submit applications'
+                        : 'Submit ${_chosen.length} '
+                              '${_chosen.length == 1 ? 'application' : 'applications'}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
             ],
@@ -212,6 +220,7 @@ class _CsatScreenState extends State<CsatScreen> {
     final university = game.pack.admissions.universities[d.universityId];
     final allowed = game.canApply(d);
     final chosen = _chosen.contains(d.id);
+    final sameSchool = !chosen && game.sameSchoolChosen(d, _chosen);
     final chance = game.admissionChance(d);
     final (label, colour) = switch (chance) {
       >= 0.85 => ('Safe', D30Colors.hpGreen),
@@ -221,7 +230,7 @@ class _CsatScreenState extends State<CsatScreen> {
     return Card(
       color: chosen ? const Color(0xFFFFE6CF) : D30Colors.panel,
       child: ListTile(
-        enabled: allowed && (chosen || _chosen.length < limit),
+        enabled: allowed && !sameSchool && (chosen || _chosen.length < limit),
         onTap: () => setState(() {
           chosen ? _chosen.remove(d.id) : _chosen.add(d.id);
         }),
@@ -230,14 +239,21 @@ class _CsatScreenState extends State<CsatScreen> {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          allowed ? d.name : '${d.name}\n${d.condition ?? 'Not eligible'}',
+          !allowed
+              ? '${d.name}\n${d.condition ?? 'Not eligible'}'
+              : sameSchool
+              ? '${d.name}\nAlready applying to this school'
+              : d.name,
         ),
-        isThreeLine: !allowed,
+        isThreeLine: !allowed || sameSchool,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(d.deviation.toStringAsFixed(1)),
+            Text(
+              _percent(chance),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
             allowed
                 ? Text(label, style: TextStyle(color: colour))
                 : const Icon(Icons.lock, size: 16),
@@ -274,7 +290,7 @@ class _CsatScreenState extends State<CsatScreen> {
         else
           D30RaisedButton(
             onPressed: _enrolIn == null ? null : _finish,
-            child: const Text('Enrol', style: TextStyle(fontSize: 17)),
+            child: const Text('Enroll', style: TextStyle(fontSize: 17)),
           ),
       ],
     );
@@ -313,6 +329,15 @@ class _CsatScreenState extends State<CsatScreen> {
   void _finish() {
     game.enroll(_enrolIn);
     Navigator.of(context).pop();
+  }
+
+  /// The chance an application is accepted, as the list shows it: whole
+  /// percents, with "<1%" and ">99%" at the ends rather than a flat 0 or 100.
+  static String _percent(double chance) {
+    final p = chance * 100;
+    if (p < 1) return '<1%';
+    if (p > 99) return '>99%';
+    return '${p.round()}%';
   }
 
   static String _cap(String s) =>
