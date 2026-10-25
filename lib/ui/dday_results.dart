@@ -235,6 +235,32 @@ class _ResultsTitleState extends State<_ResultsTitle>
 
 enum _Step { idle, opening, card, stashing }
 
+/// Browse reveal (DDAY-C06): from the Browse tap to the settled verdict card.
+/// The original gives each stage more time than the first rebuild's 2.8 s;
+/// the stages below are fractions of [envelopeOpenDuration] and overlap.
+const Duration envelopeOpenDuration = Duration(milliseconds: 5000);
+
+/// Others leave, the active envelope centres and enlarges.
+const (double, double) _stageMove = (0.0, 0.16);
+
+/// The tilt wobble.
+const (double, double) _stageTilt = (0.16, 0.38);
+
+/// The flap opens.
+const (double, double) _stageFlap = (0.36, 0.54);
+
+/// The letter rises out of the pocket.
+const (double, double) _stageLetter = (0.50, 0.72);
+
+/// The school-coloured glow expands.
+const (double, double) _stageGlow = (0.60, 0.88);
+
+/// The envelope fades and the verdict card appears.
+const (double, double) _stageCard = (0.84, 1.0);
+
+/// Confetti starts here.
+const double _confettiFrom = 0.84;
+
 class _EnvelopeStage extends StatefulWidget {
   final Game game;
   final VoidCallback onAllRevealed;
@@ -257,13 +283,13 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
   late int _revealed = game.resultsRevealed;
   _Step _step = _Step.idle;
 
-  /// Browse: the staged envelope animation (about 2.8 s), driven through
+  /// Browse: the staged envelope animation (about 5 s), driven through
   /// Intervals: others leave, the active one centres and wobbles, the flap
   /// opens, the letter rises, the school-coloured glow expands and the
   /// verdict card appears.
   late final AnimationController _open = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2800),
+    duration: envelopeOpenDuration,
   );
 
   /// Confirm: the card moves up behind the stack and the next envelope
@@ -380,12 +406,12 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
     final rankStep = h * .058;
 
     // Browse timeline.
-    final move = Curves.easeInOut.transform(_seg(o, 0, .2));
-    final wobble = _seg(o, .2, .38);
-    final flap = Curves.easeInOut.transform(_seg(o, .38, .55));
-    final rise = Curves.easeOut.transform(_seg(o, .5, .72));
-    final glowGrow = Curves.easeOut.transform(_seg(o, .6, .88));
-    final fade = Curves.easeIn.transform(_seg(o, .82, 1));
+    final move = Curves.easeInOut.transform(_seg(o, _stageMove.$1, _stageMove.$2));
+    final wobble = _seg(o, _stageTilt.$1, _stageTilt.$2);
+    final flap = Curves.easeInOut.transform(_seg(o, _stageFlap.$1, _stageFlap.$2));
+    final rise = Curves.easeOut.transform(_seg(o, _stageLetter.$1, _stageLetter.$2));
+    final glowGrow = Curves.easeOut.transform(_seg(o, _stageGlow.$1, _stageGlow.$2));
+    final fade = Curves.easeIn.transform(_seg(o, _stageCard.$1, _stageCard.$2));
     final angle = .085 * math.sin(wobble * math.pi * 3) * (1 - wobble * .4);
     final glowColor = shown?.color ?? D30Colors.accent;
     final glowing = (opening || cardStep) && shown != null;
@@ -411,8 +437,14 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
     final remaining = n - _revealed;
     final ranksBehind = math.max(0, remaining - 1) + (stashing ? 1 - s : 0);
     final topmost = frontTop - ranksBehind * rankStep;
+    // While one envelope opens and its verdict shows, only that card is on
+    // screen (DDAY-C04); the earlier ones return for the stack and, as the
+    // confirmed card tucks away, fade back in.
+    final stashVisible = opening ? 1 - move : (cardStep ? 0.0 : 1.0);
     for (var j = 0; j < _revealed; j++) {
       final justConfirmed = stashing && j == _revealed - 1;
+      final vis = justConfirmed ? 1.0 : (stashing ? s : stashVisible);
+      if (vis <= 0) continue;
       final depth =
           (_revealed - 1 - j) - (stashing && !justConfirmed ? 1 - s : 0);
       final scale = (.82 - depth * .06).clamp(.5, 1.0);
@@ -431,8 +463,13 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
           width: width,
           height: height,
           child: Opacity(
-            opacity: justConfirmed ? 1 : .88,
-            child: ResultCard(view: _views[j], width: width, height: height),
+            opacity: justConfirmed ? 1 : .88 * vis,
+            child: ResultCard(
+              key: ValueKey('stash-card-$j'),
+              view: _views[j],
+              width: width,
+              height: height,
+            ),
           ),
         ),
       );
@@ -558,7 +595,7 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
     }
 
     // --- confetti in the school's colours (both verdicts) ----------------------
-    if (shown != null && ((opening && o > .8) || cardStep || stashing)) {
+    if (shown != null && ((opening && o > _confettiFrom) || cardStep || stashing)) {
       final idx = stashing ? _revealed - 1 : active;
       children.add(
         Positioned.fill(
@@ -810,6 +847,10 @@ class _CardsPageState extends State<_CardsPage> {
     setState(() => _reviewed = true);
   }
 
+  Duration get _choiceSwap => reducedMotion(context)
+      ? Duration.zero
+      : const Duration(milliseconds: 320);
+
   Duration get _move => reducedMotion(context)
       ? Duration.zero
       : const Duration(milliseconds: 480);
@@ -828,9 +869,9 @@ class _CardsPageState extends State<_CardsPage> {
         if (_choosing && _results[i].accepted) {
           final m = accepted.length;
           final ch = h * .2;
-          final pitch = math.min(h * .26, (h * .62 - ch) / math.max(1, m - 1));
+          final pitch = math.min(h * .26, (h * .66 - ch) / math.max(1, m - 1));
           final total = ch + (m - 1) * pitch;
-          final top = h * .56 - total / 2 + accepted.indexOf(i) * pitch;
+          final top = h * .54 - total / 2 + accepted.indexOf(i) * pitch;
           return Rect.fromLTWH(w * .15, top, w * .70, ch);
         }
         if (_reviewed) {
@@ -902,11 +943,24 @@ class _CardsPageState extends State<_CardsPage> {
                       ),
                     ),
                     child: LayoutBuilder(
-                      builder: (_, c) => ResultCard(
-                        key: ValueKey('combined-card-$i'),
-                        view: _views[i],
-                        width: c.maxWidth,
-                        height: c.maxHeight,
+                      // After Final Decision the accepted cards turn into
+                      // enrollment-choice cards (crest, school, department;
+                      // DDAY-C07); results keep the verdict cards.
+                      builder: (_, c) => AnimatedSwitcher(
+                        duration: _choiceSwap,
+                        child: _choosing && _results[i].accepted
+                            ? ChoiceCard(
+                                key: ValueKey('choice-card-$i'),
+                                view: _views[i],
+                                width: c.maxWidth,
+                                height: c.maxHeight,
+                              )
+                            : ResultCard(
+                                key: ValueKey('combined-card-$i'),
+                                view: _views[i],
+                                width: c.maxWidth,
+                                height: c.maxHeight,
+                              ),
                       ),
                     ),
                   ),
@@ -1316,7 +1370,7 @@ class _ShareSceneState extends State<_ShareScene> {
                             ),
                           ),
                         ),
-                        SizedBox(height: h * .07),
+                        SizedBox(height: h * .04),
                         _SharePanel(
                           width: w * .64,
                           onInstagram: () =>

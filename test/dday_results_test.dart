@@ -6,6 +6,7 @@
 /// in tests, so waits here pump a short frame and then the duration.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -18,7 +19,11 @@ import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/engine/record_store.dart';
 import 'package:d30mode/engine/state.dart';
+import 'package:d30mode/engine/event_engine.dart';
+import 'package:d30mode/ui/csat_screen.dart';
 import 'package:d30mode/ui/dday_results.dart';
+import 'package:d30mode/ui/dday_widgets.dart';
+import 'package:d30mode/ui/event_screen.dart';
 import 'package:d30mode/ui/end_screen.dart';
 import 'package:d30mode/ui/student_photo.dart';
 
@@ -89,7 +94,7 @@ void main() {
   }
 
   /// Lets a controller-driven animation of [ms] finish.
-  Future<void> wait(WidgetTester tester, [int ms = 3300]) async {
+  Future<void> wait(WidgetTester tester, [int ms = 5300]) async {
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pump(Duration(milliseconds: ms));
     await tester.pump(const Duration(milliseconds: 50));
@@ -408,9 +413,9 @@ void main() {
       expect(opacity(0), 1);
       expect(opacity(2), 1);
       final centre = [
-        for (final i in [0, 2]) tester.getCenter(key('combined-card-$i')).dy,
+        for (final i in [0, 2]) tester.getCenter(key('choice-card-$i')).dy,
       ];
-      expect((centre[0] + centre[1]) / 2, closeTo(873 * .56, 12));
+      expect((centre[0] + centre[1]) / 2, closeTo(873 * .54, 12));
       expect(key('final-decision-button'), findsNothing);
       expect(game.state.finalDecided, isFalse);
 
@@ -588,6 +593,211 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Ending Reward Obtained!'), findsNothing);
       expect(find.text('HOME'), findsOneWidget);
+    });
+  });
+
+  group('DDAY-C comparison fixes', () {
+    ApplicationResultView longView({bool accepted = true}) =>
+        ApplicationResultView(
+          university: const University(
+            id: 9001,
+            name: 'Georgia Institute of Technology',
+            rank: 'ten',
+            colorCode: '#B3A369',
+          ),
+          department: const Department(
+            id: 9002,
+            universityId: 9001,
+            name: 'School of Medicine',
+            deviation: 70,
+          ),
+          rate: 100,
+          accepted: accepted,
+        );
+
+    for (final width in [393.0, 320.0]) {
+      testWidgets('C05 long names wrap or scale, never ellipsize ($width)', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, width * 2.22);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final h = width * 2.22 * .204;
+        final w = width * .70;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              backgroundColor: Colors.black,
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ResultCard(view: longView(), width: w, height: h),
+                    const SizedBox(height: 10),
+                    ChoiceCard(view: longView(), width: w, height: h),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        for (final k in [
+          'result-card-school',
+          'choice-card-school',
+          'result-card-department',
+          'choice-card-department',
+        ]) {
+          final text = tester.widget<Text>(key(k));
+          expect(text.overflow, isNot(TextOverflow.ellipsis), reason: k);
+          expect(text.maxLines, 2, reason: k);
+          final rect = tester.getRect(key(k));
+          expect(rect.height, greaterThan(0), reason: k);
+        }
+        expect(find.text('Georgia Institute of Technology'), findsNWidgets(2));
+      });
+    }
+
+    testWidgets('C04 only the current card shows while an envelope opens', (
+      tester,
+    ) async {
+      final game = committed([false, true, false]);
+      await host(tester, DdayResultsFlow(game: game, onFinished: () {}));
+      await skipTitle(tester);
+      await browseAndConfirm(tester);
+      expect(key('stash-card-0'), findsOneWidget, reason: 'stack state');
+      await tester.tap(key('browse-results'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 1500));
+      expect(key('stash-card-0'), findsNothing, reason: 'opening');
+      await wait(tester);
+      expect(key('result-card-1'), findsOneWidget);
+      expect(key('stash-card-0'), findsNothing, reason: 'verdict state');
+      expect(find.byType(ResultCard), findsOneWidget);
+      await tester.tap(key('result-confirm'));
+      await wait(tester, 700);
+      expect(key('stash-card-0'), findsOneWidget, reason: 'stack returns');
+      expect(key('stash-card-1'), findsOneWidget);
+    });
+
+    testWidgets('C06 the reveal takes about five seconds', (tester) async {
+      final game = committed([false, false, false]);
+      await host(tester, DdayResultsFlow(game: game, onFinished: () {}));
+      await skipTitle(tester);
+      await tester.tap(key('browse-results'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 3900));
+      expect(key('result-confirm'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1300));
+      expect(key('result-confirm'), findsOneWidget);
+      expect(envelopeOpenDuration.inMilliseconds, inInclusiveRange(4500, 5500));
+    });
+
+    testWidgets('C07 Final Decision turns accepted cards into choice cards', (
+      tester,
+    ) async {
+      final game = committed([true, false, true], reviewed: true);
+      await host(tester, DdayResultsFlow(game: game, onFinished: () {}));
+      await wait(tester, 900);
+      expect(key('choice-card-0'), findsNothing);
+      expect(find.text('Accepted'), findsNWidgets(2));
+      await tester.tap(key('final-decision-button'));
+      await wait(tester, 900);
+      expect(key('choice-card-0'), findsOneWidget);
+      expect(key('choice-card-2'), findsOneWidget);
+      expect(key('choice-card-1'), findsNothing);
+      expect(
+        find.text('Accepted'),
+        findsNothing,
+        reason: 'no repeated verdict text',
+      );
+      final crest = find.descendant(
+        of: key('choice-card-0'),
+        matching: find.byType(SchoolCrest),
+      );
+      expect(tester.getSize(crest).width, greaterThan(45));
+      await tester.tap(key('final-card-0'));
+      await wait(tester, 400);
+      expect(key('confirm-enrollment'), findsOneWidget);
+    });
+
+    testWidgets('C08 the share scene does not move after it appears', (
+      tester,
+    ) async {
+      final game = committed([true, false, false], reviewed: true);
+      game.enroll(game.acceptedPrograms.first.department.id);
+      await host(tester, DdayResultsFlow(game: game, onFinished: () {}));
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.pump(const Duration(milliseconds: 500));
+      final first = tester.getTopLeft(key('student-id-card'));
+      final confirm = tester.getTopLeft(key('scene-confirm'));
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.getTopLeft(key('student-id-card')), first);
+      expect(tester.getTopLeft(key('scene-confirm')), confirm);
+    });
+
+    Future<void> playToCard(WidgetTester tester) async {
+      for (var i = 0; i < 80; i++) {
+        if (key('ending-card').evaluate().isNotEmpty) return;
+        if (find.byTooltip('Next').evaluate().isEmpty) return;
+        await tester.tap(find.byTooltip('Next'));
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+    }
+
+    testWidgets('C03 ending events play over the share scene; C02 no flash', (
+      tester,
+    ) async {
+      final game = committed([true, false, false], reviewed: true);
+      game.enroll(game.acceptedPrograms.first.department.id);
+      late BuildContext hostContext;
+      EventRun? run;
+      await host(
+        tester,
+        Builder(
+          builder: (context) {
+            hostContext = context;
+            return const Scaffold(body: Text('gameplay-behind'));
+          },
+        ),
+      );
+      unawaited(
+        CsatScreen.pushResults(
+          hostContext,
+          game,
+          endings: () async {
+            run = game.nextEndingEvent();
+            if (run != null) await EventScreen.show(hostContext, run!);
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(key('results-scene'), findsOneWidget);
+      await tester.tap(key('scene-confirm'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(run, isNotNull, reason: 'an ending event follows enrollment');
+      // The event is up and the certificate scene is still the page behind it
+      // (not the gameplay screen).
+      expect(find.byTooltip('Next'), findsOneWidget);
+      expect(key('results-scene'), findsOneWidget);
+      await playToCard(tester);
+      if (key('ending-card').evaluate().isNotEmpty) {
+        expect(key('results-scene'), findsOneWidget);
+        await tester.pump(endingConfirmDelay);
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(key('ending-confirm'));
+        // Frame by frame: the empty dialogue window never reappears.
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          final beat = run!.current;
+          if (beat != null && beat.isEnd && beat.text.trim().isEmpty) {
+            expect(find.byTooltip('Next'), findsNothing, reason: 'frame $i');
+          }
+        }
+      }
+      expect(tester.takeException(), isNull);
     });
   });
 }

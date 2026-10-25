@@ -144,55 +144,147 @@ class ResultCard extends StatelessWidget {
           width: 6 * u,
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SchoolCrest(university: view.university, size: 24 * u),
-              SizedBox(width: 6 * u),
-              Flexible(
-                child: Text(
-                  view.universityName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16 * u,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 3 * u),
-          Text(
-            view.departmentName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12.5 * u,
-              fontWeight: FontWeight.w800,
-              color: Colors.black87,
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 6 * u),
-            child: Divider(height: 1, thickness: 1, color: Colors.black54),
-          ),
-          FittedBox(
+      // Long school and department names wrap to two lines inside the card's
+      // width and, as a last resort, the whole identity block scales down
+      // (DDAY-C05) instead of ending in an ellipsis.
+      child: LayoutBuilder(
+        builder: (context, box) => Center(
+          child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              view.accepted ? 'Accepted' : 'Rejected',
-              style: TextStyle(
-                fontSize: 31 * u,
-                fontWeight: FontWeight.w900,
-                color: view.accepted ? acceptedGreen : rejectedRed,
+            child: SizedBox(
+              width: box.maxWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SchoolCrest(university: view.university, size: 24 * u),
+                      SizedBox(width: 6 * u),
+                      Flexible(
+                        child: Text(
+                          view.universityName,
+                          key: const ValueKey('result-card-school'),
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16 * u,
+                            height: 1.1,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 3 * u),
+                  Text(
+                    view.departmentName,
+                    key: const ValueKey('result-card-department'),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5 * u,
+                      height: 1.15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6 * u),
+                    child: const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  Text(
+                    view.accepted ? 'Accepted' : 'Rejected',
+                    style: TextStyle(
+                      fontSize: 31 * u,
+                      fontWeight: FontWeight.w900,
+                      color: view.accepted ? acceptedGreen : rejectedRed,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The enrollment-choice card of Final Decision (DDAY-C07): a large centred
+/// crest, the school and the department, with no verdict text. The older
+/// successful reference shows exactly this after the Final Decision button.
+class ChoiceCard extends StatelessWidget {
+  final ApplicationResultView view;
+  final double width;
+  final double height;
+  const ChoiceCard({
+    super.key,
+    required this.view,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final u = height / 178;
+    return Container(
+      width: width,
+      height: height,
+      padding: EdgeInsets.symmetric(horizontal: 12 * u, vertical: 8 * u),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22 * u),
+        border: Border.all(
+          color: Color.lerp(view.color, Colors.white, .55)!,
+          width: 4 * u,
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, box) => Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SizedBox(
+              width: box.maxWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SchoolCrest(university: view.university, size: 62 * u),
+                  SizedBox(height: 6 * u),
+                  Text(
+                    view.universityName,
+                    key: const ValueKey('choice-card-school'),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17 * u,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 2 * u),
+                  Text(
+                    view.departmentName,
+                    key: const ValueKey('choice-card-department'),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12 * u,
+                      height: 1.15,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

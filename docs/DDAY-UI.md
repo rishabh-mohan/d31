@@ -83,11 +83,14 @@ none -> the title.
    front = first; the active one shows "<n>% Acceptance Rate" and the large
    school-coloured glowing control (school, department, Browse Application
    Results). School colour = catalog `colorCode`.
-3. Browse: one 2.8 s controller with staged Intervals: others leave and fade,
-   the active one centres/enlarges (0-20%), wobbles (20-38%), flap opens
-   (38-55%), letter rises (50-72%), the school-coloured rectangle glows over
-   a tinted page (60-88%), the white result card appears with school-coloured
-   confetti (82-100%). Confirm (school colour) moves the card up behind the
+3. Browse: one 5 s controller (`envelopeOpenDuration`, DDAY-C06) with staged
+   Intervals named in `dday_results.dart` (`_stageMove` ... `_stageCard`):
+   others leave and fade, the active one centres/enlarges (0-16%), wobbles
+   (16-38%), flap opens (36-54%), letter rises (50-72%), the school-coloured
+   rectangle glows over a tinted page (60-88%), the white result card appears
+   with school-coloured confetti (84-100%). While an envelope opens and its
+   verdict shows, only the current card is on screen (DDAY-C04); earlier
+   confirmed cards fade back in for the stack state and the combined page. Confirm (school colour) moves the card up behind the
    stack (0.5 s) and brings the next envelope forward; each Confirm calls
    `game.confirmNextResult()` once. Reduced motion jumps straight to the card
    and shows no confetti.
@@ -101,7 +104,11 @@ none -> the title.
 5. Final Decision (user spec): "Final Decision" fades in. With acceptances the
    cards compact under the title and a "Final Decision" button appears;
    pressing it fades the rejected cards out and slides the accepted ones to
-   the centre; tapping one opens Confirm Enrollment. All rejected: the
+   the centre, where they turn into enrollment-choice cards (`ChoiceCard`,
+   DDAY-C07: large centred crest, school, department, no "Accepted" text, per
+   the older successful reference); tapping one opens Confirm Enrollment.
+   Long school/department names on every card wrap to two lines and scale
+   down rather than ellipsize (DDAY-C05). All rejected: the
    single white peach-bordered academy card (names read from the catalog,
    id 0; the two-pill logo is drawn, the SVG is not rendered).
 6. Confirm Enrollment modal (X, large crest, school, course, Confirm) ->
@@ -113,9 +120,22 @@ none -> the title.
    "Upload your photo to your student ID!" (gallery picker); dark panel with
    Instagram / X (snack bar "Not available in this build.") and download
    (saves the card as a PNG to the gallery); wide Confirm -> `onFinished`.
-   The Student ID number is blank (not in the recording).
+   The Student ID number is blank (not in the recording). The layout is fixed
+   once built (the card has an aspect ratio, so a late portrait cannot move
+   it); the recording frames 51 s and 52 s show no relayout (DDAY-C08).
+   Confirm does not close the scene: the authored ending events play over it
+   (blurred and dimmed by the event panel, DDAY-C03) via
+   `CsatScreen.show(endings:)`; `GameScreen._endingsOverScene` then records the
+   run behind a black page and replaces the game with the summary, so no empty
+   dialogue or gameplay frame shows between ending title and summary (DDAY-C02).
+   An ending title (`showEndingCard`, END_GAME and SHOW_ENDING alike) is centred
+   bold white on black, never auto-dismisses or reacts to taps, and fades in a
+   wide orange Confirm after `endingConfirmDelay` (4.5 s; at once under reduced
+   motion); Confirm closes it once (DDAY-C01, C09). A mid-event title (Retry
+   Year's opening "Retake Ending") returns to the event dialogue; an event
+   whose last beat is empty leaves instantly behind a black cover.
 8. Completion summary (`EndScreen`): header, Student ID card, panel titled
-   with the ending name, five stat chips (`state.stats`), the printable
+   with the ending name (extra breathing room above and below, DDAY-C10), five stat chips (`state.stats`), the printable
    Graduation Exam Score Card (`state.csat`, saved Score / Top %), Back to
    Main Menu.
 9. Back to Main Menu: brief spinner; if `AccountStore.current
