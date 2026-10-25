@@ -12,6 +12,7 @@
 /// `extraStat` as the x3-scaled field (High Potential: `+STAT_5`, extraStat 15).
 library;
 
+import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'pack.dart';
@@ -47,6 +48,43 @@ class TraitEngine {
   final ContentPack pack;
 
   TraitEngine({required this.pack});
+
+  /// Every condition target [conditionsHold] reads. The shipped trait,
+  /// character and badge catalogs use only these (a test pins it); anything
+  /// else fails closed, because an unread gate that passed would hand out a
+  /// conditional bonus unconditionally.
+  static const supportedConditionTargets = {
+    'LOCATION_TYPE',
+    'IS_HAVE_ITEM',
+    'IS_HAVE_TRAIT',
+    'IS_TODAY_IN_DATE_LIST',
+    'TICK_RANDOM',
+    'LOCATION_ID',
+    'TICK',
+    'WEEKCODE',
+    'DATE_WEEK',
+    'DATE_INT',
+    'COMBO_STUDY',
+    'PREV_STUDY_SUBJECT',
+    'IS_BEFORE_SAT_EXAM',
+    'EXERCISE_LEVEL',
+    'PART_TIME_JOB_LEVEL',
+    'STUDY_LEVEL',
+  };
+
+  /// Gates this engine met and could not read, as `target` or
+  /// `target/compareType`. Each one held its effect back.
+  final Set<String> unknownConditions = {};
+
+  bool _unsupported(String what) {
+    if (unknownConditions.add(what)) {
+      assert(() {
+        developer.log('Unsupported trait condition $what; effect withheld.');
+        return true;
+      }());
+    }
+    return false;
+  }
 
   bool get enabled => pack.rules.flag('traits', 'enabled', true);
 
@@ -339,9 +377,10 @@ class TraitEngine {
     }
 
     final actual = _numericTarget(target, state, ctx);
-    if (actual == null) return true; // nothing to compare -> do not block
+    if (actual == null) return _unsupported(target);
     final want = (c['intValue'] as num?) ?? 0;
-    switch (c['compareType'] as String?) {
+    final compareType = c['compareType'] as String?;
+    switch (compareType) {
       case 'equal':
         return actual == want;
       case 'notEqual':
@@ -355,7 +394,7 @@ class TraitEngine {
       case 'lessEqual':
         return actual <= want;
       default:
-        return true;
+        return _unsupported('$target/$compareType');
     }
   }
 

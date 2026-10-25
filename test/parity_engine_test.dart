@@ -8,6 +8,7 @@ import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/goals.dart';
 import 'package:d30mode/engine/pack.dart';
+import 'package:d30mode/engine/traits.dart';
 
 /// Regressions for the original-game parity audit's engine defects
 /// (TODO 81 / 86). Each test names the audit item it pins.
@@ -232,6 +233,60 @@ void main() {
     test('says its elseText when the gate fails', () {
       expect(finalLine(gate: 1), 'Primary.');
       expect(finalLine(gate: 0), 'Otherwise.');
+    });
+  });
+
+  group('L04 trait conditions fail closed', () {
+    test('every gate in the shipped catalogs is one the engine reads', () {
+      for (final pack in [original, retry]) {
+        final game = Game.newRun(pack, random: Random(12));
+        final engine = TraitEngine(pack: pack);
+        final effects = [
+          for (final t in pack.traits.values) ...t.effects,
+          for (final c in pack.characters.values) ...c.effects,
+          for (final b in pack.badges.values) ...b.effects,
+        ];
+        var gated = 0;
+        for (final e in effects) {
+          final conditions = e['conditions'] as List? ?? const [];
+          for (final c in conditions.whereType<Map>()) {
+            gated++;
+            expect(
+              TraitEngine.supportedConditionTargets,
+              contains(c['target']),
+            );
+            engine.conditionsHold(
+              {
+                'conditions': [c],
+              },
+              game.state,
+              TraitContext.none,
+            );
+          }
+        }
+        expect(gated, greaterThan(50));
+        expect(engine.unknownConditions, isEmpty);
+      }
+    });
+
+    test('an unread target or comparison withholds the effect', () {
+      final game = Game.newRun(original, random: Random(13));
+      final engine = TraitEngine(pack: original);
+      bool holds(Map<String, dynamic> c) => engine.conditionsHold(
+        {
+          'conditions': [c],
+        },
+        game.state,
+        TraitContext.none,
+      );
+
+      expect(holds({'target': 'TICK', 'compareType': 'greaterEqual'}), isTrue);
+      expect(
+        holds({'target': 'NOT_A_TARGET', 'compareType': 'equal'}),
+        isFalse,
+      );
+      expect(holds({'target': 'TICK', 'compareType': 'sortOf'}), isFalse);
+      expect(engine.unknownConditions, {'NOT_A_TARGET', 'TICK/sortOf'});
     });
   });
 }
