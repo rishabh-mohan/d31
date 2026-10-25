@@ -462,7 +462,7 @@ anything containing backticks, and always `assert s != o` after a replace.
 checkpoint. Main includes both campaigns' current exam/admission/ending flow,
 Home/account collections and captured dialogs, shared wallets, the integrated
 branch fixes, saved score cards and debug wallet entry. Current verification:
-318 tests passing and no analysis issues. The latest profile APK is installed
+327 tests passing (re-verified 2026-10-25) and no analysis issues. The latest profile APK is installed
 on the Nord; its local hash and deployment evidence are in that checkpoint.
 
 The trait catalog loads 244 entries; structured effects and supported compiled

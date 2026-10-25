@@ -1,5 +1,7 @@
 # Interrupted branch audit — 2026-10-25
 
+> **Superseded.** Everything listed below as missing has since been integrated on main; see [BRANCH-INTEGRATION-2026-10-25.md](BRANCH-INTEGRATION-2026-10-25.md), [CLARIFIED-MECHANICS-2026-10-25.md](CLARIFIED-MECHANICS-2026-10-25.md) and [CURRENT-STATE.md](CURRENT-STATE.md). Kept as a historical record.
+
 All five branch tips are ancestors of main (71c0b34); no committed branch work is missing. However, merging branch tips did not include the following uncommitted work. These drafts remain in their original worktrees; they have not been incorporated into the phone build.
 
 | Worktree | Uncommitted work | Assessment |
