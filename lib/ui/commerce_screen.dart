@@ -261,6 +261,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                       game.pack.items[(offer['itemId'] as num).toInt()];
                   if (item == null) return const SizedBox.shrink();
                   final stock = game.shopStock(id);
+                  final capped = game.shopItemAtCap(id);
                   return card(
                     Column(
                       children: [
@@ -314,9 +315,13 @@ class _CommerceScreenState extends State<CommerceScreen> {
                               ),
                             ),
                             key: ValueKey('buy-$id'),
-                            onPressed: stock > 0 ? () => buy(id) : null,
+                            onPressed: stock > 0 && !capped
+                                ? () => buy(id)
+                                : null,
                             child: Text(
-                              stock == 0
+                              capped
+                                  ? 'Owned (max)'
+                                  : stock == 0
                                   ? 'Sold out'
                                   : '${offer['price']} Gold ($stock/${offer['stock']})',
                             ),
