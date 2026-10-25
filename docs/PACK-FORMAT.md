@@ -155,8 +155,9 @@ shared, refresh per-run. When a currency is shared, its `initial` becomes a
 one-time grant to the account on the first run started or resumed; a save
 made before sharing moves its leftover run balance onto the account once;
 saves made while sharing store no balance of their own (`sharedWallet`).
-Refresh stays per-run (50 every run, TODO 31) because nothing earns refresh
-tickets account-wide yet: a shared pool would be empty after a run or two.
+Both generated packs now share refresh tickets as well (user decision,
+2026-10-25): the account gets 50 once. Nothing earns refresh tickets
+account-wide yet, so the pool drains; that is TODO 97.
 Turning a switch off again restarts that counter from `initial` for runs
 saved while it was shared.
 `goals.*` feeds the placeholder goal strips (lib/engine/goals.dart). A missing key falls back to a built-in

@@ -8,7 +8,7 @@ This is not a current total or an original-game parity percentage. Later entries
 and the audit below remain part of the backlog; this older summary can lag fixes.
 
 **Current integration:** recoverable work from all five interrupted branches is
-on main; 318 tests pass and analysis is clean. Read
+on main; 327 tests pass (re-verified 2026-10-25) and analysis is clean. Read
 [CURRENT-STATE.md](docs/CURRENT-STATE.md) and
 [the per-branch completion report](docs/BRANCH-INTEGRATION-2026-10-25.md).
 A14 and I03 have since been implemented using the user's clarified persistent-block
@@ -40,7 +40,7 @@ prototype tuning; the dedicated Quizmaster bank and general scheduler remain
 unrecovered. Recovered exam thresholds are unchanged by the book-gain fix, so
 Retry Year's exam progression balance needs separate verification.
 
-Latest completed combined review (2026-10-25): **318 tests passed**, analysis
+Latest completed combined review (2026-10-25): **327 tests passed** (re-verified after the modular-pack commit), analysis
 clean; the integrated profile APK is installed on the Nord. Current deployment,
 artifact hash and evidence: [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md).
 Historical 214/114-test checkpoints are retained in the archived state document.
@@ -162,6 +162,7 @@ TODO:
 45. Curve the bottom two corners of each stationery icon when in the larger menu (it's cutting off the black border)
    DONE — Already fixed by the stationery border rework (a real 2px inset with 9px outer / 7px inner clipping); verified by rendering the large-menu grid — the bottom corners are rounded and the black border is intact.
    REOPENED (user, 2026-10-24) — The border cutoff is still visible on the Nord, so the DONE above was wrong: my check rendered the cards in a test harness, not the device's larger menu. Still open.
+   2R — StationeryCard now paints its outline as a foreground layer and the hub's empty slots (_EmptyStationerySlot) clip their contents; renders at 393x873 show intact borders. Awaiting confirmation on the Nord before DONE.
 46. Make the opened Schedule/Calendar menu a bit wider and also standardize a name
    DONE — Calendar is now the name on both the hub button and dialog; its horizontal inset is 20px instead of 40px. Existing panel regressions verify the wider window at 320px and 393px.
 47. Rerolling an object should always ensure that it rerolls to the average (rounded up) tier (B and C always makes B or very rarely A, A and C always makes A or very rarely S, etc) Check psuedocode for absolute answer
@@ -238,6 +239,7 @@ TODO:
    DONE — The item report's Confirm is flat (no lower face, no press motion: D30RaisedButton(flat: true)), as is the bag's Use. The acquisition popup's buttons follow 75 instead.
 78. Implement every item, and have the shop roll randomly every time, matching the original game's pseudocode for which items appear.
 79. Add a fade in transition for the info menu
+   DONE — My Info fades in (showFadeDialog, 250ms; instant with reduced motion). See "Interrupted branches integrated — 2026-10-25" below.
 80. In the top left hamburger menu, "Main Menu" instead shows "Main M..." when there is plenty of space for the full title
    DONE — The label now takes its full width and the "day is over" explanation wraps beside it; it was squeezed to a third of the row.
 
@@ -301,25 +303,27 @@ work must be reviewed before asserting those baseline gaps still exist.
    assignment audit, finished behavior and remaining evidence gaps.
    - [ ] M01: Home hub/navigation: supplied layout, hidden-UI background view, Settings, mailbox, profile, Charging, Store, Notices and seasonal entry. Rank/leaderboard is intentionally omitted.
      NOTE (user, 2026-10-25) — These screens WERE supplied and are saved in screenshots/original-game-followup-2026-10-24/, specified per file in docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md: Settings F01-F02 (214331, 214340); Mail Box F03-F04 (214350, 214358); account/profile F05 (214418) and Change Username F07 (214513); Cookie Charging F08-F09 (214528, 214534); Store F10-F16 (214549-214627: Ads, Packs, Expansion, Cookie Store tabs). Not found in any capture folder: Notices and the seasonal Cookie Parade entry. So M01 is no longer blocked on evidence except Notices/seasonal; the destinations are still unbuilt (Settings is the project's own).
-   - [ ] M02: Old hardcoded three-save limit versus reference with at least five resumable runs; real portrait, D-count, mode and five-subject stat sum, add/delete ordering and capacity.
+     2R (2026-10-25) — Settings, Mail Box, Profile, Change Username (first rename free, then 9 cookies), Charging and Store are built from F01-F16 (lib/ui/account_menus.dart); purchases/ads/mail show an unavailable notice. Notices and the seasonal entry still lack captures. See "Home implementation follow-up" below.
+   - [x] M02: Old hardcoded three-save limit versus reference with at least five resumable runs; real portrait, D-count, mode and five-subject stat sum, add/delete ordering and capacity.
      DONE (Claude, 2026-10-24) — Unlimited saves; Select Game cards show portrait, D-n, name, mode and the five-subject sum; newest first; trash deletes after a confirm (40).
-   - [ ] M03: Automatic completed-run persistence: old ending path saved only before completion. Separate History from resumable Play; verify ending transition, reopening/relaunch and deletion.
+   - [x] M03: Automatic completed-run persistence: old ending path saved only before completion. Separate History from resumable Play; verify ending transition, reopening/relaunch and deletion.
      DONE (Claude, 2026-10-24) — A finished run is recorded and its save deleted at the end transition; History lists records, a card shows stats/CSAT/enrolment, trash deletes (40).
    - [x] M04: Account cookies/refresh tokens instead of separate run wallets; shared transactions, persistence and migration. Starting balances are not screenshot examples 53/522.
      1R (Claude) — Account wallet exists (cookies/refresh tokens on Home, persisted, earned from endings/achievements/quests). Still separate from the in-run cookie/refresh counters; unifying them is open.
+     DONE (2026-10-25) — Runs spend and earn from the account wallet. Both cookies and refresh tickets are shared in both packs (user decision: one-time grants of 20 cookies and 50 refresh tickets). Nothing earns refresh tickets yet: TODO 97.
    - [ ] M05: Persistent earned badge collection for later runs when gating is enabled; keep the user's currently unlocked setup prototype. User confirms first college enrolment unlocks that college's achievement and grants two cookies. Repeat/department-specific awards are not established.
-   - [ ] M06: Discovered endings and authored cookie rewards, including first-time/repeat rules.
+   - [x] M06: Discovered endings and authored cookie rewards, including first-time/repeat rules.
      DONE (Claude) — Endings reached are kept per account; first-time reach pays the ending's catalog cookies; Endings List shows cookie or check. Repeat rules beyond 'pay once' are not established.
-   - [ ] M07: Trait-pack stock, purchase/open, mileage guarantee/reset, tap-stopped one-card roulette, result browsing and optional Draw More. User confirms mileage resets after ANY S-tier draw. All 12 pack rate tables recovered from the supplied public Notion page; see docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md (per-card rates differ from pack-wide cumulative rates).
+   - [x] M07: Trait-pack stock, purchase/open, mileage guarantee/reset, tap-stopped one-card roulette, result browsing and optional Draw More. User confirms mileage resets after ANY S-tier draw. All 12 pack rate tables recovered from the supplied public Notion page; see docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md (per-card rates differ from pack-wide cumulative rates).
      DONE (Claude) — Recovered per-card odds and card counts for all 12 packs, 1000-mileage S guarantee, reset on any S, buy/open, tap-stopped roulette, result browsing, Draw More. Prices other than Standard/Jumbo are placeholders.
    - [ ] M08: Owned trait copies and discovery database, duplicates, setup selection/consumption and persistence.
-   - [ ] M09: Exactly-three-input trait combining, pool filters, protected copies and protection-editing mode. Protection persists after restart; selecting a protected card shows the supplied warning (F20). No combine roulette; tier-colored confetti and Confirm fading in after 0.5 seconds are confirmed.
+   - [x] M09: Exactly-three-input trait combining, pool filters, protected copies and protection-editing mode. Protection persists after restart; selecting a protected card shows the supplied warning (F20). No combine roulette; tier-colored confetti and Confirm fading in after 0.5 seconds are confirmed.
      DONE (Claude) — Three inputs, S only with S, protection mode with per-copy locks (persisted with the account), warnings, tier confetti, Confirm after 0.5s. Combine result odds are provisional (rates unrecovered).
-   - [ ] M10: Puzzle pieces, conditions, weighted progress/cost, purchases, complete backgrounds and selection; match supplied locked/partial/complete states.
+   - [x] M10: Puzzle pieces, conditions, weighted progress/cost, purchases, complete backgrounds and selection; match supplied locked/partial/complete states.
      DONE (Claude) — Pieces from endings/story ownership/runs, cookie-weighted progress and Complete Now price, locked/partial/complete art. Only the Amnesia desk has full-screen background art; Insta-draw not built; game-count thresholds provisional.
-   - [ ] M11: Home Daily Quests: progress, reset, Receive states, claim persistence and rewards.
+   - [x] M11: Home Daily Quests: progress, reset, Receive states, claim persistence and rewards.
      DONE (Claude) — Dated quest (one department), local-midnight reset, Receive enabled once completed by a run finished that day, claim persisted, 4 cookies.
-   - [ ] M12: Korean/US university toggle and Purdue setting (41) after main-menu integration.
+   - [x] M12: Korean/US university toggle and Purdue setting (41) after main-menu integration.
      DONE (Claude) — Settings toggle, colleges_us.json from tools/us_colleges.csv (user-editable), seals as crests, Purdue a top-level college (41).
    WITHDRAWN FINDING: cross-run stationery carryover. Stationery is new each
    run; preserve it only when resuming that same run. Account currencies and
@@ -338,7 +342,7 @@ work must be reviewed before asserting those baseline gaps still exist.
 86. Latent engine hazards to fix before dependent ports.
    - [x] L01: INCREASE_TAMGOO_STAT / DECREASE_TAMGOO_STAT affect all subjects; DECREASE_TAMGOO_HIGH_STAT picks global highest (effects.dart). Respect elective subset. Not exercised by current two main graphs.
    - [x] L02: EventEngine._buildEndBeat ignores gated final-node elseText and uses primary text. Synthetic probe reproduces; neither active main graph contains an affected last node.
-   - [ ] L03: submitApplications engine API accepts duplicate program IDs and can produce three acceptances for one program; UI filtering does not enforce the invariant.
+   - [x] L03: submitApplications engine API accepts duplicate program IDs and can produce three acceptances for one program; UI filtering does not enforce the invariant.
      DONE (Claude, 2026-10-25) — submitApplications now refuses a second program at a university already applied to, which also refuses duplicate program ids.
    - [x] L04: Unknown trait conditions fail open (traits.dart). Explicitly handle unsupported gates before new catalogs depend on them; current global condition coverage is largely present.
    - [ ] L05: START_LOCATION_COUNT is a no-op; related predicate tests current location rather than a count. Recover counter lifecycle and implement together.
@@ -377,9 +381,13 @@ work must be reviewed before asserting those baseline gaps still exist.
    only (39); Master of Notes' workbook callback is separate. Use hardware-
    rendered profile builds and preserve Claude's stationery name-fit cache.
 91. Home's four-arrow (show background) button: fade the rest of the menu out, and back in on the tap that restores it, instead of switching with no transition.
+   DONE — Home fades its menu out and back in around the four-arrow background view. See "Interrupted branches integrated — 2026-10-25" below.
 92. Events should still play during exhaustion's automatic tick progression. When the player is exhausted and ticks advance without user input, check and play eligible events at those ticks instead of skipping them. Verify this in both campaigns, including ticks leading up to day rollover.
+   DONE — Exhaustion checks eligible events at each skipped tick in both campaigns. See "Interrupted branches integrated — 2026-10-25" below.
 93. The banners in the main menu's submenus are all broken (Puzzles category banners and other submenu banner art).
+   DONE — The shared submenu header was shrinking to its title; it now spans the page. Banner art itself was intact. See "Interrupted branches integrated — 2026-10-25" below.
 94. Achievements should be a full-page submenu like the other Home menus (Records, Puzzles, Select Game), not the current sheet over Home.
+   DONE — Achievements is a full Home page (AchievementsPage). See "Interrupted branches integrated — 2026-10-25" below.
 
 ## Difficulty index - 2026-10-25
 
@@ -415,7 +423,10 @@ refer to the entries above). Effort is a rough guide, not a commitment.
 - Deferred or out of scope: 4/F06 Elite; 42/F07 other campaigns; 23 umbrella;
   88-90 process; 39 recurring reminder.
 
-## Interrupted branch checkpoint — 2026-10-25
+## Interrupted branch checkpoint — 2026-10-25 (superseded)
+
+SUPERSEDED by "Interrupted branches integrated" below: everything this section lists as missing from main has since been integrated.
+
 
 See [the branch audit](docs/INTERRUPTED-BRANCH-AUDIT-2026-10-25.md) before resuming: branch tips are merged, but b-flow/c-traits/d-ui/e-account retain uncommitted drafts. In particular A11, Walking Enthusiast, the empty stationery border refactor, and M01 account dialogs are not in main. Free first rename and TODO 92 remain incomplete. Earlier unchecked entries and the difficulty index have not been comprehensively reconciled with merged commits; do not use them alone to infer implementation state.
 
@@ -465,3 +476,5 @@ Current evidence/rule record: [CLARIFIED-MECHANICS-2026-10-25.md](docs/CLARIFIED
 - I03 DONE under the user's provisional choice — 20% chance of one extra copy of the exact herb scavenged. Ginseng Digger's ginseng outcome prevents the gloves bonus; ginseng takes priority if both seeded rolls would succeed. Both Retry Year gender scripts use the same overlay. The imported graph actually already had a gloves path (40%, another random herb); the earlier audit incorrectly called the mechanic absent from an empty item-effects list. This is a deliberate user-selected rule, not claimed recovered native parity.
 - I05 / 78 1R — Saturday-start restock and saved shop rerolls: one cookie before any purchase; the first reroll reduces offers by one, later rerolls keep that count. Purchase locks rerolls until Saturday. Hidden offers cannot be bought through the engine API; Home/preparation previews use the current offers. The original larger offer pool, selection weights and full price/eligibility rules remain open; current rerolls sample the configured prototype catalog.
 - T03/T13 evidence review — the user knows no exact rates or published help for Stubborn, I will not falter!, or Energizer. A read-only smaller-agent review of local pseudocode/catalogs did not recover attributable arithmetic. Keep 30%/70%/5% labeled provisional, with existing rules.traits.chances overrides; do not present them as original odds.
+
+97. Add a way to earn refresh tickets. Refresh tickets now come from the shared account wallet (one-time grant of 50, user decision 2026-10-25), and nothing refills them, so the balance runs out after a few runs. Find or design the earning source (original-game evidence first: quests, endings, ads, store) and wire it to the account wallet.

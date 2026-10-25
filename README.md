@@ -32,12 +32,13 @@ A playable 31-day loop driven entirely by pack data:
   edits `rules.json` in place; reloads the pack from disk; and lists any verb
   the pack used that the engine lacks
 
-Verified by `flutter test`: 52 tests, including 200 seeded full runs that all
+Verified by `flutter test`: 327 tests (2026-10-25), including 200 seeded full runs that all
 reach exam day, and a static check that the engine implements every verb the
 pack uses.
 
-Not built yet — exam scoring and the 57 endings, event-set triggers, art and
-audio. The honest list is at the end of [docs/PACK-FORMAT.md](docs/PACK-FORMAT.md).
+Not built yet — audio, recovered exam/admission formulas (the current scoring is
+fitted), the original event-set dispatcher and the rest of TODO.md. Current
+state: [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md).
 
 ## Run it
 
@@ -45,7 +46,7 @@ Flutter SDK lives at `C:\Users\stewc\flutter`; add `flutter\bin` to `PATH`.
 
 ```bash
 flutter pub get
-flutter test                      # 52 tests, ~30 s (the 200-run sweep is most of it)
+flutter test                      # 327 tests, ~90 s (the 200-run sweep is most of it)
 
 flutter run -d windows            # desktop, fastest iteration
 flutter run -d <serial>           # the Nord N30 over adb
@@ -131,8 +132,8 @@ lib/ui/                title, game screen, event player, inventory, dev panel
 packs/kss16/           the content
 tools/                 the pack builder
 docs/PACK-FORMAT.md    the modding contract
-test/engine_test.dart  49 tests incl. 200 seeded full runs
-test/widget_test.dart  3 panel-render tests
+test/engine_test.dart  87 tests incl. 200 seeded full runs
+test/widget_test.dart  14 panel-render tests
 ```
 
 ## Scope

@@ -721,7 +721,7 @@ def build_rules(out: Path):
         # `shared` spends the account wallet instead of a per-run counter;
         # `initial` is then a one-time grant to the account (TODO 84 M04).
         # Refresh is shared too (user, 2026-10-25): the account gets 50 once;
-        # earning more is TODO 95.
+        # earning more is TODO 97.
         "refresh": {"initial": 50, "shared": True},
         "cookies": {"initial": 20, "shared": True},
         "day": {
