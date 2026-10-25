@@ -9,6 +9,7 @@ library;
 
 import 'dart:async';
 
+import 'haptics.dart';
 import 'press_feedback.dart';
 
 import 'package:flutter/material.dart';
@@ -79,6 +80,7 @@ class _StationeryDrawState extends State<StationeryDraw> {
   /// button: the captures do not establish a per-card stopping order, so none
   /// is invented here.
   void _stop() {
+    Haptics.stop();
     _roll?.cancel();
     _roll = null;
     setState(() => _rolling = false);

@@ -197,7 +197,7 @@ class Account implements SharedWallet {
   int get renameCost => renameCount == 0 ? 0 : renameCookies;
 
   /// Settings toggles (F01). Stored for when audio and haptics exist;
-  /// nothing plays or rumbles yet (TODO 85 F02/F03).
+  /// Rumble drives lib/ui/haptics.dart (F03); audio is not built yet (F02).
   bool bgm;
   bool sfx;
   bool rumble;

@@ -8,6 +8,7 @@ library;
 
 import 'dart:async';
 
+import 'haptics.dart';
 import 'press_feedback.dart';
 
 import 'package:flutter/material.dart';
@@ -172,6 +173,7 @@ class _GameScreenState extends State<GameScreen> {
       final levelUp = game.beginPendingLevelUpEvent();
       if (levelUp == null) break;
       if (!mounted) return;
+      Haptics.levelUp();
       await EventScreen.show(context, levelUp);
     }
   }
@@ -201,6 +203,7 @@ class _GameScreenState extends State<GameScreen> {
       if (!mounted) return;
     }
     if (outcome.exhausted && state.exhaustionPending) {
+      Haptics.collapse();
       setState(() => _exhaustionPresentation = true);
       if (outcome.event != null) {
         await _showEvent(outcome.event!);
@@ -1392,7 +1395,9 @@ class _StatusBar extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(child: StaminaBar(pct: pct)),
           const SizedBox(width: 8),
+          // Flat control: no press travel (TODO 111); the ink ripple marks it.
           PressFeedback(
+            travel: 0,
             child: Material(
               color: D30Colors.accent,
               child: InkWell(

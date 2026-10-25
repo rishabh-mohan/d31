@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'haptics.dart';
 
 import '../engine/game.dart';
 import 'dday_widgets.dart';
@@ -304,6 +305,7 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
     super.initState();
     _open.addStatusListener((status) {
       if (status == AnimationStatus.completed && _step == _Step.opening) {
+        Haptics.reveal();
         setState(() => _step = _Step.card);
       }
     });
