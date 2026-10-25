@@ -16,6 +16,7 @@ import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'game_date.dart';
+import 'pack_mechanics.dart';
 import 'pack.dart';
 import 'state.dart';
 
@@ -224,97 +225,110 @@ class TraitEngine {
   num goalRewardFactor(GameState state) =>
       _factor(state, 'goalReward', 'percentPlusReward', TraitContext.none);
 
-  // --- compiled abilities -------------------------------------------------
-  //
-  // 71 traits ship no `effectList` (`notRefactor: true`): the original keeps
-  // their rule in compiled code, so only the description says what they do.
-  // These are the ones whose description states a usable rule. Where it
-  // names no rate ("random chance", "high chance", "low chance", "cheaper"),
-  // the default below is this project's, not a recovered number, and
-  // `rules.traits.chances` overrides it by trait id.
-
-  static const timeJumper = 69;
-  static const stubborn = 41;
-  static const willNotFalter = 51;
-  static const solitaryGourmet = 21;
-  static const limitedOffer = 34;
-  static const developer = 43;
-  static const walkingEnthusiast = 77;
-  static const multitasker = 49;
-  static const energizer = 84;
-  static const streetPerformer = 210;
-
-  static const _defaultChances = <int, num>{
-    timeJumper: 0.10, // "10% chance of no stamina cost"
-    stubborn: 0.30, // "Random chance" -- not stated
-    willNotFalter: 0.70, // "High chance" -- not stated
-    walkingEnthusiast: 0.50, // "50% chance of +20 Stamina"
-    energizer: 0.05, // "Low chance ... for a day" -- not stated
-  };
-
-  /// Solitary Gourmet's "Food in the Store are cheaper": price factor on
-  /// items tagged `food`. The amount is not stated.
-  num get gourmetPriceFactor =>
-      pack.rules.number('traits', 'gourmetPriceFactor', 0.8);
-
-  /// Whether trait [id] is held, in force and in scope here -- the same test
-  /// an `effectList` effect passes before it pays.
-  bool holds(GameState state, int id) => active(state).any((t) => t.id == id);
-
-  num chanceOf(int id) =>
-      pack.rules.numberMap('traits', 'chances')['$id'] ??
-      _defaultChances[id] ??
-      0;
-
-  /// A compiled ability's dice roll, seeded on the tick and the trait like
-  /// `TICK_RANDOM`, so a card and the block it resolves see the same roll.
-  bool rolls(GameState state, int id, {int salt = 0}) =>
-      holds(state, id) &&
-      Random(state.date.asInt * 31 + id * 101 + salt).nextDouble() <
-          chanceOf(id);
-
-  /// Time Jumper (one tick) or Energizer (the whole day) makes a block free.
-  /// Energizer rolls once per day -- the seed drops the tick -- and the proc
-  /// resets with the next day's roll.
-  bool staminaFree(GameState state) {
-    if (rolls(state, timeJumper)) return true;
-    if (!holds(state, energizer)) return false;
-    final day = GameDate(state.date.day, 0).asInt;
-    return Random(day * 31 + energizer * 101).nextDouble() <
-        chanceOf(energizer);
-  }
-
-  /// Stubborn and I will not falter! each roll their own chance to hold the
-  /// player at 1 stamina instead of collapsing.
-  bool survivesExhaustion(GameState state) =>
-      rolls(state, stubborn) || rolls(state, willNotFalter);
-
-  /// Store price factor: Limited Offer halves everything while its three-day
-  /// clock runs; Solitary Gourmet discounts food. Both compound.
-  num priceFactor(GameState state, GameItem? item) {
-    num factor = 1;
-    if (holds(state, limitedOffer)) factor *= 0.5;
-    if (item != null &&
-        item.detailTypes.contains('food') &&
-        holds(state, solitaryGourmet)) {
-      factor *= gourmetPriceFactor;
+  /// Behavior providers are pack-owned; catalog IDs never imply an ability.
+  Iterable<PackAbility> abilities(GameState state, String type) sync* {
+    if (!enabled) return;
+    for (final trait in active(state)) {
+      final list =
+          pack.mechanics.section('traitAbilities')['${trait.id}'] as List? ??
+          const [];
+      for (var i = 0; i < list.length; i++) {
+        final data = (list[i] as Map).cast<String, dynamic>();
+        if (data['type'] == type &&
+            MechanicRuntime(state).condition(data['when'])) {
+          yield PackAbility(trait.id, i, trait.name, data);
+        }
+      }
     }
-    return factor;
+    final id = state.characterId;
+    final list =
+        pack.mechanics.section('characterAbilities')['$id'] as List? ??
+        const [];
+    if (id != null && pack.characters.containsKey(id)) {
+      for (var i = 0; i < list.length; i++) {
+        final data = (list[i] as Map).cast<String, dynamic>();
+        if (data['type'] == type &&
+            MechanicRuntime(state).condition(data['when'])) {
+          yield PackAbility(-id, i, pack.characters[id]!.name, data);
+        }
+      }
+    }
   }
 
-  /// Developer: "X2 Stamina increase with coffee". Coffee is the pack's
-  /// `caffeine` tag (Coffee 1); Decaf Coffee is tagged `food` only.
-  num itemHpFactor(GameState state, GameItem item) =>
-      item.detailTypes.contains('caffeine') && holds(state, developer) ? 2 : 1;
+  bool holds(GameState state, int id) => active(state).any((t) => t.id == id);
+  bool _roll(GameState state, PackAbility a) {
+    final chance =
+        pack.rules.numberMap('traits', 'chances')['${a.source}'] ??
+        (a.data['chance'] as num? ?? 1);
+    final tick = a.data['period'] == 'day'
+        ? GameDate(state.date.day, 0).asInt
+        : state.date.asInt;
+    return Random(tick * 31 + a.source * 101 + a.index * 7).nextDouble() <
+        chance.clamp(0, 1);
+  }
 
-  /// Multitasker: "+STAT_1 for a random subject when studying". The subject
-  /// is drawn from the tick's seed, so it is fixed before the block resolves.
-  String? multitaskSubject(GameState state) {
-    if (!holds(state, multitasker)) return null;
+  bool abilityRoll(GameState state, PackAbility ability) =>
+      _roll(state, ability);
+
+  bool staminaFree(GameState state) =>
+      abilities(state, 'staminaFree').any((a) => _roll(state, a));
+  bool survivesExhaustion(GameState state) =>
+      abilities(state, 'surviveExhaustion').any((a) => _roll(state, a));
+  num _abilityFactor(GameState state, String type, GameItem? item) {
+    num result = 1;
+    for (final a in abilities(state, type)) {
+      if (!_roll(state, a)) continue;
+      final tag = a.data['itemTag'];
+      if (tag != null && (item == null || !item.detailTypes.contains(tag))) {
+        continue;
+      }
+      final fallback = a.data['factor'] as num? ?? 1;
+      result *= a.data['factorRule'] is String
+          ? pack.rules.number(
+              'traits',
+              a.data['factorRule'] as String,
+              fallback,
+            )
+          : fallback;
+    }
+    return result;
+  }
+
+  num priceFactor(GameState state, GameItem? item) =>
+      _abilityFactor(state, 'priceFactor', item);
+  num itemHpFactor(GameState state, GameItem item) =>
+      _abilityFactor(state, 'itemHpFactor', item);
+  void applyMovement(GameState state) {
+    final tick = state.date.asInt;
+    final legacy = state.walkRolledAt == tick && state.abilityUses.isEmpty;
+    for (final a in abilities(state, 'moveHp')) {
+      final key = '${a.source}:${a.index}:moveHp';
+      if (a.data['oncePerTick'] != false &&
+          (legacy || state.abilityUses[key] == tick)) {
+        continue;
+      }
+      state.abilityUses[key] = tick;
+      if (_roll(state, a)) {
+        state.addHp(a.data['value'] as num? ?? 0);
+      }
+    }
+    state.walkRolledAt = tick; // Old saves retain their movement-proc guard.
+  }
+
+  List<StudyBonus> studyBonuses(GameState state) {
     final subjects = pack.manifest.subjects;
-    if (subjects.isEmpty) return null;
-    final seed = state.date.asInt * 31 + multitasker * 101;
-    return subjects[Random(seed).nextInt(subjects.length)];
+    if (subjects.isEmpty) return const [];
+    return [
+      for (final a in abilities(state, 'studyRandomStat'))
+        if (_roll(state, a))
+          StudyBonus(
+            subjects[Random(
+              state.date.asInt * 31 + a.source * 101 + a.index * 7,
+            ).nextInt(subjects.length)],
+            (a.data['value'] as num? ?? 0).round(),
+            a.name,
+          ),
+    ];
   }
 
   num _sum(GameState state, String type, String key, TraitContext ctx) {
@@ -388,7 +402,8 @@ class TraitEngine {
       case 'tamgoos':
         // The two elective slots, which story 16 fills with science and
         // society -- the enum order recovered in CLAUDE.md §1.
-        return subject == null || subject == 'science' || subject == 'society';
+        return subject == null ||
+            pack.manifest.subjects.skip(3).take(2).contains(subject);
       case 'lowSubject':
         return subject == null || subject == _lowestSubject(state);
       default: // 'all'
@@ -580,3 +595,16 @@ num studyEfficiencyValue(
 }
 
 final _statPlaceholder = RegExp(r'STAT_\d');
+
+class PackAbility {
+  final int source, index;
+  final String name;
+  final Map<String, dynamic> data;
+  PackAbility(this.source, this.index, this.name, this.data);
+}
+
+class StudyBonus {
+  final String subject, source;
+  final int value;
+  const StudyBonus(this.subject, this.value, this.source);
+}

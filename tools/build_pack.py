@@ -948,6 +948,8 @@ def main() -> int:
     print(" events")
     build_events(out)
     build_commerce(out)
+    import export_pack_mechanics
+    export_pack_mechanics.export(out)
     presentation_assets.build(out, story_id=STORY_ID)
     print("done")
     return 0

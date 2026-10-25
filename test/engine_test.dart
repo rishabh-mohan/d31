@@ -7,6 +7,8 @@
 /// that goes nowhere, an effect verb with no handler.
 library;
 
+import 'support/kss_ids.dart';
+
 import 'dart:io';
 import 'dart:math';
 
@@ -133,7 +135,10 @@ Future<void> main() async {
         }
       }
 
-      final handled = EffectEngine.defaultHandlers.keys.toSet();
+      final handled = {
+        ...EffectEngine.defaultHandlers.keys,
+        ...pack.mechanics.section('callbacks').keys,
+      };
       expect(
         usedFuncCodes.difference(handled),
         isEmpty,
@@ -169,7 +174,10 @@ Future<void> main() async {
         }
       }
 
-      final knownFuncs = ConditionEvaluator.defaultFuncs.keys.toSet();
+      final knownFuncs = {
+        ...ConditionEvaluator.defaultFuncs.keys,
+        ...pack.mechanics.section('predicates').keys,
+      };
       expect(
         usedTargets.difference(knownFuncs),
         isEmpty,
@@ -860,9 +868,9 @@ Future<void> main() async {
     });
 
     test('Out of Shape costs stamina, and exercising clears it', () {
-      final game = withTrait(GameState.outOfShapeTraitId);
+      final game = withTrait(KssIds.outOfShapeTraitId);
       expect(studyCost(game), plainStudyCost() + 3);
-      game.clearOutOfShape();
+      game.runHook('exerciseLevelUp');
       expect(studyCost(game), plainStudyCost());
     });
 
@@ -1281,25 +1289,25 @@ Future<void> main() async {
       // condition, TRAIT_EVENT_7 == 1. Pinning that switch to 0 at the cap
       // is what makes the event unreachable there.
       final game = maxedAt(16005);
-      game.state.setSwitch(GameState.outOfShapeSwitch, 1);
-      expect(game.state.switchValue(GameState.outOfShapeSwitch), 0);
-      game.state.addSwitch(GameState.outOfShapeSwitch, 1);
-      expect(game.state.switchValue(GameState.outOfShapeSwitch), 0);
+      game.state.setSwitch(KssIds.outOfShapeSwitch, 1);
+      expect(game.state.switchValue(KssIds.outOfShapeSwitch), 0);
+      game.state.addSwitch(KssIds.outOfShapeSwitch, 1);
+      expect(game.state.switchValue(KssIds.outOfShapeSwitch), 0);
 
       // Below the cap the switch behaves normally -- the rule is the cap,
       // not a blanket ban.
       final fresh = Game.newRun(pack, random: Random(10));
-      fresh.state.setSwitch(GameState.outOfShapeSwitch, 1);
-      expect(fresh.state.switchValue(GameState.outOfShapeSwitch), 1);
+      fresh.state.setSwitch(KssIds.outOfShapeSwitch, 1);
+      expect(fresh.state.switchValue(KssIds.outOfShapeSwitch), 1);
     });
 
     test('exercising clears an Out of Shape already held', () {
       final game = Game.newRun(pack, random: Random(10));
-      game.state.setSwitch(GameState.outOfShapeSwitch, 1);
-      game.state.traits.add(GameState.outOfShapeTraitId);
-      game.clearOutOfShape();
-      expect(game.state.switchValue(GameState.outOfShapeSwitch), 0);
-      expect(game.state.traits, isNot(contains(GameState.outOfShapeTraitId)));
+      game.state.setSwitch(KssIds.outOfShapeSwitch, 1);
+      game.state.traits.add(KssIds.outOfShapeTraitId);
+      game.runHook('exerciseLevelUp');
+      expect(game.state.switchValue(KssIds.outOfShapeSwitch), 0);
+      expect(game.state.traits, isNot(contains(KssIds.outOfShapeTraitId)));
     });
   });
 

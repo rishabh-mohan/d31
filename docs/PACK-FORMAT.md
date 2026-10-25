@@ -9,6 +9,7 @@ trait, the level tables, and every number the loop multiplies.
 packs/kss16/
   pack.json           manifest: calendar, subjects, where you start
   rules.json          every tuning number
+  mechanics.json      custom abilities, persistent blocks, callbacks and gates
   locations.json      places and the actions available at each
   items.json          items, with structured effects
   traits.json         traits, with the original's own effectList
@@ -281,19 +282,20 @@ plain (#314 "Eating Shrimp Crackers in Secret" is `LOCATION_1000` and opens
 with "this class is so boring"; #116 "Library Volunteering" is the Library;
 #256 "Motherlode" is the Gold Mine).
 
-**`FUNC_` targets** are a registry in `lib/engine/conditions.dart`. All 37
+**`FUNC_` targets** resolve pack-owned `mechanics.predicates` first, then the
+generic registry in `lib/engine/conditions.dart`. All 37
 that story 16 uses are implemented, covering items (`FUNC_ITEM_HAVE`,
 `FUNC_ITEM_COUNT`, `FUNC_ITEM_USE_COUNT`), traits, randomness
 (`FUNC_RANDOM_TRUE`, `FUNC_RANDOM_VALUE`), levels, stat extremes
 (`FUNC_GET_LOW_STAT` / `HIGH_STAT`, which return a subject *index*), the
 calendar (`FUNC_TODO_DAY`, `FUNC_IS_WEEKEND`), and location checks.
 
-Exam-time predicates (`FUNC_IS_ENTER_UNIV_*`, `FUNC_GET_CURRENT_EXAM_GRADE`)
-return 0 — the exam milestone is not built yet. Store and regional predicates
+Exam-time predicates read retained exam and enrollment state. Store and regional predicates
 (`FUNC_GET_PREMIUM_LEVEL`, `FUNC_IS_PLAYED_JP`) return 0 deliberately.
 
-To add a verb, pass `funcs:` to `ConditionEvaluator` or add to
-`defaultFuncs`. A target with no handler evaluates false and is listed in the
+To add a content-specific predicate, define it in `mechanics.json`; see
+[MODULAR-PACKS.md](MODULAR-PACKS.md). Extend `defaultFuncs` only for new generic
+engine primitives. A target with no handler evaluates false and is listed in the
 dev panel's **Pack** tab, so it is visible rather than silent.
 
 ## Changers (effects)
@@ -311,7 +313,8 @@ dev panel's **Pack** tab, so it is visible rather than silent.
 increments, and each entry may carry its own `conditionSet`). `funcCode` is
 the gameplay verb, with positional `args`.
 
-All 55 verbs story 16 uses are implemented in `lib/engine/effects.dart`:
+All 55 verbs story 16 uses resolve through its pack callbacks or generic
+`lib/engine/effects.dart` primitives:
 stats (`INCREASE_STAT`, `INCREASE_STAT_ALL`, `INCREASE_LOW_STAT`,
 `INCREASE_RANDOM_STAT`, …), stamina and money, exp, items (`ACQUIRE_ITEM`,
 `ACQUIRE_ITEM_RANDOM`, `REMOVE_ITEM_LIST`, …), traits, locations
@@ -516,3 +519,10 @@ one scavenging decision during dialogue. The duplicate callback clears its flag
 after awarding one copy, preventing repeated application. build_pack.py applies
 the user's provisional override to both male and female scripts. These switches
 are saved through the ordinary switch map; no native probability parity is implied.
+## Mechanics extensions
+
+Optional `mechanics.json` now provides pack-owned custom abilities, named
+callbacks, predicates and persistent special blocks. See
+[MODULAR-PACKS.md](MODULAR-PACKS.md) and `examples/packs/workshop` for the format
+and validation evidence. No mechanics file means no implicit KSS special-block
+or trait behavior; a reused catalog ID alone grants no ability.

@@ -3,6 +3,8 @@
 /// wholesale by the dev panel.
 library;
 
+import 'pack_mechanics.dart';
+
 import 'dart:convert';
 import 'dart:math';
 
@@ -107,12 +109,6 @@ class GameState {
   final Map<int, GameDate> taskDeadlines = {};
   final Map<int, String> taskTitles = {};
 
-  /// The switch the global Out of Shape trait event (10010003) is gated on.
-  /// KSS names a trait event's switch `TRAIT_EVENT_<traitId>`, and trait 7
-  /// is Out of Shape ("Stamina Cost +3 / Regular exercise might help").
-  static const outOfShapeSwitch = 'TRAIT_EVENT_7';
-  static const outOfShapeTraitId = 7;
-
   final Set<int> unlockedLocations = {};
   final Map<int, int> inventory = {}; // itemId -> count
   final Map<int, int> itemUseCounts = {};
@@ -173,6 +169,8 @@ class GameState {
 
   /// Once-per-tick movement and exhaustion checks survive save/resume.
   int? walkRolledAt;
+  final Map<String, int> abilityUses = {};
+  final Map<String, bool> blockOverrides = {};
   int? exhaustionCheckedAt;
 
   /// The reroll counter beside the stamina bar: the account's refresh
@@ -540,10 +538,8 @@ class GameState {
         return;
       }
     }
-    if (name == outOfShapeSwitch && exerciseMaxed) {
-      // A maxed-out exercise level cannot be out of shape. Holding the
-      // switch at 0 is what keeps the Out of Shape trait event from firing,
-      // because that event's only condition is TRAIT_EVENT_7 == 1.
+    final guard = pack.mechanics.section('switchGuards')[name];
+    if (guard != null && !MechanicRuntime(this).condition(guard)) {
       switches[name] = 0;
       return;
     }
@@ -815,6 +811,8 @@ class GameState {
     'usedActionKeysToday': usedActionKeysToday.toList(),
     'movementLocked': movementLocked,
     'walkRolledAt': walkRolledAt,
+    'abilityUses': abilityUses,
+    'blockOverrides': blockOverrides,
     'exhaustionCheckedAt': exhaustionCheckedAt,
     'exhaustionPending': exhaustionPending,
     // A balance held by the account is not the run's to save.
@@ -963,6 +961,12 @@ class GameState {
     );
     state.movementLocked = j['movementLocked'] as bool? ?? false;
     state.walkRolledAt = (j['walkRolledAt'] as num?)?.toInt();
+    (j['abilityUses'] as Map? ?? const {}).forEach(
+      (k, v) => state.abilityUses['$k'] = (v as num).toInt(),
+    );
+    (j['blockOverrides'] as Map? ?? const {}).forEach(
+      (k, v) => state.blockOverrides['$k'] = v == true,
+    );
     state.exhaustionCheckedAt = (j['exhaustionCheckedAt'] as num?)?.toInt();
     state.exhaustionPending = j['exhaustionPending'] as bool? ?? false;
     state._rerolls = (j['rerolls'] as num?)?.toInt() ?? 0;

@@ -143,7 +143,10 @@ void main() {
   group('friend trouble blocks', () {
     test('open from tick 1 of the rolling target day, with enough rapport', () {
       final game = at(retry, 'DATE_2024101800');
-      final gate = Game.recoveredBlockGates['GO_PRO_CONDITION']!;
+      bool gate(GameState state) => Game(
+        pack: state.pack,
+        state: state,
+      ).blockGateOpen('GO_PRO_CONDITION');
       game.state.setSwitch('GO_SEE', 2);
       expect(gate(game.state), isFalse, reason: 'tick 0 is not past it');
       game.state.date = GameDate.parse('DATE_2024101801');
@@ -170,7 +173,10 @@ void main() {
 
     test('Presidential Assist counts toward the diagnosis beats', () {
       final game = at(retry, 'DATE_2024110201');
-      final gate = Game.recoveredBlockGates['HELP_BANJANG_CONDITION']!;
+      bool gate(GameState state) => Game(
+        pack: state.pack,
+        state: state,
+      ).blockGateOpen('HELP_BANJANG_CONDITION');
       expect(gate(game.state), isFalse);
       game.state.setSwitch('NA_BLOCK', 1);
       game.state.setSwitch('BANJANG_STUDY_BLOCK_ON', 1);
@@ -202,7 +208,8 @@ void main() {
       final target = game.state.switchValue('SING_TARGET');
       expect(target, inInclusiveRange(15, 17));
       expect(game.state.switchValue('SING_ENEMY'), inInclusiveRange(1, 6));
-      final win = game.conditions.funcs['FUNC_SING_TARGET']!;
+      num win(state, List<dynamic> args) =>
+          game.conditions.functionValue('FUNC_SING_TARGET', state, args)!;
       expect(win(game.state, const []), 0);
       game.state.setSwitch('SING_COUNT', target);
       expect(win(game.state, const []), 1);
@@ -230,7 +237,8 @@ void main() {
   group('exams', () {
     test('mock exam marks are the stat total against fixed bands', () {
       final game = at(retry, 'DATE_2024101803');
-      final mark = game.conditions.funcs['FUNC_MOCK_EXAM_GOOD']!;
+      num mark(state, List<dynamic> args) =>
+          game.conditions.functionValue('FUNC_MOCK_EXAM_GOOD', state, args)!;
       void total(num value) {
         for (final s in retry.manifest.subjects) {
           game.state.stats[s] = value / retry.manifest.subjects.length;
@@ -254,7 +262,8 @@ void main() {
       }, game.state);
       final subject =
           retry.manifest.subjects[game.state.switchValue('GOLD_SUN_SUBJECT')];
-      final win = game.conditions.funcs['FUNC_IS_GOLD_WIN']!;
+      num win(state, List<dynamic> args) =>
+          game.conditions.functionValue('FUNC_IS_GOLD_WIN', state, args)!;
       game.state.stats[subject] = 2449;
       expect(win(game.state, const []), 0);
       game.state.stats[subject] = 2450;
@@ -366,8 +375,14 @@ void main() {
   });
 
   test('character blocks and abilities follow the chosen character', () {
-    final medical = Game.recoveredBlockGates['MEDICAL_BLOCK_CONDITION']!;
-    final mechanic = Game.recoveredBlockGates['MECHANIC_BLOCK_CONDITION']!;
+    bool medical(GameState state) => Game(
+      pack: state.pack,
+      state: state,
+    ).blockGateOpen('MEDICAL_BLOCK_CONDITION');
+    bool mechanic(GameState state) => Game(
+      pack: state.pack,
+      state: state,
+    ).blockGateOpen('MECHANIC_BLOCK_CONDITION');
     final game = Game.newRun(original);
     expect(medical(game.state) || mechanic(game.state), isFalse);
     game.state.characterId = 70;
@@ -380,7 +395,8 @@ void main() {
     expect(mechanic(game.state), isFalse, reason: 'Robotics Master held');
 
     final singer = at(retry, 'DATE_2024110209');
-    final win = singer.conditions.funcs['FUNC_SING_TARGET']!;
+    num win(state, List<dynamic> args) =>
+        singer.conditions.functionValue('FUNC_SING_TARGET', state, args)!;
     singer.state.setSwitch('SING_TARGET', 30);
     expect(win(singer.state, const []), 0);
     singer.state.characterId = 67;

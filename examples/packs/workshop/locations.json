@@ -1,0 +1,16 @@
+{
+  "locations": [
+    {
+      "id": 801,
+      "name": "Workshop",
+      "actions": [
+        {
+          "locationActionType": "sleep"
+        },
+        {
+          "locationActionType": "study"
+        }
+      ]
+    }
+  ]
+}

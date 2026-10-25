@@ -3,6 +3,8 @@
 /// seeded, so these are deterministic.
 library;
 
+import 'support/kss_ids.dart';
+
 import 'dart:io';
 import 'dart:math';
 
@@ -12,7 +14,6 @@ import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/pack.dart';
-import 'package:d30mode/engine/traits.dart';
 
 late ContentPack pack;
 
@@ -50,7 +51,7 @@ Future<void> main() async {
     test(
       'Time Jumper 69 frees about one tick in ten, card and block alike',
       () {
-        final game = withTraits([TraitEngine.timeJumper]);
+        final game = withTraits([KssIds.timeJumper]);
         final plain = withTraits(const []);
         final study = actionOf(game, 'study');
         var free = 0;
@@ -78,7 +79,7 @@ Future<void> main() async {
     );
 
     test('Energizer 84 frees a whole day or none of it', () {
-      final game = withTraits([TraitEngine.energizer]);
+      final game = withTraits([KssIds.energizer]);
       final study = actionOf(game, 'study');
       var freeDays = 0;
       for (var d = 0; d < 400; d++) {
@@ -120,8 +121,8 @@ Future<void> main() async {
     }
 
     test('Stubborn 41 and I will not falter! 51 roll distinct chances', () {
-      final stubborn = withTraits([TraitEngine.stubborn]);
-      final falter = withTraits([TraitEngine.willNotFalter]);
+      final stubborn = withTraits([KssIds.stubborn]);
+      final falter = withTraits([KssIds.willNotFalter]);
       final s = holdRate(stubborn, (g) => g.traits.survivesExhaustion(g.state));
       final f = holdRate(falter, (g) => g.traits.survivesExhaustion(g.state));
       expect(s, inInclusiveRange(0.22, 0.38)); // "random chance": 30%
@@ -136,7 +137,7 @@ Future<void> main() async {
     });
 
     test('a held-on block leaves 1 stamina; a failed roll collapses', () {
-      final probe = withTraits([TraitEngine.stubborn]);
+      final probe = withTraits([KssIds.stubborn]);
       final afternoon = ticks(probe).where((w) => w.tick >= 6 && w.tick < 12);
       final lucky = afternoon.firstWhere((w) {
         probe.state.date = w;
@@ -147,11 +148,11 @@ Future<void> main() async {
         return !probe.traits.survivesExhaustion(probe.state);
       });
 
-      final held = spendLast(withTraits([TraitEngine.stubborn]), lucky);
+      final held = spendLast(withTraits([KssIds.stubborn]), lucky);
       expect(held.state.hp, 1);
       expect(held.state.date.day, lucky.day, reason: 'the day goes on');
 
-      final fell = spendLast(withTraits([TraitEngine.stubborn]), unlucky);
+      final fell = spendLast(withTraits([KssIds.stubborn]), unlucky);
       expect(fell.state.date.day, isNot(unlucky.day), reason: 'collapsed');
     });
 
@@ -182,7 +183,7 @@ Future<void> main() async {
 
   group('store discounts', () {
     test('Limited Offer 34 halves every Store price for its three days', () {
-      final game = withTraits([TraitEngine.limitedOffer]);
+      final game = withTraits([KssIds.limitedOffer]);
       for (final id in pack.shop.keys) {
         final listed = pack.shop[id]!['price'] as num;
         expect(game.priceOf(id), (listed / 2).round());
@@ -201,7 +202,7 @@ Future<void> main() async {
     });
 
     test('Solitary Gourmet 21 discounts only food-tagged items', () {
-      final game = withTraits([TraitEngine.solitaryGourmet]);
+      final game = withTraits([KssIds.solitaryGourmet]);
       final t = game.traits;
       expect(t.priceFactor(game.state, pack.items[1]), 0.8); // Coffee: food
       expect(t.priceFactor(game.state, pack.items[11]), 0.8); // Royal Meal
@@ -212,7 +213,7 @@ Future<void> main() async {
         expect(game.priceOf(id), pack.shop[id]!['price']);
       }
 
-      game.state.grantTrait(TraitEngine.limitedOffer);
+      game.state.grantTrait(KssIds.limitedOffer);
       expect(t.priceFactor(game.state, pack.items[1]), closeTo(0.4, 1e-9));
       expect(t.priceFactor(withTraits(const []).state, pack.items[1]), 1);
     });
@@ -229,16 +230,16 @@ Future<void> main() async {
 
     expect(pack.items[1]!.detailTypes, contains('caffeine'));
     expect(gainFrom(1, const []), 25);
-    expect(gainFrom(1, [TraitEngine.developer]), 50);
+    expect(gainFrom(1, [KssIds.developer]), 50);
     // Decaf Coffee is tagged food only: no caffeine, no doubling.
-    expect(gainFrom(2, [TraitEngine.developer]), 15);
-    expect(gainFrom(9, [TraitEngine.developer]), 30); // White Milk
+    expect(gainFrom(2, [KssIds.developer]), 15);
+    expect(gainFrom(9, [KssIds.developer]), 30); // White Milk
   });
 
   test(
     'Walking Enthusiast 77 pays +20 on about half of moves, once a tick',
     () {
-      final game = withTraits([TraitEngine.walkingEnthusiast]);
+      final game = withTraits([KssIds.walkingEnthusiast]);
       final places = game.state.unlockedLocations.toList()..sort();
       expect(places.length, greaterThan(1));
       game.state.locationId = places.first;

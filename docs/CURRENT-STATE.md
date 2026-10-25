@@ -2,6 +2,24 @@
 
 Read this checkpoint before dated historical notes. [TODO.md](../TODO.md) tracks per-item status; [the branch integration report](BRANCH-INTEGRATION-2026-10-25.md) records the original assignments and remaining blockers. Code/tests are the implementation source of truth; original-game references establish targets, not proof that a feature exists.
 
+## Modular pack mechanics
+
+Custom trait/character abilities, special blocks, callbacks, predicates, text
+macros and progression hooks now live in optional pack `mechanics.json`.
+KSS definitions are tracked in `content/kss/mechanics.json` and exported by
+the generator; custom pack IDs and blocks need no campaign-specific engine
+branches. The standalone `examples/packs/workshop` demonstrates authoring and
+same-ID isolation. Independent editable packs are discovered on desktop and
+Android. See [MODULAR-PACKS.md](MODULAR-PACKS.md) for the format and limits.
+
+Validation: both campaigns regenerate; analysis clean; 323-test full suite
+(including 200 seeded complete runs) plus four additional custom regressions,
+covering 327 unique tests. Logs are listed in the authoring guide.
+Profile build and phone deployment are in progress; the installed-artifact
+record below still identifies the previous build until replacement completes.
+TODO 39 includes shop refresh notification, reroll previews and their screenshots
+as reminder-only work alongside book-completion item gacha.
+
 ## Integrated on main
 
 - Home and captured Settings/Mail Box/Profile/Charging/Store destinations are connected. Username and preferences persist; first rename is free, subsequent changes cost nine cookies. Real purchases, ads, invitations and mail delivery remain unavailable. Notices and the seasonal destination still lack references.

@@ -1,0 +1,10 @@
+{
+  "characters": [
+    {
+      "id": 70,
+      "name": "Artisan",
+      "isDefault": true,
+      "effectDescription": "Crafting pays 7 extra Gold."
+    }
+  ]
+}

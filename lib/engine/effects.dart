@@ -17,6 +17,7 @@ library;
 import 'dart:math';
 
 import 'conditions.dart';
+import 'pack_mechanics.dart';
 import 'traits.dart';
 import 'pack.dart';
 import 'state.dart';
@@ -36,6 +37,7 @@ class EffectEngine {
   /// lists these: an unimplemented verb silently doing nothing is exactly the
   /// bug that is hardest to notice.
   final Set<String> unknownFuncCodes = {};
+  int _callbackCalls = 0;
 
   /// Set when an effect ends the run, so the caller can stop the loop.
   bool endRequested = false;
@@ -89,15 +91,48 @@ class EffectEngine {
 
     final code = changer['funcCode'] as String?;
     if (code == null) return;
-    final handler = handlers[code];
-    if (handler == null) {
-      unknownFuncCodes.add(code);
-      return;
-    }
     final exerciseBefore = state.exerciseLevel.level;
     final workBefore = state.partTimeLevel.level;
-    handler(state, (changer['args'] as List?) ?? const [], this);
+    _callbackCalls = 0;
+    try {
+      _dispatch(code, (changer['args'] as List?) ?? const [], state, 0);
+    } on FormatException catch (error) {
+      unknownFuncCodes.add('$code: ${error.message}');
+    }
     _recordLevelChanges(state, exerciseBefore, workBefore);
+  }
+
+  void _dispatch(String code, List<dynamic> args, GameState state, int depth) {
+    if (depth > 16 || ++_callbackCalls > 1000) {
+      throw const FormatException('Callback recursion/operation limit');
+    }
+    final steps = state.pack.mechanics.section('callbacks')[code];
+    void call(String name, List<dynamic> values) =>
+        _dispatch(name, values, state, depth + 1);
+    if (steps is List) {
+      MechanicRuntime(
+        state,
+        args,
+      ).execute(steps, call: call, pulse: pulsedSwitches.add);
+    } else {
+      final handler = handlers[code];
+      if (handler == null) {
+        unknownFuncCodes.add(code);
+        return;
+      }
+      handler(state, args, this);
+    }
+    final traits = TraitEngine(pack: state.pack);
+    for (final ability in traits.abilities(state, 'callback')) {
+      if (ability.data['callback'] == code &&
+          traits.abilityRoll(state, ability)) {
+        MechanicRuntime(state, args).execute(
+          ability.data['steps'] as List? ?? const [],
+          call: call,
+          pulse: pulsedSwitches.add,
+        );
+      }
+    }
   }
 
   /// Applies one item's `effects` list. Consumables apply on use; normal
@@ -251,33 +286,10 @@ class EffectEngine {
   static Iterable<String> _tamgoos(GameState s) =>
       s.pack.manifest.subjects.skip(3).take(2);
 
-  /// Advances one of the special side tracks: [counter] is the switch its
-  /// storyline reads. The step comes from `rules.specialTracks.stepPerSession`
-  /// (1, as the native) so it can be retuned.
-  static void _advanceTrack(GameState s, String counter) {
-    final step = s.pack.rules
-        .number('specialTracks', 'stepPerSession', 1)
-        .toInt();
-    s.addSwitch(counter, step);
-  }
-
-  static void _pulse(GameState s, EffectEngine e, String name) {
-    s.setSwitch(name, 1);
-    e.pulsedSwitches.add(name);
-  }
-
   static final Map<String, ChangerHandler> defaultHandlers = {
     // The host owns the loss-of-day sequence, after this global dialogue.
     // Do not charge the stat penalty or roll the date a second time here.
     'DEFAULT_FAIL_EVENT': (s, a, e) {},
-    // Exercising cures Out of Shape. Trait *effects* stay parked by
-    // rules.traits.enabled, but the trait and the switch its global event
-    // (10010003, gated on TRAIT_EVENT_7 == 1) waits on are cleared here, so
-    // the event cannot fire again off a stale switch.
-    'REMOVE_TRAIT_FROM_EXERCISE': (s, a, e) {
-      s.switches[GameState.outOfShapeSwitch] = 0;
-      s.removeTrait(GameState.outOfShapeTraitId);
-    },
     // --- stats ---
     'INCREASE_STAT': (s, a, e) =>
         s.addStat(_subjectAt(s, _int(a, 0) ?? 0), _num(a, 1)),
@@ -339,38 +351,6 @@ class EffectEngine {
         return;
       }
       s.addItem(id, _int(a, 1) ?? 1);
-    },
-    // User-selected prototype rule (2026-10-25): ginseng wins over a
-    // 20% gloves proc; gloves repeat the exact herb, never redraw the pool.
-    'SCAVENGE_ITEM': (s, a, e) {
-      s.setSwitch('GATHER_DOUBLE', 0);
-      s.setSwitch('GATHER_GINSENG', 0);
-      s.setSwitch('GATHER_ITEM', 0);
-      final pool = a
-          .whereType<num>()
-          .map((n) => n.toInt())
-          .where(s.pack.items.containsKey)
-          .toList();
-      if (pool.isEmpty) return;
-      final id = pool[s.random.nextInt(pool.length)];
-      s.addItem(id);
-      s.setSwitch('GATHER_ITEM', id);
-      if (s.pack.manifest.storyId != 20 || s.locationId != 20001) return;
-      final tick = s.date.asInt;
-      final digger = TraitEngine(pack: s.pack).holds(s, 200);
-      final ginseng = digger && Random(tick * 31 + 200 * 101).nextDouble() < .2;
-      if (ginseng) {
-        s.setSwitch('GATHER_GINSENG', 1);
-      } else if (s.itemCount(90009) > 0 &&
-          Random(tick * 31 + 90009 * 101).nextDouble() < .2) {
-        s.setSwitch('GATHER_DOUBLE', 1);
-      }
-    },
-    'DUPLICATE_SCAVENGED_ITEM': (s, a, e) {
-      final id = s.switchValue('GATHER_ITEM');
-      if (s.switchValue('GATHER_DOUBLE') != 1 || id <= 0) return;
-      s.addItem(id);
-      s.setSwitch('GATHER_DOUBLE', 0);
     },
     'ACQUIRE_ITEM_RANDOM': (s, a, e) {
       final pool = a.whereType<num>().map((n) => n.toInt()).toList();
@@ -490,15 +470,10 @@ class EffectEngine {
       final name = _str(a, 0);
       if (name != null) s.addSwitch(name, _num(a, 1).toInt());
     },
-    'ADD_BLOCK': (s, a, e) {
-      // Both shipped [1] calls announce Idol Practice. Its existing gate
-      // persists in save data until a later scene clears IDOL_BLOCK.
-      if (s.pack.manifest.storyId == 16 && _int(a, 0) == 1) {
-        s.setSwitch('IDOL_BLOCK', 1);
-      } else {
-        e.unknownFuncCodes.add('ADD_BLOCK($a)');
-      }
-    },
+    'ENABLE_BLOCK': (s, a, e) =>
+        MechanicRuntime(s).setBlock(a.isEmpty ? '' : a[0], true),
+    'DISABLE_BLOCK': (s, a, e) =>
+        MechanicRuntime(s).setBlock(a.isEmpty ? '' : a[0], false),
 
     // --- authored task deadlines ---
     'ADD_TODO': (s, a, e) {
@@ -560,112 +535,6 @@ class EffectEngine {
       }
       s.setSwitch(continuation, 1);
       s.note('Ending: ${_str(a, 0) ?? ''}', 'event');
-    },
-    'SET_DOK_BANG': (s, a, e) {
-      final rules = s.pack.rules.section('reflectionRoom');
-      final room = (rules['locationId'] as num?)?.toInt();
-      if (room == null) {
-        e.unknownFuncCodes.add('SET_DOK_BANG(missing rules)');
-        return;
-      }
-      final ordinary = (rules['ordinaryLocationIds'] as List? ?? const [])
-          .whereType<num>()
-          .map((id) => id.toInt());
-      final confined = _int(a, 0) == 1;
-      s.setSwitch('DOK_BANG_ON', confined ? 1 : 0);
-      if (confined) {
-        s.unlockedLocations.removeAll(ordinary);
-        s.unlockedLocations.add(room);
-        s.locationId = room;
-        e.moveToLocation = room;
-      } else {
-        s.unlockedLocations.remove(room);
-        s.unlockedLocations.addAll(ordinary);
-        s.locationId =
-            (rules['exitLocationId'] as num?)?.toInt() ??
-            s.pack.manifest.startLocationId;
-        e.moveToLocation = s.locationId;
-      }
-      s.movementLocked = confined;
-    },
-
-    // --- the special location tracks -------------------------------------
-    //
-    // Each practice block adds one to the counter its storyline reads: the
-    // native handlers (idolAction, proGameAction, soccerAction,
-    // medicalAction, mechanicAction, practicePsychic) are a single `+ 1`.
-    // Story 16's idol beats fire at IDOL 10/25/50, soccer at SOCCER
-    // 10/30/50, the pro-gaming results branch on GAME 10/50/100; Ihyeon's
-    // potion levels need MEDICAL_COUNT 10, Hyunho's robots ROBOT_COUNT 10.
-    // The step stays tunable under `rules.specialTracks`.
-    'IDOL_ACTION': (s, a, e) => _advanceTrack(s, 'IDOL'),
-    'PRO_GAME_ACTION': (s, a, e) => _advanceTrack(s, 'GAME'),
-    'SOCCER_ACTION': (s, a, e) => _advanceTrack(s, 'SOCCER'),
-    'MEDICAL_ACTION': (s, a, e) => _advanceTrack(s, 'MEDICAL_COUNT'),
-    'MECHANIC_ACTION': (s, a, e) => _advanceTrack(s, 'ROBOT_COUNT'),
-    'PRACTICE_PSYCHIC': (s, a, e) => _advanceTrack(s, 'PSYCHIC_PRACTICE_COUNT'),
-
-    // --- Retry Year's compiled callbacks ----------------------------------
-    //
-    // Each is the disassembled body from the Korean native, not a guess.
-    // Addresses are recorded in docs/RETRY-YEAR.md.
-
-    // sub_bdc1b0 / sub_bdc264 / sub_bdc318: a friend's trouble block raises
-    // the switch their story waits on.
-    'DO_GO_BANJANG': (s, a, e) => s.setSwitch('NA_BLOCK', 1),
-    'DO_GO_LEE': (s, a, e) => s.setSwitch('LEE_BLOCK', 1),
-    'DO_GO_PRO': (s, a, e) => s.setSwitch('GO_BLOCK', 1),
-    // sub_bdb8dc: each assist counts toward Banjang's three diagnosis beats.
-    'DO_HELP_BANJANG': (s, a, e) => s.addSwitch('BANJANG_COUNT', 1),
-    // sub_bdc0d0 / sub_bdb9d8 / sub_bdbab8: raise, check events, lower.
-    'DO_GATHER': (s, a, e) => _pulse(s, e, 'GRASS_SW'),
-    'DO_MAKE_FOOD': (s, a, e) => _pulse(s, e, 'MAKE_FOOD_BLOCK'),
-    'DO_SINGKING': (s, a, e) => _pulse(s, e, 'SING_KING_BLOCK'),
-    // sub_bdbb98: practice is worth 2 with item 90008 in the bag, else 1.
-    // A character whose ability is SING_MONEY (67) is also paid each time;
-    // the amount is a remote-config value not in the binary, so
-    // rules.karaoke.money stands in for it.
-    'DO_KARAOKE': (s, a, e) {
-      if (TraitEngine(pack: s.pack).holds(s, TraitEngine.streetPerformer)) {
-        s.addMoney(600);
-      }
-      s.addSwitch('SING_COUNT', s.itemCount(90008) > 0 ? 2 : 1);
-      if (s.pack.characters[s.characterId]?.specialFuncCode == 'SING_MONEY') {
-        s.addMoney(s.pack.rules.number('karaoke', 'money', 1000));
-      }
-    },
-    // sub_be9578: the next trouble block opens three days after the last
-    // target, rolling the month over.
-    'SET_NEXT_TARGET_BLOCK_CONDITION': (s, a, e) {
-      final month = s.switchValue('BLOCK_TARGET_MONTH');
-      final day = s.switchValue('BLOCK_TARGET_DAY');
-      if (month <= 0 || day <= 0) return;
-      final next = DateTime(s.date.day.year, month, day + 3);
-      s.setSwitch('BLOCK_TARGET_MONTH', next.month);
-      s.setSwitch('BLOCK_TARGET_DAY', next.day);
-    },
-    // sub_bea5f8 (0xff1048): the opponent and the practice they demand.
-    'SET_SING_TARGET': (s, a, e) {
-      final point = s.switchValue('SING_POINT');
-      s.setSwitch('SING_TARGET', (point * 1.5 + s.random.nextInt(3)).round());
-      s.setSwitch('SING_ENEMY', s.random.nextInt(6) + 1);
-    },
-    // sub_be9f38: Taeyang's bet. The argument names the mock exam (1-3) and
-    // the subject is drawn at random; FUNC_IS_GOLD_WIN settles it.
-    'SET_GOLD_SUN_VALUE': (s, a, e) {
-      final subjects = s.pack.manifest.subjects;
-      if (subjects.isEmpty) return;
-      s.setSwitch('GOLD_ORDER', _int(a, 0) ?? 1);
-      s.setSwitch('GOLD_SUN_SUBJECT', s.random.nextInt(subjects.length));
-    },
-    // sub_be973c: moving up to the Higher class closes the Lower class's
-    // haunts and sends you to the classroom.
-    'SET_HIGH_GOGO': (s, a, e) {
-      s.setSwitch('HIGH_GOGO', 1);
-      s.unlockedLocations.removeAll(const [2000, 20001, 20002, 20003, 20004]);
-      s.locationId = 1000;
-      s.unlockedLocations.add(1000);
-      e.moveToLocation = 1000;
     },
     // Takes one copy of the first listed item the player holds.
     'REMOVE_ITEM_ONCE': (s, a, e) {

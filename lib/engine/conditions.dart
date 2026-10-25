@@ -14,6 +14,7 @@
 library;
 
 import 'game_date.dart';
+import 'pack_mechanics.dart';
 import 'pack.dart';
 import 'state.dart';
 
@@ -29,8 +30,30 @@ class ConditionEvaluator {
   /// pack using a verb the engine lacks is visible rather than silently false.
   final Set<String> unknownTargets = {};
 
+  /// Resolve pack predicates before generic built-in functions.
+  num? functionValue(String name, GameState state, List<dynamic> args) {
+    if (state.pack.mechanics.section('predicates').containsKey(name)) {
+      return MechanicRuntime(state, args).number({'predicate': name});
+    }
+    final handler = funcs[name];
+    if (handler == null) {
+      unknownTargets.add(name);
+      return null;
+    }
+    return handler(state, args);
+  }
+
   bool evaluate(Map<String, dynamic>? set, GameState state) {
     if (set == null) return true;
+    if (set.isNotEmpty &&
+        !set.keys.any({'conditions', 'operator', 'left', 'right'}.contains)) {
+      try {
+        return MechanicRuntime(state).condition(set);
+      } on FormatException catch (error) {
+        unknownTargets.add('expression: ${error.message}');
+        return false;
+      }
+    }
 
     final conditions = set['conditions'];
     if (conditions is List) {
@@ -142,12 +165,7 @@ class ConditionEvaluator {
         return state.locationId == id ? 1 : 0;
 
       case 'func':
-        final handler = funcs[target];
-        if (handler == null) {
-          unknownTargets.add(target);
-          return null;
-        }
-        return handler(state, args);
+        return functionValue(target, state, args);
 
       default:
         unknownTargets.add(target);
@@ -254,38 +272,6 @@ class ConditionEvaluator {
       );
       return _b(s.date.day.isAfter(day));
     },
-    // qtl (0xadfef0): the mock exam's mark is the current stat total against
-    // that exam's two thresholds -- 1 below the first, 2 between, 3 above.
-    'FUNC_MOCK_EXAM_GOOD': (s, a) {
-      const thresholds = {
-        1: [1500, 1750],
-        2: [3500, 4250],
-        3: [8500, 9500],
-      };
-      final bands = thresholds[_intArg(a, 0)];
-      if (bands == null) return 0;
-      final total = s.totalStat;
-      var grade = 1;
-      for (final t in bands) {
-        if (total < t) return grade;
-        grade++;
-      }
-      return grade;
-    },
-    // rtl (0xadfc04): beat Taeyang's mark in the bet subject. His marks for
-    // bets 1-3 are fixed in the binary.
-    'FUNC_IS_GOLD_WIN': (s, a) {
-      const marks = {1: 370, 2: 1180, 3: 2450};
-      final mark = marks[s.switchValue('GOLD_ORDER')];
-      final subjects = s.pack.manifest.subjects;
-      final index = s.switchValue('GOLD_SUN_SUBJECT');
-      if (mark == null || index < 0 || index >= subjects.length) return 0;
-      return _b((s.stats[subjects[index]] ?? 0) >= mark);
-    },
-    // ttl (0xadf8a4): enough practice for the opponent SET_SING_TARGET drew.
-    // Character 67's ability is a guaranteed win.
-    'FUNC_SING_TARGET': (s, a) => _b(singOffWins(s)),
-
     'FUNC_COMPARE_SWITCH': (s, a) {
       final name = a.isNotEmpty ? a[0]?.toString() : null;
       return name == null ? 0 : s.switchValue(name);
@@ -301,12 +287,12 @@ class ConditionEvaluator {
     },
     'FUNC_IS_ENTER_UNIV': (s, a) =>
         _b(_enrolled(s)?.universityId == _intArg(a, 0)),
-    'FUNC_IS_ENTER_UNIV_WITH_DEPART': (s, a) =>
-        _b(_enrolled(s)?.universityId == _intArg(a, 0) &&
-            s.enrolledDepartment == _intArg(a, 1)),
-    'FUNC_IS_ENTER_DEPART_LIST': (s, a) => _b(
-      a.whereType<num>().any((n) => n.toInt() == s.enrolledDepartment),
+    'FUNC_IS_ENTER_UNIV_WITH_DEPART': (s, a) => _b(
+      _enrolled(s)?.universityId == _intArg(a, 0) &&
+          s.enrolledDepartment == _intArg(a, 1),
     ),
+    'FUNC_IS_ENTER_DEPART_LIST': (s, a) =>
+        _b(a.whereType<num>().any((n) => n.toInt() == s.enrolledDepartment)),
     // Enrolled somewhere whose cutoff is at or above this percentile.
     'FUNC_IS_ENTER_UNIV_THAT_RATE': (s, a) {
       final department = _enrolled(s);
@@ -318,8 +304,7 @@ class ConditionEvaluator {
     // id (58's branches in #189/#210, 66's Weird Cookie), but the name and
     // the sibling *_LIST predicates take any number.
     'FUNC_IS_IN_CHARACTER_LIST': (s, a) => _b(
-      s.characterId != null &&
-          a.any((id) => _intArg([id], 0) == s.characterId),
+      s.characterId != null && a.any((id) => _intArg([id], 0) == s.characterId),
     ),
 
     // Store / regional predicates with no meaning in a local build. They
@@ -328,14 +313,6 @@ class ConditionEvaluator {
     'FUNC_GET_PREMIUM_LEVEL': (s, a) => 0,
     'FUNC_IS_PLAYED_JP': (s, a) => 0,
   };
-
-  /// The sing-off's result, shared by FUNC_SING_TARGET and the Scouter's
-  /// forecast so the two can never disagree: enough practice for the
-  /// opponent SET_SING_TARGET drew, or character 67, whose ability is a
-  /// guaranteed win.
-  static bool singOffWins(GameState s) =>
-      s.characterId == 67 ||
-      s.switchValue('SING_COUNT') >= s.switchValue('SING_TARGET');
 
   static int _taskDays(GameState state, List<dynamic> args) {
     // Whole-day view of the authored task deadline. Native partial-day

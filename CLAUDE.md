@@ -8,8 +8,13 @@ before starting work. The five interrupted branches' recoverable work is now
 integrated on main; their original worktrees are recovery copies, not newer
 source to copy over main. A14/I03 are now implemented using the later user
 clarifications in docs/CLARIFIED-MECHANICS-2026-10-25.md, including the provisional
-20% exact-herb gloves override and persistent Practice Block availability. Current validation is 318 passing tests,
-clean analysis and a successfully installed/cold-started Nord profile build.
+20% exact-herb gloves override and persistent Practice Block availability.
+Pack-specific abilities, special blocks, predicates and story callbacks now
+belong in `mechanics.json`, not engine checks for a catalog ID. Read
+`docs/MODULAR-PACKS.md` and `examples/packs/workshop` before adding pack behavior.
+Validation: clean analysis, 323-test full suite plus four additional
+custom-pack regressions (327 unique tests). Consult CURRENT-STATE for the latest
+Nord deployment evidence.
 The dated notes below remain useful evidence but may describe older behavior.
 
 Keep TODO statuses and the current checkpoint synchronized after changes.

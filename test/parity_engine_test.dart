@@ -48,7 +48,8 @@ void main() {
       game.state.addItem(90021);
       game.state.setSwitch('SING_TARGET', 15);
       game.state.setSwitch('SING_COUNT', 0);
-      final win = game.conditions.funcs['FUNC_SING_TARGET']!;
+      num win(state, List<dynamic> args) =>
+          game.conditions.functionValue('FUNC_SING_TARGET', state, args)!;
 
       game.state.characterId = 1;
       expect(win(game.state, const []), 0);

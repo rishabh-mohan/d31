@@ -1,0 +1,16 @@
+{
+  "id": "workshop",
+  "name": "Workshop example",
+  "calendar": {
+    "startDate": "DATE_2023101600",
+    "endDate": "DATE_2023111600",
+    "ticksPerDay": 15
+  },
+  "start": {
+    "locationId": 801
+  },
+  "subjects": [
+    "craft",
+    "design"
+  ]
+}
