@@ -330,6 +330,34 @@ class GameState {
   final List<int> admittedDepartments = [];
   int? enrolledDepartment;
 
+  // --- the D-Day flow (docs/DDAY-FLOW.md) ---------------------------------
+
+  /// Subjects whose exam card has been taken, in order, and what each said.
+  final List<String> examCardsDone = [];
+  final Map<String, int> examCardScores = {};
+  final Map<String, String> examResponses = {};
+
+  /// The score announcement has been shown and confirmed.
+  bool scoreAnnounced = false;
+
+  /// The draft candidates, one entry per slot (null = empty). Separate from
+  /// [applications], which only a committed draft fills.
+  final List<int?> draft = [];
+
+  /// The draft was committed: [applications] / [applicationRates] /
+  /// [admittedDepartments] are final and never rolled again.
+  bool applicationsCommitted = false;
+
+  /// The displayed acceptance rate of each [applications] entry when it was
+  /// committed (the rate the roll used).
+  final List<int> applicationRates = [];
+
+  /// The envelope animations / combined results have been confirmed.
+  bool resultsReviewed = false;
+
+  /// Enrollment (or the retake academy) was chosen; the endings are on.
+  bool finalDecided = false;
+
   final List<LogEntry> log = [];
   bool finished = false;
   String? endingLabel;
@@ -836,6 +864,15 @@ class GameState {
     'applications': applications,
     'admittedDepartments': admittedDepartments,
     'enrolledDepartment': enrolledDepartment,
+    'examCardsDone': examCardsDone,
+    'examCardScores': examCardScores,
+    'examResponses': examResponses,
+    'scoreAnnounced': scoreAnnounced,
+    'draft': draft,
+    'applicationsCommitted': applicationsCommitted,
+    'applicationRates': applicationRates,
+    'resultsReviewed': resultsReviewed,
+    'finalDecided': finalDecided,
   };
 
   String toPrettyJson() => const JsonEncoder.withIndent('  ').convert(toJson());
@@ -1015,6 +1052,37 @@ class GameState {
       );
     }
     state.enrolledDepartment = (j['enrolledDepartment'] as num?)?.toInt();
+    state.examCardsDone.addAll(
+      (j['examCardsDone'] as List? ?? const []).map((v) => '$v'),
+    );
+    for (final e in ((j['examCardScores'] as Map?) ?? const {}).entries) {
+      state.examCardScores['${e.key}'] = (e.value as num).toInt();
+    }
+    for (final e in ((j['examResponses'] as Map?) ?? const {}).entries) {
+      state.examResponses['${e.key}'] = '${e.value}';
+    }
+    state.draft.addAll(
+      (j['draft'] as List? ?? const []).map((v) => v is num ? v.toInt() : null),
+    );
+    state.applicationRates.addAll(
+      (j['applicationRates'] as List? ?? const []).whereType<num>().map(
+        (n) => n.toInt(),
+      ),
+    );
+    // Saves from before the flow had stages: infer them from what exists, so
+    // a run resumed mid-exam lands where it stood and nothing is skipped
+    // backwards.
+    final sat = state.csat != null;
+    final committed =
+        j['applicationsCommitted'] as bool? ?? state.applications.isNotEmpty;
+    state.applicationsCommitted = committed;
+    state.scoreAnnounced = j['scoreAnnounced'] as bool? ?? (sat || committed);
+    state.resultsReviewed = j['resultsReviewed'] as bool? ?? committed;
+    state.finalDecided =
+        j['finalDecided'] as bool? ?? (state.switches['ENDING_CODE'] == 1);
+    if (!j.containsKey('examCardsDone') && (sat || state.finalDecided)) {
+      state.examCardsDone.addAll(pack.manifest.subjects);
+    }
     return state;
   }
 }
