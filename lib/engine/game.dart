@@ -1445,13 +1445,23 @@ class Game {
     ];
   }
 
+  /// What an offer costs today: the listed price after Limited Offer's 50%
+  /// and Solitary Gourmet's food discount. The Store shows this number.
+  int priceOf(int offerId) {
+    final offer = pack.shop[offerId];
+    if (offer == null) return 0;
+    final listed = offer['price'] as num;
+    final item = pack.items[(offer['itemId'] as num?)?.toInt()];
+    return (listed * traits.priceFactor(state, item)).round();
+  }
+
   String? purchase(int offerId) {
     final offer = pack.shop[offerId];
     if (offer == null) return 'This item is unavailable.';
     final week =
         (state.dayIndex + 2) ~/ 7; // run begins Monday; restock Saturday.
     final key = '$week:$offerId';
-    final price = (offer['price'] as num).toInt();
+    final price = priceOf(offerId);
     final limit = (offer['stock'] as num?)?.toInt() ?? 1;
     if ((state.shopPurchases[key] ?? 0) >= limit) {
       return 'Sold out until Saturday.';
