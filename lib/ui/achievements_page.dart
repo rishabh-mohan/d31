@@ -141,6 +141,8 @@ class _AchievementsPageState extends State<AchievementsPage> {
     child: Container(
       width: 121 * u,
       height: 37 * u,
+      // Clip so the orange arrow cell fills to the rounded border.
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: HomeColors.paper,
         borderRadius: BorderRadius.circular(8 * u),
