@@ -20,7 +20,9 @@ from pathlib import Path
 # Edit tools/us_colleges.csv, then rebuild the packs (build_pack.py, both
 # stories). One row per regular Korean university: korean_id is the key,
 # korean_name and rank are there to read by, us_name and us_color (hex, no #)
-# are what the US set shows. Rows run in the original's rank order.
+# are what the US set shows, and us_crest is its emblem under assets/images/
+# (tools/fetch_us_seals.py fills it with each school's seal; blank keeps the
+# Korean crest). Rows run in the original's rank order.
 CSV = Path(__file__).with_name("us_colleges.csv")
 
 
@@ -28,13 +30,14 @@ def _load():
     with CSV.open(encoding="utf-8", newline="") as f:
         return {
             int(row["korean_id"]): (row["us_name"].strip(),
-                                    row["us_color"].strip().lstrip("#") or None)
+                                    row["us_color"].strip().lstrip("#") or None,
+                                    (row.get("us_crest") or "").strip() or None)
             for row in csv.DictReader(f)
             if row.get("korean_id", "").strip()
         }
 
 
-# id: (name, colorCode)
+# id: (name, colorCode, crest)
 US_COLLEGES = _load()
 
 # Words that would echo a global university's name.
@@ -53,7 +56,7 @@ def check(universities):
     extra = US_COLLEGES.keys() - regular
     assert not missing, f"Korean universities without a US name: {sorted(missing)}"
     assert not extra, f"US names for non-regular universities: {sorted(extra)}"
-    names = [n for n, _ in US_COLLEGES.values()]
+    names = [n for n, _, _ in US_COLLEGES.values()]
     assert len(set(names)) == len(names), "duplicate US university names"
     globals_ = [by_id[i].get("engName", "") for i in by_id
                 if by_id[i].get("type") == "studyAbroad"]

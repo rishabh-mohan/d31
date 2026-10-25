@@ -16,22 +16,19 @@ import 'dart:math';
 
 /// The pack's catalog file: `colleges.json`, or `admissions.json`, the name
 /// packs built before TODO 41 used.
-String? collegesFile(Map<String, String> files) => files.containsKey(
-  'colleges.json',
-)
+String? collegesFile(Map<String, String> files) =>
+    files.containsKey('colleges.json')
     ? 'colleges.json'
     : files.containsKey('admissions.json')
     ? 'admissions.json'
     : null;
 
 /// Lays a university set over a pack's files. [overlay] is a
-/// `colleges_<set>.json`: `{"universities": [{"id", "name", "colorCode"?}]}`.
-/// Each listed university is renamed (and recoloured) in the catalog and in
+/// `colleges_<set>.json`: `{"universities": [{"id", "name", "colorCode"?,
+/// "crest"?}]}`. Each listed university is renamed (recoloured, and given its
+/// own emblem, a path under the images folder) in the catalog and in
 /// `badges.json`; anything unlisted, and every department, stays as it was.
-Map<String, String> overlayColleges(
-  Map<String, String> files,
-  String overlay,
-) {
+Map<String, String> overlayColleges(Map<String, String> files, String overlay) {
   final replace = <int, Map<String, dynamic>>{
     for (final u
         in ((jsonDecode(overlay) as Map)['universities'] as List? ?? const [])
@@ -48,6 +45,7 @@ Map<String, String> overlayColleges(
       if (swap == null) continue;
       if (swap['name'] is String) row['name'] = swap['name'];
       if (swap['colorCode'] is String) row['colorCode'] = swap['colorCode'];
+      if (swap['crest'] is String) row['crest'] = swap['crest'];
     }
     return jsonEncode(json);
   }
@@ -69,6 +67,13 @@ class University {
   final String rank;
   final String? colorCode;
 
+  /// The emblem, a path under the images folder. A pack may give any
+  /// university its own (`crest` in colleges.json or an overlay); otherwise
+  /// the original's crest for that id.
+  final String? crest;
+
+  String get crestPath => crest ?? 'kss/images/university/$id.png';
+
   /// Belongs to one story (Retry Year's two retry universities, say).
   final bool storyOnly;
 
@@ -77,6 +82,7 @@ class University {
     required this.name,
     required this.rank,
     this.colorCode,
+    this.crest,
     this.storyOnly = false,
   });
 
@@ -85,6 +91,7 @@ class University {
     name: j['name'] as String? ?? 'University ${j['id']}',
     rank: j['rank'] as String? ?? 'none',
     colorCode: j['colorCode'] as String?,
+    crest: j['crest'] as String?,
     storyOnly: j['storyOnly'] == true,
   );
 }
@@ -142,13 +149,15 @@ class AdmissionsCatalog {
   factory AdmissionsCatalog.fromJson(Map<String, dynamic> j) =>
       AdmissionsCatalog(
         universities: {
-          for (final u in (j['universities'] as List? ?? const [])
-              .whereType<Map<String, dynamic>>())
+          for (final u
+              in (j['universities'] as List? ?? const [])
+                  .whereType<Map<String, dynamic>>())
             (u['id'] as num).toInt(): University.fromJson(u),
         },
         departments: {
-          for (final d in (j['departments'] as List? ?? const [])
-              .whereType<Map<String, dynamic>>())
+          for (final d
+              in (j['departments'] as List? ?? const [])
+                  .whereType<Map<String, dynamic>>())
             (d['id'] as num).toInt(): Department.fromJson(d),
         },
       );
@@ -212,8 +221,11 @@ class Admissions {
   }
 
   /// Fitted, not recovered: `50 + 10 * (total - mean) / sd`.
-  static double standardScoreFor(num total, {required num mean, required num sd}) =>
-      50 + 10 * (total - mean) / (sd <= 0 ? 1 : sd);
+  static double standardScoreFor(
+    num total, {
+    required num mean,
+    required num sd,
+  }) => 50 + 10 * (total - mean) / (sd <= 0 ? 1 : sd);
 
   /// The chance a department accepts this score. Even at the cutoff it is a
   /// coin flip; `spread` points either side makes it about 73% / 27%.
@@ -229,9 +241,9 @@ class Admissions {
     final y =
         1 -
         (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t -
-                    0.284496736) *
-                t +
-            0.254829592) *
+                        0.284496736) *
+                    t +
+                0.254829592) *
             t *
             exp(-x * x / 2);
     return x >= 0 ? (1 + y) / 2 : (1 - y) / 2;

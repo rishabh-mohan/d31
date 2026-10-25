@@ -279,7 +279,7 @@ class _AchievementsSheetState extends State<AchievementsSheet> {
                 u: u,
                 name: renamed?.name ?? uni.name,
                 colorCode: renamed?.colorCode ?? uni.colorCode,
-                crest: uni.crest,
+                crest: renamed?.crestPath ?? uni.crest,
                 stars: uni.stars,
                 enrollments: account.enrollments[uni.id] ?? 0,
               );

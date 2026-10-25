@@ -94,7 +94,9 @@ class _DailyQuestPanelState extends State<DailyQuestPanel> {
                     SizedBox.square(
                       dimension: 74 * u,
                       child: PackImage(
-                        path: 'kss/images/university/${quest.universityId}.png',
+                        path:
+                            university?.crestPath ??
+                            'kss/images/university/${quest.universityId}.png',
                         fit: BoxFit.contain,
                       ),
                     ),

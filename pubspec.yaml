@@ -43,6 +43,7 @@ flutter:
     - assets/images/stationery/
     # BEGIN import_all_images.py -- generated, do not edit
     - assets/images/kss/images/
+    - assets/images/colleges/us/
     - assets/images/kss/images/cookie_parade/
     - assets/images/kss/images/detail_image/18/
     - assets/images/kss/images/detail_image/20/

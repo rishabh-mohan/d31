@@ -510,8 +510,9 @@ def build_admissions(out: Path):
 
     us_colleges.check(unis)
     write(out, "colleges_us.json", {"universities": [
-        {"id": uid, "name": name, "colorCode": color}
-        for uid, (name, color) in us_colleges.US_COLLEGES.items()
+        {"id": uid, "name": name, "colorCode": color,
+         **({"crest": crest} if crest else {})}
+        for uid, (name, color, crest) in us_colleges.US_COLLEGES.items()
         if uid in keep
     ]})
 
