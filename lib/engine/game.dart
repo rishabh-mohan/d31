@@ -1057,6 +1057,9 @@ class Game {
   /// from. Sleep never costs; it restores.
   num _hpCostOf(LocationAction action) {
     if (action.actionType == 'sleep') return 0;
+    // Time Jumper / Energizer: seeded on the tick (the day, for Energizer),
+    // so the card's 0 is the block's 0.
+    if (traits.staminaFree(state)) return 0;
 
     final base = pack.rules.number('staminaCost', 'base', 9.5);
     final perWeight = pack.rules.number('staminaCost', 'perWeight', 6.25);

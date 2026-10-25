@@ -12,6 +12,7 @@ library;
 
 import 'dart:math';
 
+import 'game_date.dart';
 import 'pack.dart';
 import 'state.dart';
 
@@ -182,6 +183,99 @@ class TraitEngine {
   /// "effect begins the week after obtaining", which is not modelled.
   num goalRewardFactor(GameState state) =>
       _factor(state, 'goalReward', 'percentPlusReward', TraitContext.none);
+
+  // --- compiled abilities -------------------------------------------------
+  //
+  // 71 traits ship no `effectList` (`notRefactor: true`): the original keeps
+  // their rule in compiled code, so only the description says what they do.
+  // These are the ones whose description states a usable rule. Where it
+  // names no rate ("random chance", "high chance", "low chance", "cheaper"),
+  // the default below is this project's, not a recovered number, and
+  // `rules.traits.chances` overrides it by trait id.
+
+  static const timeJumper = 69;
+  static const stubborn = 41;
+  static const willNotFalter = 51;
+  static const solitaryGourmet = 21;
+  static const limitedOffer = 34;
+  static const developer = 43;
+  static const walkingEnthusiast = 77;
+  static const multitasker = 49;
+  static const energizer = 84;
+  static const streetPerformer = 210;
+
+  static const _defaultChances = <int, num>{
+    timeJumper: 0.10, // "10% chance of no stamina cost"
+    stubborn: 0.30, // "Random chance" -- not stated
+    willNotFalter: 0.70, // "High chance" -- not stated
+    walkingEnthusiast: 0.50, // "50% chance of +20 Stamina"
+    energizer: 0.05, // "Low chance ... for a day" -- not stated
+  };
+
+  /// Solitary Gourmet's "Food in the Store are cheaper": price factor on
+  /// items tagged `food`. The amount is not stated.
+  num get gourmetPriceFactor =>
+      pack.rules.number('traits', 'gourmetPriceFactor', 0.8);
+
+  /// Whether trait [id] is held, in force and in scope here -- the same test
+  /// an `effectList` effect passes before it pays.
+  bool holds(GameState state, int id) => active(state).any((t) => t.id == id);
+
+  num chanceOf(int id) =>
+      pack.rules.numberMap('traits', 'chances')['$id'] ??
+      _defaultChances[id] ??
+      0;
+
+  /// A compiled ability's dice roll, seeded on the tick and the trait like
+  /// `TICK_RANDOM`, so a card and the block it resolves see the same roll.
+  bool rolls(GameState state, int id, {int salt = 0}) =>
+      holds(state, id) &&
+      Random(state.date.asInt * 31 + id * 101 + salt).nextDouble() <
+          chanceOf(id);
+
+  /// Time Jumper (one tick) or Energizer (the whole day) makes a block free.
+  /// Energizer rolls once per day -- the seed drops the tick -- and the proc
+  /// resets with the next day's roll.
+  bool staminaFree(GameState state) {
+    if (rolls(state, timeJumper)) return true;
+    if (!holds(state, energizer)) return false;
+    final day = GameDate(state.date.day, 0).asInt;
+    return Random(day * 31 + energizer * 101).nextDouble() <
+        chanceOf(energizer);
+  }
+
+  /// Stubborn and I will not falter! each roll their own chance to hold the
+  /// player at 1 stamina instead of collapsing.
+  bool survivesExhaustion(GameState state) =>
+      rolls(state, stubborn) || rolls(state, willNotFalter);
+
+  /// Store price factor: Limited Offer halves everything while its three-day
+  /// clock runs; Solitary Gourmet discounts food. Both compound.
+  num priceFactor(GameState state, GameItem? item) {
+    num factor = 1;
+    if (holds(state, limitedOffer)) factor *= 0.5;
+    if (item != null &&
+        item.detailTypes.contains('food') &&
+        holds(state, solitaryGourmet)) {
+      factor *= gourmetPriceFactor;
+    }
+    return factor;
+  }
+
+  /// Developer: "X2 Stamina increase with coffee". Coffee is the pack's
+  /// `caffeine` tag (Coffee 1); Decaf Coffee is tagged `food` only.
+  num itemHpFactor(GameState state, GameItem item) =>
+      item.detailTypes.contains('caffeine') && holds(state, developer) ? 2 : 1;
+
+  /// Multitasker: "+STAT_1 for a random subject when studying". The subject
+  /// is drawn from the tick's seed, so it is fixed before the block resolves.
+  String? multitaskSubject(GameState state) {
+    if (!holds(state, multitasker)) return null;
+    final subjects = pack.manifest.subjects;
+    if (subjects.isEmpty) return null;
+    final seed = state.date.asInt * 31 + multitasker * 101;
+    return subjects[Random(seed).nextInt(subjects.length)];
+  }
 
   num _sum(GameState state, String type, String key, TraitContext ctx) {
     num total = 0;

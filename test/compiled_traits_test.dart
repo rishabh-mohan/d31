@@ -1,0 +1,97 @@
+/// The compiled trait abilities (TODO 82/83): traits that ship no
+/// `effectList` and whose rule the engine carries in code. Every roll is
+/// seeded, so these are deterministic.
+library;
+
+import 'dart:io';
+import 'dart:math';
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:d30mode/engine/content_source.dart';
+import 'package:d30mode/engine/game.dart';
+import 'package:d30mode/engine/game_date.dart';
+import 'package:d30mode/engine/pack.dart';
+import 'package:d30mode/engine/traits.dart';
+
+late ContentPack pack;
+
+/// A run parked out of class at the Gym, holding [ids].
+Game withTraits(List<int> ids, {int tick = 7, int seed = 51}) {
+  final game = Game.newRun(pack, random: Random(seed));
+  game.state.date = GameDate(game.state.date.day, tick);
+  game.state.locationId = 16005;
+  for (final id in ids) {
+    expect(game.state.grantTrait(id), isTrue, reason: 'trait $id refused');
+  }
+  game.invalidateHand();
+  return game;
+}
+
+LocationAction actionOf(Game game, String type) =>
+    game.state.location!.actions.firstWhere((a) => a.actionType == type);
+
+/// Every action tick of the 30 days from the run's start.
+Iterable<GameDate> ticks(Game game) sync* {
+  for (var d = 0; d < 30; d++) {
+    final day = GameDate.addDays(pack.manifest.startDate.day, d);
+    for (var t = 0; t < 14; t++) {
+      yield GameDate(day, t);
+    }
+  }
+}
+
+Future<void> main() async {
+  setUpAll(() async {
+    pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
+  });
+
+  group('stamina-free blocks', () {
+    test('Time Jumper 69 frees about one tick in ten, card and block alike', () {
+      final game = withTraits([TraitEngine.timeJumper]);
+      final plain = withTraits(const []);
+      final study = actionOf(game, 'study');
+      var free = 0;
+      var total = 0;
+      for (final when in ticks(game)) {
+        game.state.date = when;
+        plain.state.date = when;
+        total++;
+        if (game.preview(study).hpCost == 0) free++;
+        expect(plain.preview(study).hpCost, greaterThan(0));
+      }
+      // 420 seeded ticks; the stated rate is 10%.
+      expect(free / total, inInclusiveRange(0.05, 0.16));
+
+      // On a free tick the block really costs nothing.
+      final freeTick = ticks(game).firstWhere((when) {
+        game.state.date = when;
+        return when.tick >= 6 && game.preview(study).hpCost == 0;
+      });
+      game.state.date = freeTick;
+      game.state.hp = 50;
+      game.act(study, book: game.bookForSlot(0));
+      expect(game.state.hp, 50);
+    });
+
+    test('Energizer 84 frees a whole day or none of it', () {
+      final game = withTraits([TraitEngine.energizer]);
+      final study = actionOf(game, 'study');
+      var freeDays = 0;
+      for (var d = 0; d < 400; d++) {
+        final day = GameDate.addDays(pack.manifest.startDate.day, d);
+        final costs = {
+          for (var t = 0; t < 14; t++)
+            (() {
+              game.state.date = GameDate(day, t);
+              return game.preview(study).hpCost == 0;
+            })(),
+        };
+        expect(costs, hasLength(1), reason: 'day $day split');
+        if (costs.single) freeDays++;
+      }
+      // "Low chance": 5% of days by default.
+      expect(freeDays, inInclusiveRange(8, 40));
+    });
+  });
+}
