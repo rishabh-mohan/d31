@@ -765,11 +765,18 @@ Future<void> main() async {
       expect(atGym.traits.studyBonus(atGym.state), 0);
     });
 
-    test('an effect with extraStat 0 falls back to storyStat', () {
+    test('an effect with storyStat 0 reads its description unit', () {
       // Trait 160011 "High Potential" reads "+STAT_5" and ships
-      // extraStat 15 / storyStat 0, so the live number is 15.
+      // extraStat 15 / storyStat 0: one stat per unit, so +5 (audit A04).
       final game = withTrait(160011);
-      expect(game.traits.studyBonus(game.state), 15);
+      expect(game.traits.studyBonus(game.state), 5);
+      // Trait 160007 "Entrepreneur": "+STAT_2", extraStat 6 -> +2.
+      final entrepreneur = withTrait(160007);
+      expect(entrepreneur.traits.studyBonus(entrepreneur.state), 2);
+      // Trait 180002 "Worth the Wait" writes a literal "+3" over
+      // extraStat 3, which is already the unit.
+      final worthTheWait = withTrait(180002);
+      expect(worthTheWait.traits.studyBonus(worthTheWait.state), 3);
 
       // And the other way round: story 3's "Western Taste" ships
       // extraStat 0 / storyStat 1 and its description reads "+1".

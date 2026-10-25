@@ -346,11 +346,11 @@ class _SetupScreenState extends State<SetupScreen> {
   );
 }
 
-String effectLabel(Map<String, dynamic> e) {
+String effectLabel(Map<String, dynamic> e, {String description = ''}) {
   final subject = e['plusStatType'] == 'all'
       ? 'All subjects'
       : subjectLabel(e['subjectType'] as String? ?? 'all');
-  final value = studyEfficiencyValue(e);
+  final value = studyEfficiencyValue(e, description: description);
   return switch (e['type']) {
     'plusStat' => '$subject study efficiency +$value',
     'firstPlusStat' => 'Initial $subject stats +${e['stat']}',
