@@ -46,21 +46,27 @@ class Puzzle {
   final int storyId;
   final List<PuzzlePiece> pieces;
 
+  /// Whether full-screen art is bundled. The original ships only the
+  /// Amnesia desk and downloads the rest from Firebase Storage `wallpapers/`
+  /// (sub_aa702c); tools/import_wallpapers.py bundles the ones captured
+  /// from a real install's cache.
+  final bool hasFullImage;
+
   const Puzzle({
     required this.id,
     required this.name,
     required this.description,
     required this.storyId,
     required this.pieces,
+    this.hasFullImage = false,
   });
 
   String get thumbnail => 'kss/images/wallpaper_thumbnail/$id.png';
 
-  /// Full-screen art, where the app ships it (only the Amnesia desk does).
-  /// The original streams the rest from its Firebase Storage `wallpapers/`
-  /// folder (sub_aa702c), which is not reachable from here.
-  String? get fullImage =>
-      id == 'wallpaper0' ? 'kss/images/wallpaper_image/wallpaper0.png' : null;
+  /// Full-screen art, where the app ships it. The Amnesia desk always does.
+  String? get fullImage => hasFullImage || id == 'wallpaper0'
+      ? 'kss/images/wallpaper_image/$id.png'
+      : null;
 
   /// What Home draws when this is the background: the full-screen art, or
   /// failing that the square thumbnail, cropped to fill the screen.
@@ -334,6 +340,7 @@ class AccountCatalog {
                 cookies: (p['cookieCount'] as num?)?.toInt() ?? 0,
               ),
           ],
+          hasFullImage: w['fullImage'] == true,
         ),
     ],
     stories: {
