@@ -138,6 +138,9 @@ class _BooksMenuState extends State<BooksMenu> {
   Widget build(BuildContext context) {
     final game = widget.game;
     final books = game.menuBooks(selected);
+    // The engine's own prerequisite chain, so the menu cannot open a rank
+    // the block lottery would still refuse.
+    final unlockedCount = game.unlockedBooksFor(selected).length;
     return Column(
       children: [
         Padding(
@@ -205,7 +208,7 @@ class _BooksMenuState extends State<BooksMenu> {
               final book = books[i];
               final rank = book.tier;
               final count = game.readCount(book);
-              final unlocked = i == 0 || game.isBookComplete(books[i - 1]);
+              final unlocked = i < unlockedCount;
               final rankColor = switch (rank) {
                 'E' => const Color(0xFFBFBFBF),
                 'D' => const Color(0xFF927D78),

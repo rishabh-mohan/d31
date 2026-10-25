@@ -89,6 +89,9 @@ class ActionOutcome {
   final bool dayEnded;
   final bool runEnded;
   final bool exhausted;
+
+  /// The action met this week's goal and its reward was paid on the spot.
+  final bool goalMet;
   ActionOutcome(
     this.summary, {
     this.event,
@@ -96,6 +99,7 @@ class ActionOutcome {
     this.dayEnded = false,
     this.runEnded = false,
     this.exhausted = false,
+    this.goalMet = false,
   });
 }
 
@@ -761,8 +765,13 @@ class Game {
   /// been read through, which is the same rule the Books menu states as
   /// `Unlocked when you complete reading <previous book>`. The lowest tier is
   /// always open.
+  ///
+  /// The chain runs over [menuBooks] -- this run's one variant per rank --
+  /// not over every variant. Walking all of them made the engine wait on a
+  /// rank-two sibling (1002) the menu never showed, while the menu showed
+  /// rank three (2001) as open (A02). The Books menu reads this same list.
   List<GameBook> unlockedBooksFor(String subject) {
-    final ordered = pack.booksFor(subject);
+    final ordered = menuBooks(subject);
     final out = <GameBook>[];
     for (final book in ordered) {
       out.add(book);
@@ -924,7 +933,6 @@ class Game {
 
     effects.resetTransient();
     final parts = <String>[];
-    final goalMetBefore = state.weeklyGoal?.met ?? true;
     final exerciseBefore = state.exerciseLevel.level;
     final partTimeBefore = state.partTimeLevel.level;
 
@@ -946,12 +954,8 @@ class Game {
     // The action's own changer runs after the built-in payout, so content can
     // adjust it.
     effects.applyChanger(action.changer, state);
-    // Stat changes mark the goal met as they land; announce it when this
-    // action is what got it there.
-    Goals.checkMet(state);
-    if (!goalMetBefore && (state.weeklyGoal?.met ?? false)) {
-      parts.add('Weekly goal met!');
-    }
+    final goalMet = settleWeeklyGoal();
+    if (goalMet) parts.add('Weekly goal met!');
     if (action.blockDuplicated) state.usedActionKeysToday.add(_key(action));
 
     final beforeEvents = <EventRun>[];
@@ -993,6 +997,7 @@ class Game {
           exhausted: true,
           beforeEvents: beforeEvents,
           event: beginExhaustionEvent(),
+          goalMet: goalMet,
         );
       }
       final outcome = _endDay();
@@ -1003,10 +1008,11 @@ class Game {
         beforeEvents: beforeEvents,
         runEnded: outcome.runEnded,
         event: outcome.event,
+        goalMet: goalMet,
       );
     }
 
-    return _tick(parts.join(' '), beforeEvents: beforeEvents);
+    return _tick(parts.join(' '), beforeEvents: beforeEvents, goalMet: goalMet);
   }
 
   /// Stubborn 41, I will not falter! 51 and a held Pet Rock 30207
@@ -1024,6 +1030,10 @@ class Game {
     }
     return false;
   }
+
+  /// Meets and pays this week's goal if its threshold has been reached --
+  /// by an action, or by an event or item since. True when it just was.
+  bool settleWeeklyGoal() => Goals.settleIfMet(state);
 
   // The formulas live in these four helpers so that `preview` and the
   // resolution below cannot disagree about what an action is worth.
@@ -1209,6 +1219,7 @@ class Game {
   ActionOutcome _tick(
     String summary, {
     List<EventRun> beforeEvents = const [],
+    bool goalMet = false,
   }) {
     state.date = state.date.advance(1, pack.manifest.ticksPerDay);
     invalidateHand();
@@ -1222,6 +1233,7 @@ class Game {
         runEnded: end.runEnded,
         event: end.event,
         beforeEvents: beforeEvents,
+        goalMet: goalMet,
       );
     }
 
@@ -1232,6 +1244,7 @@ class Game {
       event: event,
       runEnded: state.finished,
       beforeEvents: beforeEvents,
+      goalMet: goalMet,
     );
   }
 
@@ -1322,6 +1335,10 @@ class Game {
     }
     invalidateHand();
 
+    if (isExamDay) {
+      // The last, partial goal week ends here; there is no Monday after it.
+      Goals.settle(state);
+    }
     if (isExamDay && examEnabled) {
       // Exam day is played: the Graduation Exam scene, the CSAT, the
       // applications, then whichever ending the result opens. No blocks.
