@@ -761,8 +761,13 @@ class Game {
   /// been read through, which is the same rule the Books menu states as
   /// `Unlocked when you complete reading <previous book>`. The lowest tier is
   /// always open.
+  ///
+  /// The chain runs over [menuBooks] -- this run's one variant per rank --
+  /// not over every variant. Walking all of them made the engine wait on a
+  /// rank-two sibling (1002) the menu never showed, while the menu showed
+  /// rank three (2001) as open (A02). The Books menu reads this same list.
   List<GameBook> unlockedBooksFor(String subject) {
-    final ordered = pack.booksFor(subject);
+    final ordered = menuBooks(subject);
     final out = <GameBook>[];
     for (final book in ordered) {
       out.add(book);
