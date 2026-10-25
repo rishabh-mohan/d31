@@ -168,12 +168,15 @@ class GameState {
   bool movementLocked = false;
   bool exhaustionPending = false;
 
+  /// Once-per-tick movement and exhaustion checks survive save/resume.
+  int? walkRolledAt;
+  int? exhaustionCheckedAt;
+
   /// The reroll counter beside the stamina bar: the account's refresh
   /// tokens when [sharesWallet] says so, otherwise this run's own.
   int get rerolls => _shares('refresh') ? _wallet!.refreshTokens : _rerolls;
-  set rerolls(int value) => _shares('refresh')
-      ? _wallet!.refreshTokens = value
-      : _rerolls = value;
+  set rerolls(int value) =>
+      _shares('refresh') ? _wallet!.refreshTokens = value : _rerolls = value;
   int _rerolls = 0;
 
   /// The current weekly goal, renewed every Monday.
@@ -805,6 +808,8 @@ class GameState {
     'eventsFiredToday': eventsFiredToday,
     'usedActionKeysToday': usedActionKeysToday.toList(),
     'movementLocked': movementLocked,
+    'walkRolledAt': walkRolledAt,
+    'exhaustionCheckedAt': exhaustionCheckedAt,
     'exhaustionPending': exhaustionPending,
     // A balance held by the account is not the run's to save.
     'rerolls': _shares('refresh') ? 0 : _rerolls,
@@ -944,6 +949,8 @@ class GameState {
       ((j['usedActionKeysToday'] as List?) ?? const []).whereType<String>(),
     );
     state.movementLocked = j['movementLocked'] as bool? ?? false;
+    state.walkRolledAt = (j['walkRolledAt'] as num?)?.toInt();
+    state.exhaustionCheckedAt = (j['exhaustionCheckedAt'] as num?)?.toInt();
     state.exhaustionPending = j['exhaustionPending'] as bool? ?? false;
     state._rerolls = (j['rerolls'] as num?)?.toInt() ?? 0;
     state._cookies = (j['cookies'] as num?)?.toInt() ?? 0;

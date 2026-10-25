@@ -12,6 +12,7 @@ import '../engine/record_store.dart';
 import '../engine/save_store.dart';
 import 'home_screen.dart';
 import 'pack_image.dart';
+import 'score_card.dart';
 
 /// Header, washed wallpaper and a body laid out at [u] units per design pixel.
 class MenuPage extends StatelessWidget {
@@ -621,6 +622,34 @@ class _RecordCard extends StatelessWidget {
                     const Text('CSAT standard score'),
                     Text(score.toStringAsFixed(1)),
                   ],
+                ),
+              if (record.scoreCard case final card?)
+                TextButton.icon(
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: const Text('Score Card'),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (context) => Dialog(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: ExamScoreCard(
+                                name: record.name,
+                                result: card,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Close'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               if (record.enrolled case final enrolled?)
                 Padding(

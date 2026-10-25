@@ -31,3 +31,7 @@ Supersedes the e-account draft-only and free-first-rename statements above: the 
 Validation for this Home takeover: 302/302 regression tests pass; `flutter analyze` reports no issues. Seven reference-size renders are in build/home-review (Home, Settings, Profile, Charging, Mail, Store, Puzzles). Visual checks identified and fixed full-width orange title bars and confirmed undistorted category banners. The Home test render may show pack-loading state; on-device startup is checked separately.
 
 On-device validation: updated 367.3 MB profile APK installed successfully with data-preserving replacement, cold-started on Nord 7c2c1cc8, and Home fully loaded with the existing 21-cookie/41-refresh wallet. Captured build/home-review/nord-home.png confirms the connected buttons, username and reference-style layout. No fatal/Flutter errors appeared in sampled startup logs. TODO 95 remains for user confirmation of specific saved-character thumbnails after the shared aspect-ratio fix.
+
+## Main integration completed — 2026-10-25
+
+See [the final branch report](BRANCH-INTEGRATION-2026-10-25.md), which supersedes the earlier draft-only assessments. Remaining recoverable b-flow/c-traits/d-ui changes are completed in main, with 311 passing tests and clean static analysis. A14 Practice Block insertion and I03 Hiking Gloves' extra yield remain explicitly evidence-blocked; no original worktrees were discarded.

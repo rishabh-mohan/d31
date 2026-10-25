@@ -54,6 +54,19 @@ double _fittedSize(
 
 final Map<String, double> _fittedSizes = {};
 
+List<Color> stationeryRankColors(String rank) => switch (rank) {
+  'S' => const [
+    Color(0xFFFFB4D9),
+    Color(0xFFFFED98),
+    Color(0xFFABEDC8),
+    Color(0xFF9BD9FF),
+    Color(0xFFD8ACF0),
+  ],
+  'A' => const [Color(0xFFE4B600), Color(0xFFFFE47A)],
+  'B' => const [Color(0xFFCADAF4), Color(0xFFE3E9FA)],
+  _ => const [Color(0xFFBBBBBB), Color(0xFFDDDDDD)],
+};
+
 /// Shared by inventory, combination, and Thursday's draw.
 class StationeryCard extends StatelessWidget {
   final int id;
@@ -80,18 +93,7 @@ class StationeryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rank = item['rank'] as String;
     final rows = (item['studyStats'] as List? ?? const []).whereType<Map>();
-    final colors = switch (rank) {
-      'S' => const [
-        Color(0xFFFFB4D9),
-        Color(0xFFFFED98),
-        Color(0xFFABEDC8),
-        Color(0xFF9BD9FF),
-        Color(0xFFD8ACF0),
-      ],
-      'A' => const [Color(0xFFE4B600), Color(0xFFFFE47A)],
-      'B' => const [Color(0xFFCADAF4), Color(0xFFE3E9FA)],
-      _ => const [Color(0xFFBBBBBB), Color(0xFFDDDDDD)],
-    };
+    final colors = stationeryRankColors(rank);
     return Semantics(
       label: '$rank tier ${item['name']}${equipped ? ', equipped' : ''}',
       child: PressFeedback(
@@ -99,6 +101,15 @@ class StationeryCard extends StatelessWidget {
           onTap: onTap,
           child: Container(
             clipBehavior: Clip.antiAlias,
+            // Paint last as well as reserving an inset: fractional device
+            // scaling must not let a stat fill erase the rounded outline.
+            foregroundDecoration: BoxDecoration(
+              border: Border.all(
+                color: selected ? D30Colors.accent : Colors.black87,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(9),
+            ),
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               color: selected ? D30Colors.accent : Colors.black87,

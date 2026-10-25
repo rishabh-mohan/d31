@@ -203,7 +203,23 @@ class _GameScreenState extends State<GameScreen> {
         await _showEvent(outcome.event!);
       }
       if (!mounted) return;
-      while (state.date.tick < game.actionTicksPerDay) {
+      while (!state.finished && !state.csatPending) {
+        final skippedEvent = game.beginExhaustedTickEvent();
+        if (skippedEvent != null) {
+          await _showEvent(skippedEvent);
+          if (!mounted) return;
+          await _drainScheduledEvents();
+          if (!mounted) return;
+          if (game.settleWeeklyGoal()) {
+            await _announceGoalMet();
+            if (!mounted) return;
+          }
+        }
+        if (state.finished ||
+            state.csatPending ||
+            state.date.tick >= game.actionTicksPerDay) {
+          break;
+        }
         // Reconstructed presentation timing; the global event supplies wording.
         await Future<void>.delayed(const Duration(milliseconds: 120));
         if (!mounted) return;
@@ -236,6 +252,14 @@ class _GameScreenState extends State<GameScreen> {
         state.dayEndPending = false;
       } else {
         outcome = game.finishPendingDay();
+        // The new morning's own event, begun by the deferred rollover.
+        final morning = outcome.event;
+        if (morning != null && mounted) {
+          await _showEvent(morning);
+          if (!mounted) return;
+          await _drainScheduledEvents();
+          if (!mounted) return;
+        }
       }
     }
 
@@ -1515,6 +1539,11 @@ class _ActionCard extends StatelessWidget {
               children: [
                 _title(onFill),
                 if (_hasBodyRow) _body(onFill),
+                if (preview.bonusSubject case final subject?)
+                  Text(
+                    '${subjectLabel(subject)} +${preview.bonusGain}',
+                    style: TextStyle(fontSize: 11, color: onFill),
+                  ),
                 if (preview.bookComplete)
                   _readingComplete()
                 else if (_showsProgress)

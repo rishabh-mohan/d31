@@ -3,9 +3,9 @@
 /// The original's Records button opens History (MM-09): one card per
 /// completed run with its portrait, name, campaign and ending, each with a
 /// trash corner. A run is recorded the moment it ends and its save is removed,
-/// so it shows in History and no longer in Select Game. What a card opens is
-/// not in the captures, so a record keeps enough of the result (stats, CSAT,
-/// enrolment) to show one without the pack.
+/// so it shows in History and no longer in Select Game. New records retain
+/// the complete CSAT score card; legacy records with only a total still open
+/// without inventing missing subject scores.
 ///
 /// A record file is `record_<id>.json` holding one [RunRecord].
 library;
@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'state.dart';
+import 'admissions.dart';
 
 class RunRecord {
   final int id;
@@ -30,6 +31,7 @@ class RunRecord {
   final DateTime finishedAt;
   final Map<String, num> stats;
   final double? csatStandardScore;
+  final CsatResult? scoreCard;
 
   /// "University — Department", when the run enrolled anywhere.
   final String? enrolled;
@@ -53,6 +55,7 @@ class RunRecord {
     required this.finishedAt,
     required this.stats,
     this.csatStandardScore,
+    this.scoreCard,
     this.enrolled,
     this.enrolledDepartmentId,
     this.enrolledUniversityId,
@@ -80,6 +83,7 @@ class RunRecord {
       finishedAt: DateTime.now(),
       stats: Map<String, num>.from(state.stats),
       csatStandardScore: state.csat?.standardScore,
+      scoreCard: state.csat,
       enrolled: department == null
           ? null
           : [
@@ -104,6 +108,7 @@ class RunRecord {
     'finishedAt': finishedAt.toIso8601String(),
     'stats': stats,
     'csatStandardScore': ?csatStandardScore,
+    'scoreCard': ?scoreCard?.toJson(),
     'enrolled': ?enrolled,
     'enrolledDepartmentId': ?enrolledDepartmentId,
     'enrolledUniversityId': ?enrolledUniversityId,
@@ -123,6 +128,9 @@ class RunRecord {
         DateTime.tryParse(j['finishedAt'] as String? ?? '') ?? DateTime(2000),
     stats: ((j['stats'] as Map?) ?? const {}).map(
       (k, v) => MapEntry('$k', (v as num?) ?? 0),
+    ),
+    scoreCard: CsatResult.fromJson(
+      (j['scoreCard'] as Map?)?.cast<String, dynamic>(),
     ),
     csatStandardScore: (j['csatStandardScore'] as num?)?.toDouble(),
     enrolled: j['enrolled'] as String?,
