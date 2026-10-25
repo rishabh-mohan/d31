@@ -146,6 +146,18 @@ actions, so until a character unlocks the special blocks the hand is usually
 the whole pool and the weights do not bite.
 
 `refresh.initial` is the stock of Refresh Tickets, which redeal the hand.
+`cookies.initial` is the stock of cookies (stationery redraws).
+
+`refresh.shared` / `cookies.shared` (TODO 84 M04) spend the account wallet
+that Home shows instead of a per-run counter. A missing key means cookies
+shared, refresh per-run. When a currency is shared, its `initial` becomes a
+one-time grant to the account on the first run started or resumed; a save
+made before sharing moves its leftover run balance onto the account once;
+saves made while sharing store no balance of their own (`sharedWallet`).
+Refresh stays per-run (50 every run, TODO 31) because nothing earns refresh
+tickets account-wide yet: a shared pool would be empty after a run or two.
+Turning a switch off again restarts that counter from `initial` for runs
+saved while it was shared.
 `goals.*` feeds the placeholder goal strips (lib/engine/goals.dart). A missing key falls back to a built-in
 default rather than failing, so a half-edited file still loads.
 
