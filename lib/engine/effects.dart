@@ -17,6 +17,7 @@ library;
 import 'dart:math';
 
 import 'conditions.dart';
+import 'traits.dart';
 import 'pack.dart';
 import 'state.dart';
 import 'game_date.dart';
@@ -217,7 +218,6 @@ class EffectEngine {
       state.setSwitch('PART_TIME_JOB_LEVEL_UP', 1);
     }
   }
-
 
   // -------------------------------------------------------------------------
   // funcCode handlers -- every verb story 16 uses.
@@ -488,10 +488,7 @@ class EffectEngine {
       // Story 16 often names only the day ([7, "Date_with_Customer", 7]).
       final tick = _int(a, 3) ?? 0;
       if (id == null || days == null) return;
-      s.taskDeadlines[id] = GameDate(
-        GameDate.addDays(s.date.day, days),
-        tick,
-      );
+      s.taskDeadlines[id] = GameDate(GameDate.addDays(s.date.day, days), tick);
       s.taskTitles[id] = (_str(a, 1) ?? '').replaceAll('_', ' ');
     },
     'REMOVE_TODO': (s, a, e) {
@@ -566,8 +563,7 @@ class EffectEngine {
     'SOCCER_ACTION': (s, a, e) => _advanceTrack(s, 'SOCCER'),
     'MEDICAL_ACTION': (s, a, e) => _advanceTrack(s, 'MEDICAL_COUNT'),
     'MECHANIC_ACTION': (s, a, e) => _advanceTrack(s, 'ROBOT_COUNT'),
-    'PRACTICE_PSYCHIC': (s, a, e) =>
-        _advanceTrack(s, 'PSYCHIC_PRACTICE_COUNT'),
+    'PRACTICE_PSYCHIC': (s, a, e) => _advanceTrack(s, 'PSYCHIC_PRACTICE_COUNT'),
 
     // --- Retry Year's compiled callbacks ----------------------------------
     //
@@ -590,6 +586,9 @@ class EffectEngine {
     // the amount is a remote-config value not in the binary, so
     // rules.karaoke.money stands in for it.
     'DO_KARAOKE': (s, a, e) {
+      if (TraitEngine(pack: s.pack).holds(s, TraitEngine.streetPerformer)) {
+        s.addMoney(600);
+      }
       s.addSwitch('SING_COUNT', s.itemCount(90008) > 0 ? 2 : 1);
       if (s.pack.characters[s.characterId]?.specialFuncCode == 'SING_MONEY') {
         s.addMoney(s.pack.rules.number('karaoke', 'money', 1000));
@@ -608,10 +607,7 @@ class EffectEngine {
     // sub_bea5f8 (0xff1048): the opponent and the practice they demand.
     'SET_SING_TARGET': (s, a, e) {
       final point = s.switchValue('SING_POINT');
-      s.setSwitch(
-        'SING_TARGET',
-        (point * 1.5 + s.random.nextInt(3)).round(),
-      );
+      s.setSwitch('SING_TARGET', (point * 1.5 + s.random.nextInt(3)).round());
       s.setSwitch('SING_ENEMY', s.random.nextInt(6) + 1);
     },
     // sub_be9f38: Taeyang's bet. The argument names the mock exam (1-3) and

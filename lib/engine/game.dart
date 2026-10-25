@@ -54,6 +54,9 @@ class ActionPreview {
   /// Money paid, for a part-time shift.
   final int? money;
 
+  final String? bonusSubject;
+  final int? bonusGain;
+
   final num hpCost;
 
   /// 0..1 bar under the title: book completion, or progress to the next level.
@@ -75,6 +78,8 @@ class ActionPreview {
     this.gain,
     this.gainMax,
     this.money,
+    this.bonusSubject,
+    this.bonusGain,
     this.progress = 0,
     this.showCoin = false,
     this.bookComplete = false,
@@ -807,9 +812,22 @@ class Game {
     if (inClass) return false;
     if (state.movementLocked) return false;
     if (!state.unlockedLocations.contains(locationId)) return false;
+    final moved = locationId != state.locationId;
     state.locationId = locationId;
+    if (moved) _walk();
     invalidateHand();
     return true;
+  }
+
+  /// Walking Enthusiast 77: "50% chance of +20 Stamina when moving
+  /// locations". Rolled on the first move of a tick only.
+  void _walk() {
+    if (state.walkRolledAt == state.date.asInt) return;
+    if (!traits.holds(state, TraitEngine.walkingEnthusiast)) return;
+    state.walkRolledAt = state.date.asInt;
+    if (!traits.rolls(state, TraitEngine.walkingEnthusiast)) return;
+    state.addHp(20);
+    state.note('Walking Enthusiast: +20 stamina.', 'effect');
   }
 
   // --- previewing an action -----------------------------------------------
@@ -826,6 +844,8 @@ class Game {
         final gain = _studyGain(action, book, subject);
         return ActionPreview(
           kind: ActionKind.study,
+          bonusSubject: traits.multitaskSubject(state),
+          bonusGain: traits.multitaskSubject(state) == null ? null : 3,
           title: book?.name ?? 'Study',
           subject: subject,
           rank: book?.tier,
@@ -1135,13 +1155,19 @@ class Game {
 
     final amount = gain.round();
     state.addStat(subject, amount);
+    final extraSubject = traits.multitaskSubject(state);
+    if (extraSubject != null) {
+      // The catalog writes STAT_1: one authored unit is three stat points.
+      state.addStat(extraSubject, 3);
+    }
     state.studyExp += pack.rules.studyExp;
     Goals.recordStudyBlock(state);
     _spendHp(action);
     if (book != null) {
       state.bookReadCounts[book.id] = (state.bookReadCounts[book.id] ?? 0) + 1;
     }
-    return 'Studied ${_pretty(subject)}: +$amount.';
+    return 'Studied ${_pretty(subject)}: +$amount.'
+        '${extraSubject == null ? '' : ' Multitasker: ${_pretty(extraSubject)} +3.'}';
   }
 
   String _partTimeJob(LocationAction action) {
@@ -1305,7 +1331,13 @@ class Game {
     state.date = GameDate(state.date.day, pack.manifest.ticksPerDay - 1);
     final eveningEvent = _maybeEvent();
 
-    if (pack.rules.flag('events', 'deferEveningRollover', false)) {
+    // An evening scene plays on its own evening: the date, stamina and trait
+    // ages must not roll over underneath it (A11). Rolling at once also used
+    // to begin the next morning's event and drop it unseen behind this one.
+    // Retry Year defers every night, scene or not; story 16 only when the
+    // evening has one, so its morning event still comes with the rollover.
+    if (eveningEvent != null ||
+        pack.rules.flag('events', 'deferEveningRollover', false)) {
       state.dayEndPending = true;
       return ActionOutcome('', dayEnded: true, event: eveningEvent);
     }
@@ -1430,7 +1462,20 @@ class Game {
     return run;
   }
 
-  /// Presentation-only lost slots: no payouts, stamina recovery or events.
+  /// Eligible events on a skipped tick still play, without action rewards.
+  /// A persisted guard prevents repeated random checks after save/resume.
+  EventRun? beginExhaustedTickEvent() {
+    if (!state.exhaustionPending ||
+        state.finished ||
+        state.date.tick >= actionTicksPerDay ||
+        state.exhaustionCheckedAt == state.date.asInt) {
+      return null;
+    }
+    state.exhaustionCheckedAt = state.date.asInt;
+    return _maybeEvent();
+  }
+
+  /// Advance a lost action slot without granting action rewards.
   bool advanceExhaustedTick() {
     if (!state.exhaustionPending || state.date.tick >= actionTicksPerDay) {
       return false;
@@ -1442,6 +1487,10 @@ class Game {
   ActionOutcome finishExhaustedDay() {
     if (!state.exhaustionPending) {
       return ActionOutcome('No exhausted day to finish.');
+    }
+    if (state.finished || state.csatPending) {
+      state.exhaustionPending = false;
+      return ActionOutcome('', runEnded: state.finished);
     }
     return _endDay();
   }

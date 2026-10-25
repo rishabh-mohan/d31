@@ -498,6 +498,7 @@ Future<void> main() async {
       expect(pack.manifest.ticksPerDay, 15);
 
       final startDay = game.state.date.day;
+      ActionOutcome? last;
       for (var i = 0; i < 14; i++) {
         game.state.hp = game.state.hpMax; // isolate the clock from stamina
         expect(
@@ -512,10 +513,22 @@ Future<void> main() async {
           (a) => a.actionType != 'study',
           orElse: () => hand.first,
         );
-        game.act(
+        last = game.act(
           action,
           book: action.actionType == 'study' ? pack.books.values.first : null,
         );
+      }
+      if (game.state.dayEndPending) {
+        expect(game.state.date.tick, 14);
+        final run = last?.event;
+        while (run != null && !(run.current?.isEnd ?? true)) {
+          if (run.current!.choices.isNotEmpty) {
+            run.choose(run.current!.choices.first);
+          } else {
+            run.advance();
+          }
+        }
+        game.finishPendingDay();
       }
       expect(
         game.state.date.day,
@@ -1605,7 +1618,9 @@ Future<void> main() async {
               run.advance();
             }
           }
-          run = null;
+          // An evening scene holds the rollover until it has played (A11);
+          // the deferred rollover may then bring the morning's event.
+          run = game.state.dayEndPending ? game.finishPendingDay().event : null;
         }
       }
 

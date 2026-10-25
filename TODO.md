@@ -244,62 +244,62 @@ future-port hazards and unrecovered rules. Claude's concurrent Home/account
 work must be reviewed before asserting those baseline gaps still exist.
 
 81. Fix demonstrated engine and progression defects.
-   - [ ] A01: FUNC_IS_IN_CHARACTER_LIST returns constant 0 (conditions.dart), blocking active Retry Year checks including character 66's Weird Cookie and character 58 branches. Matching character 66 / argument 66 returned 0 in a probe.
-   - [ ] A02: Books UI exposes one book per rank while progression checks all variants (pack_menus.dart / game.dart). After completing 1 and 1001, rank-three 2001 can appear unlocked while actual availability remains 1, 1001, 1002. Use one prerequisite model.
-   - [ ] A03: Level-8 Suit 3028 contributes its passive below level 8 (state.dart held-passive sum); level-zero starter gain became 18 instead of 15. Apply passive conditions.
-   - [ ] A04: High Potential 160011 (+5) and Entrepreneur 160007 (+2) grant +15/+6 because zero storyStat falls back to NORMAL_STAT conversion (traits.dart). Audit this fallback separately from fixed Genius of the Century (71).
-   - [ ] A05: Academic Potion 35 parses as Humanities +2 / Science +0 instead of +2 to both (item-effect parser). Correct multi-subject parsing and regenerate affected data. Follows 78.
-   - [ ] A06: Shop purchases bypass maxCount: Book Stand 3005 goes from owned 1 to 2 despite cap 1 (game.dart purchase path). Follows 78.
-   - [ ] A07: Event/item stat gains do not update Weekly Goal completion until the action-only check runs: target 398 / current 1050 can remain met=false. Check every relevant stat mutation.
-   - [ ] A08: Weekly Goal reward bonuses apply retroactively: buying Study Planner 3001 midweek changes the existing reward 258 -> 271. Respect authored next-week activation and snapshot eligible modifiers.
-   - [ ] A09: Final partial-week goal lacks settlement before CSAT; current payout happens only Monday. V02 now shows an original mid-day Weekly Goals Met/Confirm reward flow. Implement the evidenced settlement behavior and verify final-week boundary handling rather than assuming all rewards wait for Monday.
+   - [x] A01: FUNC_IS_IN_CHARACTER_LIST returns constant 0 (conditions.dart), blocking active Retry Year checks including character 66's Weird Cookie and character 58 branches. Matching character 66 / argument 66 returned 0 in a probe.
+   - [x] A02: Books UI exposes one book per rank while progression checks all variants (pack_menus.dart / game.dart). After completing 1 and 1001, rank-three 2001 can appear unlocked while actual availability remains 1, 1001, 1002. Use one prerequisite model.
+   - [x] A03: Level-8 Suit 3028 contributes its passive below level 8 (state.dart held-passive sum); level-zero starter gain became 18 instead of 15. Apply passive conditions.
+   - [x] A04: High Potential 160011 (+5) and Entrepreneur 160007 (+2) grant +15/+6 because zero storyStat falls back to NORMAL_STAT conversion (traits.dart). Audit this fallback separately from fixed Genius of the Century (71).
+   - [x] A05: Academic Potion 35 parses as Humanities +2 / Science +0 instead of +2 to both (item-effect parser). Correct multi-subject parsing and regenerate affected data. Follows 78.
+   - [x] A06: Shop purchases bypass maxCount: Book Stand 3005 goes from owned 1 to 2 despite cap 1 (game.dart purchase path). Follows 78.
+   - [x] A07: Event/item stat gains do not update Weekly Goal completion until the action-only check runs: target 398 / current 1050 can remain met=false. Check every relevant stat mutation.
+   - [x] A08: Weekly Goal reward bonuses apply retroactively: buying Study Planner 3001 midweek changes the existing reward 258 -> 271. Respect authored next-week activation and snapshot eligible modifiers.
+   - [x] A09: Final partial-week goal lacks settlement before CSAT; current payout happens only Monday. V02 now shows an original mid-day Weekly Goals Met/Confirm reward flow. Implement the evidenced settlement behavior and verify final-week boundary handling rather than assuming all rewards wait for Monday.
    - [ ] A10: Story 16 hidden fake events 122/123/162 never execute because their flag stays false (game.dart). Audit customer-date, curse and mining-restoration consequences/triggers.
-   - [ ] A11: Story 16 evening rollover occurs before dialogue finishes, changing date, stamina and trait age under the scene. Deferred evening rollover currently applies only to Retry Year.
-   - [ ] A12: Scouter predicts loss for character 67 although sing-off resolution guarantees a win (event_text.dart versus conditions.dart). Share resolution rules.
+   - [x] A11: Story 16 evening rollover occurs before dialogue finishes, changing date, stamina and trait age under the scene. Deferred evening rollover currently applies only to Retry Year.
+   - [x] A12: Scouter predicts loss for character 67 although sing-off resolution guarantees a win (event_text.dart versus conditions.dart). Share resolution rules.
    - A13 WITHDRAWN as a parity bug (user confirmation, evening 2026-10-24): inventory XP does NOT show the level-up event in the original. Do not add that scene on inventory close. Verify levels/EXP update and suppressed notifications do not leak into later unrelated scenes; event-granted XP is a separate rule.
    - [ ] A14: ADD_BLOCK handler is empty (effects.dart). Story 16 nodes 48012/48022 announce Practice Block but only their IDOL switch changes. Implement authored block insertion/consumption.
-   - [ ] A15: Scorecard menu always shows literal 'No ScoreCard yet!' (day_menu.dart); retain/display actual exam results and history.
+   - [x] A15: Scorecard menu always shows literal 'No ScoreCard yet!' (day_menu.dart); retain/display actual exam results and history.
 
 82. Implement missing compiled trait callbacks (follows 48/78).
    Each line is independently open. Recover unresolved rates/conditions rather
    than inventing them; descriptions/data alone do not execute an effect.
    - [ ] T01: Master of Notes 8: Weird Workbook on book completion; a completion probe left inventory empty. User confirms workbook popup precedes the separate item gacha; supplied F21 shows random-subject +90, Use and Confirm. Do not substitute one reward for the other.
-   - [ ] T02: Time Jumper 69: 10% chance of no stamina cost.
-   - [ ] T03: Stubborn 41 / I will not falter! 51: their distinct chances to remain at 1 stamina instead of collapsing.
+   - [x] T02: Time Jumper 69: 10% chance of no stamina cost.
+   - [x] T03: Stubborn 41 / I will not falter! 51: their distinct chances to remain at 1 stamina instead of collapsing.
    - [ ] T04: Master of 108 Bows 47: acceptance multiplier x1.08.
    - [ ] T05: Blood Type A 74: acceptance +3%, with verified percent semantics.
    - [ ] T06: MBTI S. Realistic 40: higher acceptance chance; recover exact rule.
-   - [ ] T07: Solitary Gourmet 21: food discount.
-   - [ ] T08: Limited Offer 34: 50% discount for its three-day window.
-   - [ ] T09: Developer 43: doubled coffee recovery.
-   - [ ] T10: Walking Enthusiast 77: 50% chance of +20 stamina on movement.
-   - [ ] T11: Multitasker 49: random-subject +1 when studying.
+   - [x] T07: Solitary Gourmet 21: food discount.
+   - [x] T08: Limited Offer 34: 50% discount for its three-day window.
+   - [x] T09: Developer 43: doubled coffee recovery.
+   - [x] T10: Walking Enthusiast 77: 50% chance of +20 stamina on movement.
+   - [x] T11: Multitasker 49: random-subject +1 when studying.
    - [ ] T12: Bully 44: 200 Gold proc and eligibility.
-   - [ ] T13: Energizer 84: daily no-cost proc and reset rule.
+   - [x] T13: Energizer 84: daily no-cost proc and reset rule.
    - [ ] T14: Talented Singer 201: karaoke/practice improvement.
    - [ ] T15: Exam Dreams 206: random-subject sleep stat reward.
-   - [ ] T16: Street Performer 210: 600 Gold singing reward.
+   - [x] T16: Street Performer 210: 600 Gold singing reward.
    NOTE: Cooking Master 221, Ginseng Digger 200, Jailbreaker 214 and Delinquent
    216 have inline event-graph effects; missing compiled callbacks alone do not
    make those effects absent.
 
 83. Finish item/book behavior (follows 78/3).
-   - [ ] I01: Pet Rock 30207's parsed surviveExhaustion effect is unused by collapse handling.
+   - [x] I01: Pet Rock 30207's parsed surviveExhaustion effect is unused by collapse handling.
    - [ ] I02: Recipe 80011 has no recipe/inspection interface; empty generated effects do not supply its intended function.
    - [ ] I03: Hiking Gloves 90009's 20% extra-gather effect has no runtime implementation.
    - [ ] I04: Recover book condition and extraDoneCount semantics. GameBook omits these original fields; verify replacement progress rules, repeat-completion rewards and same-rank variants.
    - [ ] I05: Replace fixed five-offer shop selection and estimated prices with original stock generation, eligibility, refresh timing, prices and limits. Expands 78; do not create a competing shop task.
 
 84. Re-audit main-menu/account parity after Claude's current integration (40/41).
-   OWNER: Claude. Inspect his account/record/save/state/Home changes before
-   treating these audit-baseline gaps as still missing. No parallel rewrite.
+   Integrated on main: see docs/BRANCH-INTEGRATION-2026-10-25.md for the
+   assignment audit, finished behavior and remaining evidence gaps.
    - [ ] M01: Home hub/navigation: supplied layout, hidden-UI background view, Settings, mailbox, profile, Charging, Store, Notices and seasonal entry. Rank/leaderboard is intentionally omitted.
      NOTE (user, 2026-10-25) — These screens WERE supplied and are saved in screenshots/original-game-followup-2026-10-24/, specified per file in docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md: Settings F01-F02 (214331, 214340); Mail Box F03-F04 (214350, 214358); account/profile F05 (214418) and Change Username F07 (214513); Cookie Charging F08-F09 (214528, 214534); Store F10-F16 (214549-214627: Ads, Packs, Expansion, Cookie Store tabs). Not found in any capture folder: Notices and the seasonal Cookie Parade entry. So M01 is no longer blocked on evidence except Notices/seasonal; the destinations are still unbuilt (Settings is the project's own).
    - [ ] M02: Old hardcoded three-save limit versus reference with at least five resumable runs; real portrait, D-count, mode and five-subject stat sum, add/delete ordering and capacity.
      DONE (Claude, 2026-10-24) — Unlimited saves; Select Game cards show portrait, D-n, name, mode and the five-subject sum; newest first; trash deletes after a confirm (40).
    - [ ] M03: Automatic completed-run persistence: old ending path saved only before completion. Separate History from resumable Play; verify ending transition, reopening/relaunch and deletion.
      DONE (Claude, 2026-10-24) — A finished run is recorded and its save deleted at the end transition; History lists records, a card shows stats/CSAT/enrolment, trash deletes (40).
-   - [ ] M04: Account cookies/refresh tokens instead of separate run wallets; shared transactions, persistence and migration. Starting balances are not screenshot examples 53/522.
+   - [x] M04: Account cookies/refresh tokens instead of separate run wallets; shared transactions, persistence and migration. Starting balances are not screenshot examples 53/522.
      1R (Claude) — Account wallet exists (cookies/refresh tokens on Home, persisted, earned from endings/achievements/quests). Still separate from the in-run cookie/refresh counters; unifying them is open.
    - [ ] M05: Persistent earned badge collection for later runs when gating is enabled; keep the user's currently unlocked setup prototype. User confirms first college enrolment unlocks that college's achievement and grants two cookies. Repeat/department-specific awards are not established.
    - [ ] M06: Discovered endings and authored cookie rewards, including first-time/repeat rules.
@@ -323,18 +323,18 @@ work must be reviewed before asserting those baseline gaps still exist.
    - [ ] F01: In-run Surprise/Sudden Missions: offers, requirements, progress, success/failure, expiry, rewards and location-risk warnings. New F23-F26 specify offer/success/failure/item-reward layouts. User confirms unmet end-of-day goals expire silently, but breaking continuous conditions (e.g. maintain stamina above X) shows Surprise Mission Failed. Failed dialog shows forgone reward; do not grant it.
    - [ ] F02: Effective BGM/SFX playback and settings; event audio commands and cosmetic switches need runtime behavior.
    - [ ] F03: Effective Rumble/haptics with verified trigger points.
-   - [ ] F04: Stationery roulette/result confetti with the different tier colors; distinguish trait-pack mixed brown/gray/gold and combine's result-tier confetti.
+   - [x] F04: Stationery roulette/result confetti with the different tier colors; distinguish trait-pack mixed brown/gray/gold and combine's result-tier confetti.
    - [ ] F05: Acceptance-photo/report-card sharing or export, using verified contents/layout.
    - [ ] F06: Elite gameplay is rejected and its 37-level catalog unused. Deferred by user (4); do not activate/tune until requested.
    - [ ] F07: Stories 14/3/18/68 remain outside the two bundled campaigns. Future-port scope (42), not current-campaign regressions.
    - [ ] F08: Remaining compiled character abilities/action/crafting flows (48); verify each independently of imported event graphs.
 
 86. Latent engine hazards to fix before dependent ports.
-   - [ ] L01: INCREASE_TAMGOO_STAT / DECREASE_TAMGOO_STAT affect all subjects; DECREASE_TAMGOO_HIGH_STAT picks global highest (effects.dart). Respect elective subset. Not exercised by current two main graphs.
-   - [ ] L02: EventEngine._buildEndBeat ignores gated final-node elseText and uses primary text. Synthetic probe reproduces; neither active main graph contains an affected last node.
+   - [x] L01: INCREASE_TAMGOO_STAT / DECREASE_TAMGOO_STAT affect all subjects; DECREASE_TAMGOO_HIGH_STAT picks global highest (effects.dart). Respect elective subset. Not exercised by current two main graphs.
+   - [x] L02: EventEngine._buildEndBeat ignores gated final-node elseText and uses primary text. Synthetic probe reproduces; neither active main graph contains an affected last node.
    - [ ] L03: submitApplications engine API accepts duplicate program IDs and can produce three acceptances for one program; UI filtering does not enforce the invariant.
      DONE (Claude, 2026-10-25) — submitApplications now refuses a second program at a university already applied to, which also refuses duplicate program ids.
-   - [ ] L04: Unknown trait conditions fail open (traits.dart). Explicitly handle unsupported gates before new catalogs depend on them; current global condition coverage is largely present.
+   - [x] L04: Unknown trait conditions fail open (traits.dart). Explicitly handle unsupported gates before new catalogs depend on them; current global condition coverage is largely present.
    - [ ] L05: START_LOCATION_COUNT is a no-op; related predicate tests current location rather than a count. Recover counter lifecycle and implement together.
    - [ ] L06: Delayed/timed changes execute immediately; EffectEngine.applyChanger has no scheduler. Recover timing semantics before dependent ports; no active timer regression is claimed.
 
@@ -422,3 +422,23 @@ M01 partial implementation: integrated and refined the e-account worktree's Sett
 Fixed shared orange title bars shrinking around their labels in account overlays. Image decoding now preserves source aspect ratio, addressing the likely cause of TODO 95's squished ongoing-save portraits and distorted banner art; confirm those on the Nord. Existing 91 fade and 94 full-page Achievements preserved.
 
 Remaining Home scope: real audio/haptics, mail delivery/claims, paid purchases/restoration, invitations/account services, Notices/seasonal entry (no destination evidence), History's detailed Info/Score Card/University Apps recreation, remaining puzzle full-screen art and provisional collection rules. Store/Charging purchases and external-service actions currently display an unavailable notice and make no transaction. Settings audio toggles persist preferences but playback is not implemented. Do not mark all of M01 DONE.
+
+
+## Interrupted branches integrated — 2026-10-25
+
+Current report: [branch assignments, completed work and blockers](docs/BRANCH-INTEGRATION-2026-10-25.md). This supersedes the draft-only checkpoint above. Main includes the verified b-flow/c-traits/d-ui drafts, completed Home/account work and new regression coverage. Original worktrees remain untouched as recovery copies.
+
+- A11: DONE — evening scenes retain their evening date/stamina/trait ages; deferred rollover surfaces the following morning event.
+- 92: DONE — exhaustion checks eligible events at each skipped action tick in both campaigns, including the first skipped tick; the normal evening event runs before rollover. Dialogue pauses progression. No lost-slot action rewards are granted.
+- T10: DONE — Walking Enthusiast checks actual movement, once per tick, with a saved guard against free-movement farming. The once-per-tick limit is a prototype safeguard, not recovered native parity.
+- T11: DONE — Multitasker's authored STAT_1 pays three stat points to its deterministic random subject on a Study block, consistent with the recorded STAT_ scaling rule; the card previews the bonus separately. The older '+1' shorthand above is one authored unit.
+- T16: DONE — Street Performer grants 600 Gold on the Karaoke singing callback, respecting trait enablement and its location scope. Existing character singing pay still stacks.
+- F04: DONE — weekly stationery draw and combination results use stationery tier colors (S rainbow, A gold, B blue, C gray); confetti does not block controls and is suppressed with reduced motion.
+- A15: DONE for retained CSAT results — day-menu Score Card displays the saved per-subject scores and top percentages. Newly completed History records retain/open the same result. Old records containing only an overall score are not backfilled. Mock-exam per-subject results are not currently generated by the engine, so none are invented.
+- 45: Added a final foreground outline to the real shared StationeryCard used by CommerceScreen, retaining its reserved inset and inner clip. Completed the interrupted clipped empty-slot widget too. Expanded grid and hub rendered at 393x873; borders remain intact. Confirm the original Nord complaint during playtesting.
+- 79/91/93/94: Integrated — My Info fade, Home background fade, full-page Achievements, full-width headers and undistorted banner decoding remain present.
+- M01: Captured local screens integrated. Real mail/purchases/ads/invitations remain unavailable by original assignment; Notices and seasonal entry lack destination references. The broader M01 stays partial.
+- A14: OPEN, evidence-blocked — E32 explicitly lacks the granted block's insertion/expiry/consumption semantics. Native sub_bec688 still calls an unresolved closure; args [1] cannot safely be treated as either an ID or a quantity.
+- I03: OPEN, evidence-blocked — Hiking Gloves states 20% for 'more items' while Collecting at the mountain. Native DO_GATHER establishes the GRASS_SW pulse, but neither its extra yield nor reward-selection semantics are recovered (E27). Do not guess a double grant, reroll or Gold Mine effect.
+
+Previously integrated trait proc/discount defaults remain configurable reconstructions where original rates are unstated (Stubborn, I will not falter!, Energizer, Solitary Gourmet). Checked items mean the implementation exists, not that every original rate has been recovered.

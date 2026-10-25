@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
 import 'stationery_card.dart';
+import 'score_card.dart';
 import 'theme.dart';
 import 'transitions.dart';
 import 'commerce_screen.dart';
@@ -692,61 +693,12 @@ class _DayMenuState extends State<DayMenu> {
                                               child:
                                                   state.equippedStationery[type] ==
                                                       null
-                                                  ? Container(
-                                                      decoration: BoxDecoration(
-                                                        color: const Color(
-                                                          0xFFD9D9D9,
-                                                        ),
-                                                        border: Border.all(
-                                                          color: Colors.black87,
-                                                          width: 2,
-                                                        ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                      ),
-                                                      child: Column(
-                                                        children: [
-                                                          Container(
-                                                            width:
-                                                                double.infinity,
-                                                            color:
-                                                                Colors.black87,
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  vertical: 3,
-                                                                ),
-                                                            child: FittedBox(
-                                                              fit: BoxFit
-                                                                  .scaleDown,
-                                                              child: Text(
-                                                                stationeryTypeLabel(
-                                                                  type,
-                                                                ),
-                                                                style:
-                                                                    const TextStyle(
-                                                                      color:
-                                                                          cream,
-                                                                      fontSize:
-                                                                          10,
-                                                                    ),
-                                                              ),
-                                                            ),
+                                                  ? _EmptyStationerySlot(
+                                                      label:
+                                                          stationeryTypeLabel(
+                                                            type,
                                                           ),
-                                                          const Expanded(
-                                                            child: SizedBox(),
-                                                          ),
-                                                          const SizedBox(
-                                                            width:
-                                                                double.infinity,
-                                                            height: 25,
-                                                            child: ColoredBox(
-                                                              color: cream,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
+                                                      cream: cream,
                                                     )
                                                   : StationeryCard(
                                                       id: state
@@ -799,14 +751,21 @@ class _DayMenuState extends State<DayMenu> {
                                   // with the message high and blank below it.
                                   () => _panel(
                                     'Score Card',
-                                    const Align(
-                                      alignment: Alignment.topCenter,
-                                      child: Text(
-                                        'No Score Card yet!',
-                                        style: TextStyle(fontSize: 18),
-                                      ),
-                                    ),
-                                    heightFactor: .26,
+                                    game.state.csat == null
+                                        ? const Align(
+                                            alignment: Alignment.topCenter,
+                                            child: Text(
+                                              'No Score Card yet!',
+                                              style: TextStyle(fontSize: 18),
+                                            ),
+                                          )
+                                        : ExamScoreCard(
+                                            name: game.state.fullName,
+                                            result: game.state.csat!,
+                                          ),
+                                    heightFactor: game.state.csat == null
+                                        ? .26
+                                        : .75,
                                   ),
                                 ),
                                 _tile(
@@ -889,6 +848,48 @@ class _CornerClose extends StatelessWidget {
             child: Icon(Icons.close, color: Colors.white, size: 26),
           ),
         ),
+      ),
+    ),
+  );
+}
+
+/// Empty hub slots use the same reserved border inset as StationeryCard.
+class _EmptyStationerySlot extends StatelessWidget {
+  final String label;
+  final Color cream;
+  const _EmptyStationerySlot({required this.label, required this.cream});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(2),
+    decoration: BoxDecoration(
+      color: Colors.black87,
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(7),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            color: Colors.black87,
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: TextStyle(color: cream, fontSize: 10)),
+            ),
+          ),
+          const Expanded(
+            child: ColoredBox(
+              color: Color(0xFFD9D9D9),
+              child: SizedBox.expand(),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            height: 25,
+            child: ColoredBox(color: cream),
+          ),
+        ],
       ),
     ),
   );

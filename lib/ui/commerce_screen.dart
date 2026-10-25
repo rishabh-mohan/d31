@@ -7,6 +7,7 @@ import 'pack_image.dart';
 import 'theme.dart';
 import 'transitions.dart';
 import 'stationery_card.dart';
+import 'account_widgets.dart';
 import 'pack_menus.dart';
 
 enum PackMenu { books, items, shop, stationery }
@@ -129,46 +130,59 @@ class _CommerceScreenState extends State<CommerceScreen> {
       barrierColor: Colors.black.withValues(alpha: .88),
       pageBuilder: (context, _, _) => Material(
         type: MaterialType.transparency,
-        child: Center(
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: RadialGradient(
-                radius: .7,
-                colors: [Color(0x55FFFFFF), Color(0x00000000)],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 180,
-                    height: 265,
-                    child: StationeryCard(
-                      id: result,
-                      item: game.pack.stationery[result]!,
-                    ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    radius: .7,
+                    colors: [Color(0x55FFFFFF), Color(0x00000000)],
                   ),
-                  const SizedBox(height: 56),
-                  SizedBox(
-                    width: 260,
-                    height: 52,
-                    child: PressFeedback(
-                      child: FilledButton(
-                        style: orangeButton,
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          'Confirm',
-                          style: TextStyle(fontSize: 19),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 180,
+                        height: 265,
+                        child: StationeryCard(
+                          id: result,
+                          item: game.pack.stationery[result]!,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 56),
+                      SizedBox(
+                        width: 260,
+                        height: 52,
+                        child: PressFeedback(
+                          child: FilledButton(
+                            style: orangeButton,
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text(
+                              'Confirm',
+                              style: TextStyle(fontSize: 19),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
+            if (!MediaQuery.disableAnimationsOf(context))
+              Positioned.fill(
+                child: ConfettiLayer(
+                  colors: stationeryRankColors(
+                    game.pack.stationery[result]!['rank'] as String,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

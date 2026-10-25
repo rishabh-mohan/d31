@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
 import 'stationery_card.dart';
+import 'account_widgets.dart';
 import 'theme.dart';
 
 class StationeryDraw extends StatefulWidget {
@@ -39,6 +40,8 @@ class _StationeryDrawState extends State<StationeryDraw> {
   Timer? _roll;
   int _frame = 0;
   bool _rolling = true;
+  int _drawRound = 0;
+  bool _reduceMotion = false;
 
   late final List<int> _faces = game.pack.stationery.keys.toList();
 
@@ -49,12 +52,23 @@ class _StationeryDrawState extends State<StationeryDraw> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion) {
+      _roll?.cancel();
+      _roll = null;
+    }
+  }
+
+  @override
   void dispose() {
     _roll?.cancel();
     super.dispose();
   }
 
   void _start() {
+    if (_reduceMotion) return;
     _roll = Timer.periodic(_rollInterval, (_) {
       if (!mounted) return;
       setState(() => _frame++);
@@ -75,6 +89,7 @@ class _StationeryDrawState extends State<StationeryDraw> {
       game.redrawStationery();
       _rolling = true;
       _frame = 0;
+      _drawRound++;
     });
     _start();
   }
@@ -105,183 +120,203 @@ class _StationeryDrawState extends State<StationeryDraw> {
     canPop: false,
     child: Scaffold(
       backgroundColor: const Color(0xFF14110F),
-      body: DecoratedBox(
-        // A pale glow sits behind the card group on the charcoal vignette.
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -.35),
-            radius: .85,
-            colors: [Color(0x33FFFFFF), Color(0x00000000)],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: SizedBox(
-                width: 390,
-                height: 840,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 30),
-                      for (final indexes in [
-                        const [0, 1, 2],
-                        const [3, 4],
-                      ]) ...[
-                        SizedBox(
-                          height: 178,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              for (final index in indexes)
-                                SizedBox(
-                                  width: 105,
-                                  child: StationeryCard(
-                                    key: ValueKey('draw-card-$index'),
-                                    id: _cardAt(index),
-                                    item: game.pack.stationery[_cardAt(index)]!,
-                                    locked: game.state.stationeryLocks.contains(
-                                      index,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            // A pale glow sits behind the card group on the charcoal vignette.
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -.35),
+                radius: .85,
+                colors: [Color(0x33FFFFFF), Color(0x00000000)],
+              ),
+            ),
+            child: SafeArea(
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: 390,
+                    height: 840,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 30),
+                          for (final indexes in [
+                            const [0, 1, 2],
+                            const [3, 4],
+                          ]) ...[
+                            SizedBox(
+                              height: 178,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  for (final index in indexes)
+                                    SizedBox(
+                                      width: 105,
+                                      child: StationeryCard(
+                                        key: ValueKey('draw-card-$index'),
+                                        id: _cardAt(index),
+                                        item: game
+                                            .pack
+                                            .stationery[_cardAt(index)]!,
+                                        locked: game.state.stationeryLocks
+                                            .contains(index),
+                                        onTap: () => _rolling
+                                            ? _stop()
+                                            : setState(() {
+                                                if (!game.state.stationeryLocks
+                                                    .add(index)) {
+                                                  game.state.stationeryLocks
+                                                      .remove(index);
+                                                }
+                                              }),
+                                      ),
                                     ),
-                                    onTap: () => _rolling
-                                        ? _stop()
-                                        : setState(() {
-                                            if (!game.state.stationeryLocks.add(
-                                              index,
-                                            )) {
-                                              game.state.stationeryLocks.remove(
-                                                index,
-                                              );
-                                            }
-                                          }),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                          ],
+                          if (_rolling) ...[
+                            const Spacer(),
+                            const Text(
+                              'Tap on a stationery to obtain them.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 19,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            SizedBox(
+                              width: 260,
+                              height: 52,
+                              child: PressFeedback(
+                                child: FilledButton(
+                                  key: const ValueKey('stop-all-stationery'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: D30Colors.accent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: _stop,
+                                  child: const Text(
+                                    'Stop all Stationery',
+                                    style: TextStyle(fontSize: 18),
                                   ),
                                 ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                      ],
-                      if (_rolling) ...[
-                        const Spacer(),
-                        const Text(
-                          'Tap on a stationery to obtain them.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white, fontSize: 19),
-                        ),
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          width: 260,
-                          height: 52,
-                          child: PressFeedback(
-                            child: FilledButton(
-                              key: const ValueKey('stop-all-stationery'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: D30Colors.accent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              onPressed: _stop,
-                              child: const Text(
-                                'Stop all Stationery',
-                                style: TextStyle(fontSize: 18),
                               ),
                             ),
-                          ),
-                        ),
-                        const Spacer(),
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: D30Colors.panel,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: D30Colors.accent,
-                              width: 3,
-                            ),
-                          ),
-                          child: const Column(
-                            children: [
-                              Text(
-                                'Re-draw: B-Tier and above guaranteed',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: D30Colors.alert,
-                                  fontSize: 16,
+                            const Spacer(),
+                          ] else ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: D30Colors.panel,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: D30Colors.accent,
+                                  width: 3,
                                 ),
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                "Tap on stationery you'd like to keep before a "
-                                're-draw.',
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Cookies Owned : ${game.state.cookies}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const Spacer(),
-                        SizedBox(
-                          width: 240,
-                          height: 52,
-                          child: PressFeedback(
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: D30Colors.accent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              onPressed: _canRedraw ? _redraw : null,
-                              child: Text(
-                                game.state.stationeryFreeRedrawUsed
-                                    ? 'Re-draw · ${game.pack.rules.number('stationery', 'redrawCookies', 1)} Cookie'
-                                    : 'Free re-draw',
+                              child: const Column(
+                                children: [
+                                  Text(
+                                    'Re-draw: B-Tier and above guaranteed',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: D30Colors.alert,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    "Tap on stationery you'd like to keep before a "
+                                    're-draw.',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          width: 240,
-                          height: 46,
-                          child: PressFeedback(
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: D30Colors.panel,
-                                foregroundColor: D30Colors.accent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Cookies Owned : ${game.state.cookies}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const Spacer(),
+                            SizedBox(
+                              width: 240,
+                              height: 52,
+                              child: PressFeedback(
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: D30Colors.accent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: _canRedraw ? _redraw : null,
+                                  child: Text(
+                                    game.state.stationeryFreeRedrawUsed
+                                        ? 'Re-draw · ${game.pack.rules.number('stationery', 'redrawCookies', 1)} Cookie'
+                                        : 'Free re-draw',
+                                  ),
                                 ),
                               ),
-                              onPressed: close,
-                              child: const Text('Close'),
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: 240,
+                              height: 46,
+                              child: PressFeedback(
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: D30Colors.panel,
+                                    foregroundColor: D30Colors.accent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: close,
+                                  child: const Text('Close'),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+          if (!_rolling && !MediaQuery.disableAnimationsOf(context))
+            Positioned.fill(
+              child: ConfettiLayer(
+                key: ValueKey('stationery-confetti-$_drawRound'),
+                colors: [
+                  for (final id in game.state.pendingStationery)
+                    ...stationeryRankColors(
+                      game.pack.stationery[id]!['rank'] as String,
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     ),
   );

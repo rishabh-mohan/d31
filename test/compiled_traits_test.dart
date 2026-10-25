@@ -234,4 +234,41 @@ Future<void> main() async {
     expect(gainFrom(2, [TraitEngine.developer]), 15);
     expect(gainFrom(9, [TraitEngine.developer]), 30); // White Milk
   });
+
+  test(
+    'Walking Enthusiast 77 pays +20 on about half of moves, once a tick',
+    () {
+      final game = withTraits([TraitEngine.walkingEnthusiast]);
+      final places = game.state.unlockedLocations.toList()..sort();
+      expect(places.length, greaterThan(1));
+      game.state.locationId = places.first;
+      var paid = 0;
+      var total = 0;
+      for (final when in ticks(game).where((w) => w.tick >= 6)) {
+        game.state.date = when;
+        game.state.hp = 50;
+        final here = game.state.locationId;
+        expect(game.move(here), isTrue);
+        expect(game.state.hp, 50, reason: 'staying put is not a move');
+        final there = places.firstWhere((p) => p != here);
+        expect(game.move(there), isTrue);
+        final gain = game.state.hp - 50;
+        expect(gain, anyOf(0, 20));
+        if (gain == 20) paid++;
+        total++;
+        // Hopping back in the same tick never pays again.
+        expect(game.move(here), isTrue);
+        expect(game.state.hp, 50 + gain);
+      }
+      expect(paid / total, inInclusiveRange(0.4, 0.6));
+
+      // The once-a-tick guard survives a save.
+      expect(game.state.toJson()['walkRolledAt'], game.state.date.asInt);
+
+      final plain = withTraits(const []);
+      plain.state.hp = 50;
+      plain.move(places.firstWhere((p) => p != plain.state.locationId));
+      expect(plain.state.hp, 50);
+    },
+  );
 }
