@@ -86,6 +86,25 @@ void main() {
     expect(find.text('Reach Campaign Ending 1/5'), findsOneWidget);
   });
 
+  testWidgets('Achievements filter: the arrow cell spans the pill height', (
+    tester,
+  ) async {
+    await pumpPhone(tester, AchievementsPage(campaigns: [pack, retry]));
+    final pill = tester.getRect(find.byKey(const ValueKey('ach-filter')));
+    final cell = tester.getRect(
+      find
+          .ancestor(
+            of: find.byIcon(Icons.arrow_drop_down),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    // Inside the 2-unit border on both sides, not just the icon's height.
+    expect(cell.height, greaterThan(pill.height * 0.85));
+    expect(cell.top - pill.top, lessThan(pill.height * 0.08));
+    expect(pill.bottom - cell.bottom, lessThan(pill.height * 0.08));
+  });
+
   testWidgets('Daily Quests names a department and stays incomplete', (
     tester,
   ) async {

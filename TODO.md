@@ -19,6 +19,7 @@ guides. Quick: ~20-60k tokens. Moderate: ~60-200k. Large: ~200-600k. Very large:
 110. The sort option in Achievements isn't filled in properly with orange.
    *Estimate: ~25k. Achievements sort/filter pill styling (lib/ui/achievements_page.dart).*
    1R — Clipped the orange arrow cell to the pill's rounded border (antiAlias). REOPENED (user, 2026-10-25): still incomplete on the Nord; the fill still does not match MM-03. Previous attempt: the orange arrow cell sat unclipped inside the rounded bordered pill, so it did not follow the corners or fill to the border; the pill now clips it (antiAlias), matching MM-03.
+   2R — Root cause of the remaining gap: the arrow cell sat in a Row that centred its children vertically, so it was only its icon's height and left cream bands above and below. The Row now stretches the cell to the pill's full inner height; test/account_pages_test.dart checks it. Awaiting confirmation on the Nord.
 
 ## Moderate (~60-200k tokens each)
 
@@ -186,3 +187,4 @@ Cost depends on what evidence turns up; none of these should be guessed.
    are intentional. Elite is deferred. Book-completion item gacha stays reminder
    only (39); Master of Notes' workbook callback is separate. Use hardware-
    rendered profile builds and preserve Claude's stationery name-fit cache.
+91. in the History tab, looking at university apps- acceptance rate is not shown, seals are cut off on the left and right edges (there is a screenshot on phone)

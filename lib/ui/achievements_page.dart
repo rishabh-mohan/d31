@@ -148,7 +148,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
         borderRadius: BorderRadius.circular(8 * u),
         border: Border.all(color: HomeColors.orange, width: 2 * u),
       ),
+      // Stretch so the arrow cell spans the pill's full inner height, not
+      // just its icon's (TODO 110).
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: Center(
