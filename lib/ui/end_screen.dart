@@ -108,7 +108,7 @@ class EndScreen extends StatelessWidget {
                     onPressed: () =>
                         Navigator.of(context)
                             .popUntil((route) => route.isFirst),
-                    child: const Text('Back to title'),
+                    child: const Text('Back to Home'),
                   ),
                 ),
               ],

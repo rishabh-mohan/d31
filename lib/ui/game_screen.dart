@@ -15,6 +15,7 @@ import '../engine/game.dart';
 import '../engine/event_engine.dart';
 import '../engine/goals.dart';
 import '../engine/pack.dart';
+import '../engine/record_store.dart';
 import '../engine/save_store.dart';
 import '../engine/state.dart';
 import 'csat_screen.dart';
@@ -233,6 +234,8 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     if (state.finished && mounted) {
+      await _closeRun();
+      if (!mounted) return;
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => EndScreen(outcome: game.outcome, state: state),
@@ -283,11 +286,21 @@ class _GameScreenState extends State<GameScreen> {
     }
     if (!mounted) return;
     game.concludeRun();
+    await _closeRun();
+    if (!mounted) return;
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => EndScreen(outcome: game.outcome, state: state),
       ),
     );
+  }
+
+  /// The run is over: it moves from Select Game to History (TODO 40).
+  Future<void> _closeRun() async {
+    await RecordStore.add(state, ending: game.outcome);
+    final slot = state.saveSlot;
+    state.saveSlot = null;
+    if (slot != null) await SaveStore.delete(slot);
   }
 
   /// Each day is written as it begins, once the night screen has been
