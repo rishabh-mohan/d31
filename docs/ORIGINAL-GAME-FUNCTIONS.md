@@ -279,7 +279,12 @@ Do not add both or prefer the larger field automatically. The current rebuild
 prefers nonzero storyStat and falls back to explicit extraStat. That fallback is
 an implementation policy, not proof that every zero-storyStat entry has been
 reconciled with its description. For example, legacy High Potential text uses
-`STAT_5` while extraStat is 15 and storyStat is zero. Keep such exceptions open.
+`STAT_5` while extraStat is 15 and storyStat is zero. Audit A04 (2026-10-25):
+when storyStat is zero and the trait's description writes the `STAT_<n>`
+placeholder, the rebuild now treats extraStat as the x3-scaled field and pays
+extraStat / 3 (High Potential +5, Entrepreneur +2); literal descriptions such
+as Worth the Wait "+3" over extraStat 3 keep extraStat. Only those two traits
+take that path. An in-game measurement (E23) would still confirm it.
 
 ## 7. Stamina, exercise, sleep and work
 
