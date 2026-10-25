@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/event_text.dart';
 import 'package:d30mode/engine/game.dart';
+import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/pack.dart';
 
 /// Regressions for the original-game parity audit's engine defects
@@ -54,6 +55,32 @@ void main() {
       game.state.characterId = 67;
       expect(win(game.state, const []), 1);
       expect(expandEventText('{IS_SING_WIN}', game.state), contains('win'));
+    });
+  });
+
+  group('A03 held passive conditions', () {
+    test('Level 8 Suit pays nothing below exercise level 8', () {
+      final game = Game.newRun(original, random: Random(4));
+      game.state.openingComplete = true;
+      game.state.date = GameDate(game.state.date.day, 7);
+      game.state.locationId = 1000;
+      final study = original.locations[1000]!.actions.firstWhere(
+        (action) => action.actionType == 'study',
+      );
+      final book = original
+          .booksFor('korean')
+          .firstWhere((book) => book.bookRank == '1');
+      game.state.addItem(3028);
+      expect(game.state.exerciseLevel.level, lessThan(8));
+      expect(game.state.passiveSum('studyEfficiency', subject: 'korean'), 0);
+      expect(game.preview(study, book: book).gain, 15);
+
+      game.state.exerciseExp = original.exerciseLevels.tiers
+          .firstWhere((t) => t.level == 8)
+          .exp;
+      expect(game.state.exerciseLevel.level, 8);
+      expect(game.state.passiveSum('studyEfficiency', subject: 'korean'), 3);
+      expect(game.preview(study, book: book).gain, 18);
     });
   });
 }

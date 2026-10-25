@@ -110,12 +110,7 @@ class EffectEngine {
   }
 
   void applyItemEffect(Map<String, dynamic> e, GameState state) {
-    final conds = e['conditions'];
-    if (conds is List && conds.isNotEmpty) {
-      for (final c in conds.whereType<Map>()) {
-        if (!_simpleCondition(c.cast<String, dynamic>(), state)) return;
-      }
-    }
+    if (!state.itemConditionsHold(e)) return;
 
     num amount(String key) {
       final range = e['range'];
@@ -223,33 +218,6 @@ class EffectEngine {
     }
   }
 
-  bool _simpleCondition(Map<String, dynamic> c, GameState state) {
-    final target = c['target'] as String?;
-    if (target == null) return true;
-    num? actual;
-    switch (target) {
-      case 'EXERCISE_LEVEL':
-        actual = state.exerciseLevel.level;
-      case 'PART_TIME_JOB_LEVEL':
-        actual = state.partTimeLevel.level;
-      case 'STUDY_LEVEL':
-        actual = state.studyLevel.level;
-      case 'LOCATION_ID':
-        actual = state.locationId;
-      case 'TICK':
-        actual = state.date.tick;
-      case 'DATE_INT':
-        actual = state.date.asInt;
-      default:
-        return true; // unknown gate: do not block the effect
-    }
-    final want = (c['intValue'] as num?) ?? (c['value'] as num?) ?? 0;
-    return ConditionEvaluator.compare(
-      actual,
-      c['compareType'] as String?,
-      want,
-    );
-  }
 
   // -------------------------------------------------------------------------
   // funcCode handlers -- every verb story 16 uses.
