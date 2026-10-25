@@ -9,6 +9,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gal/gal.dart';
 
+/// Tests replace this to avoid the platform channel.
+@visibleForTesting
+Future<bool> Function(Uint8List png, String name)? gallerySaveOverride;
+
 /// Renders the [RepaintBoundary] behind [key] to a PNG at about 3x and saves
 /// it to the gallery as [name] (no extension). Returns false on any failure
 /// (no boundary yet, permission refused, no gallery on this platform).
@@ -18,6 +22,8 @@ Future<bool> saveWidgetImage(GlobalKey key, String name) async {
   try {
     final bytes = await renderWidgetPng(key);
     if (bytes == null) return false;
+    final override = gallerySaveOverride;
+    if (override != null) return await override(bytes, name);
     if (!await Gal.hasAccess(toAlbum: true)) {
       if (!await Gal.requestAccess(toAlbum: true)) return false;
     }

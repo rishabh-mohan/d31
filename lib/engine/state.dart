@@ -358,6 +358,15 @@ class GameState {
   /// Enrollment (or the retake academy) was chosen; the endings are on.
   bool finalDecided = false;
 
+  /// How many envelope results the player has opened AND confirmed, in
+  /// submission order. A resumed run shows these as already revealed and
+  /// continues at the next envelope (docs/DDAY-UI.md).
+  int resultsRevealed = 0;
+
+  /// The player's own photo for the Student ID, copied into the app's
+  /// documents folder (absolute path), or null for the character portrait.
+  String? studentPhotoPath;
+
   final List<LogEntry> log = [];
   bool finished = false;
   String? endingLabel;
@@ -873,6 +882,8 @@ class GameState {
     'applicationRates': applicationRates,
     'resultsReviewed': resultsReviewed,
     'finalDecided': finalDecided,
+    'resultsRevealed': resultsRevealed,
+    'studentPhotoPath': ?studentPhotoPath,
   };
 
   String toPrettyJson() => const JsonEncoder.withIndent('  ').convert(toJson());
@@ -1080,6 +1091,8 @@ class GameState {
     state.resultsReviewed = j['resultsReviewed'] as bool? ?? committed;
     state.finalDecided =
         j['finalDecided'] as bool? ?? (state.switches['ENDING_CODE'] == 1);
+    state.resultsRevealed = (j['resultsRevealed'] as num?)?.toInt() ?? 0;
+    state.studentPhotoPath = j['studentPhotoPath'] as String?;
     if (!j.containsKey('examCardsDone') && (sat || state.finalDecided)) {
       state.examCardsDone.addAll(pack.manifest.subjects);
     }
