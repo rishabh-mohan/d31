@@ -83,4 +83,25 @@ void main() {
       expect(game.preview(study, book: book).gain, 18);
     });
   });
+
+  group('A06 shop maxCount', () {
+    test('Book Stand cannot be bought past its cap of one', () {
+      final game = Game.newRun(original, random: Random(6));
+      expect(original.items[3005]!.maxCount, 1);
+      game.state.money = 100000;
+      expect(game.shopItemAtCap(3005), isFalse);
+      expect(game.purchase(3005), isNull);
+      expect(game.state.itemCount(3005), 1);
+      expect(game.shopItemAtCap(3005), isTrue);
+
+      // Owned some other way, with shop stock left: still refused, unpaid.
+      final other = Game.newRun(original, random: Random(6));
+      other.state.money = 100000;
+      other.state.addItem(3005);
+      expect(other.shopStock(3005), 1);
+      expect(other.purchase(3005), isNotNull);
+      expect(other.state.itemCount(3005), 1);
+      expect(other.state.money, 100000);
+    });
+  });
 }

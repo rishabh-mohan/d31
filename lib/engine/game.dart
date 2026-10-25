@@ -1433,13 +1433,23 @@ class Game {
     if ((state.shopPurchases[key] ?? 0) >= limit) {
       return 'Sold out until Saturday.';
     }
-    if (state.money < price) return 'Not enough Gold.';
     final itemId = (offer['itemId'] as num).toInt();
     if (!pack.items.containsKey(itemId)) return 'Item missing from pack.';
+    // An item's maxCount caps ownership however it is obtained; refuse
+    // before charging rather than let addItem clamp a paid-for copy away.
+    if (shopItemAtCap(offerId)) return 'You already own as many as you can.';
+    if (state.money < price) return 'Not enough Gold.';
     state.addMoney(-price);
     state.inventory[itemId] = state.itemCount(itemId) + 1;
     state.shopPurchases[key] = (state.shopPurchases[key] ?? 0) + 1;
     return null;
+  }
+
+  /// True when the offer's item is already held at its `maxCount`.
+  bool shopItemAtCap(int offerId) {
+    final itemId = (pack.shop[offerId]?['itemId'] as num?)?.toInt();
+    final cap = pack.items[itemId]?.maxCount;
+    return itemId != null && cap != null && state.itemCount(itemId) >= cap;
   }
 
   int shopStock(int offerId) {
