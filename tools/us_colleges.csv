@@ -1,52 +1,52 @@
 korean_id,korean_name,rank,us_name,us_color
 2,Korea Dream University,ten,Harvard University,A51C30
-1,Korea Movie University,nine,University of Southern California,990000
-4,Korea Drama University,nine,New York University,57068C
-5,Korea Culture University,nine,"University of California, Los Angeles",2774AE
-7,Korea Sports University,nine,Ohio State University,BB0000
-8,Korea Music University,nine,Juilliard School,1F2A44
-9,Korea Food University,nine,Cornell University,B31B1B
-3,Special Seoul University,eight,Yale University,00356B
-6,Special Gangwon University,eight,Massachusetts Institute of Technology,A31F34
-11,Special North Jeolla University,eight,Princeton University,E77500
-101,North Chungcheong University,eight,Purdue University,CEB888
-10,South Gyeongsang University,seven,University of Chicago,800000
-12,Special Jeju University,seven,Columbia University,1D4F91
-13,South Jeolla University,seven,University of Pennsylvania,011F5B
-14,Gyeonggi University,seven,Duke University,012169
-15,South Chungcheong University,seven,Northwestern University,4E2A84
-102,North Gyeongsang University,seven,California Institute of Technology,FF6C0C
-17,Incheon Metro University,six,"University of California, Berkeley",003262
-18,Wonju University,six,University of Michigan,00274C
-25,Special Sejong University,six,Carnegie Mellon University,C41230
-103,Gimpo University,six,Georgia Institute of Technology,B3A369
-104,Andong University,six,University of Illinois Urbana-Champaign,E84A27
-105,Nonsan University,six,University of Texas at Austin,BF5700
-16,Daegu Metro University,five,University of Wisconsin-Madison,C5050C
-20,Daejeon Metro University,five,University of Washington,4B2E83
-22,Gwangju Metro University,five,University of Virginia,232D4B
-26,Jinju University,five,University of North Carolina at Chapel Hill,4B9CD3
+1,Korea Movie University,nine,Massachusetts Institute of Technology,A31F34
+4,Korea Drama University,nine,Princeton University,E77500
+5,Korea Culture University,nine,Yale University,00356B
+7,Korea Sports University,nine,California Institute of Technology,FF6C0C
+8,Korea Music University,nine,University of Chicago,800000
+9,Korea Food University,nine,Columbia University,1D4F91
+3,Special Seoul University,eight,Purdue University,CEB888
+6,Special Gangwon University,eight,University of Pennsylvania,011F5B
+11,Special North Jeolla University,eight,Duke University,012169
+101,North Chungcheong University,eight,Northwestern University,4E2A84
+10,South Gyeongsang University,seven,Cornell University,B31B1B
+12,Special Jeju University,seven,"University of California, Berkeley",003262
+13,South Jeolla University,seven,Rice University,00205B
+14,Gyeonggi University,seven,Vanderbilt University,866D4B
+15,South Chungcheong University,seven,Carnegie Mellon University,C41230
+102,North Gyeongsang University,seven,"University of California, Los Angeles",2774AE
+17,Incheon Metro University,six,University of Michigan,00274C
+18,Wonju University,six,University of Virginia,232D4B
+25,Special Sejong University,six,Georgia Institute of Technology,B3A369
+103,Gimpo University,six,New York University,57068C
+104,Andong University,six,University of Southern California,990000
+105,Nonsan University,six,University of North Carolina at Chapel Hill,4B9CD3
+16,Daegu Metro University,five,Juilliard School,1F2A44
+20,Daejeon Metro University,five,University of Illinois Urbana-Champaign,E84A27
+22,Gwangju Metro University,five,University of Texas at Austin,BF5700
+26,Jinju University,five,University of Wisconsin-Madison,C5050C
 28,Ulsan Metro University,five,University of Florida,0021A5
-106,Busan Metro University,five,Rice University,00205B
-109,Hongsung University,five,Vanderbilt University,866D4B
-113,Dokdo University,five,University of Maryland,E03A3E
-114,Hongcheon University,five,Indiana University Bloomington,990000
-19,Cheorwon University,four,Pennsylvania State University,041E42
-21,Inje University,four,University of Minnesota,7A0019
-107,Danyang University,four,Rutgers University,CC0033
-27,Yeongwol University,three,Texas A&M University,500000
-108,Sokcho University,three,Virginia Tech,630031
-115,Youngdeok University,three,Iowa State University,C8102E
-117,Samcheok University,three,Michigan State University,18453B
-29,Jecheon University,two,University of Arizona,AB0520
-110,Mungyeon University,two,University of Colorado Boulder,CFB87C
-23,Jangsung University,one,Arizona State University,8C1D40
-24,Gwangyang University,one,University of Iowa,FFCD00
+106,Busan Metro University,five,University of Washington,4B2E83
+109,Hongsung University,five,University of Maryland,E03A3E
+113,Dokdo University,five,Ohio State University,BB0000
+114,Hongcheon University,five,Pennsylvania State University,041E42
+19,Cheorwon University,four,University of Minnesota,7A0019
+21,Inje University,four,Rutgers University,CC0033
+107,Danyang University,four,Texas A&M University,500000
+27,Yeongwol University,three,Virginia Tech,630031
+108,Sokcho University,three,Indiana University Bloomington,990000
+115,Youngdeok University,three,Michigan State University,18453B
+117,Samcheok University,three,University of Colorado Boulder,CFB87C
+29,Jecheon University,two,University of Iowa,FFCD00
+110,Mungyeon University,two,University of Arizona,AB0520
+23,Jangsung University,one,University of Utah,CC0000
+24,Gwangyang University,one,Iowa State University,C8102E
 30,Goseong University,one,University of Kansas,0051BA
 31,Dangyang University,one,University of Oregon,154733
-32,Hadong University,one,University of Utah,CC0000
-33,Boryeong University,one,Kansas State University,512888
-111,Yanggu University,one,University of Kentucky,0033A0
-112,Paju University,one,Oklahoma State University,FF7300
-116,Uiryeong University,one,University of Nebraska-Lincoln,E41C38
+32,Hadong University,one,University of Nebraska-Lincoln,E41C38
+33,Boryeong University,one,University of Kentucky,0033A0
+111,Yanggu University,one,Arizona State University,8C1D40
+112,Paju University,one,Kansas State University,512888
+116,Uiryeong University,one,Oklahoma State University,FF7300
 118,Sunchang University,one,Ball State University,BA0C2F
