@@ -2,7 +2,7 @@
 
 ### Read first — integrated checkpoint (2026-10-25)
 
-Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md), [TODO.md](TODO.md) and
+Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md), [TODO.md](TODO.md) (finished entries: [TODO-DONE.md](TODO-DONE.md)) and
 [docs/BRANCH-INTEGRATION-2026-10-25.md](docs/BRANCH-INTEGRATION-2026-10-25.md)
 before starting work. The five interrupted branches' recoverable work is now
 integrated on main; their original worktrees are recovery copies, not newer
