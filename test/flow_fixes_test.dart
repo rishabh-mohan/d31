@@ -41,4 +41,28 @@ Future<void> main() async {
       expect(game.unlockedBooksFor('korean').map((b) => b.id), [1, 1002]);
     });
   });
+
+  group('A05 multi-subject items', () {
+    test('Academic Potion adds read count to Humanities and Science', () {
+      final game = Game.newRun(pack, random: Random(5));
+      game.state.addItem(35);
+      expect(game.useItem(35), isTrue);
+      for (final book in pack.books.values) {
+        final want = book.subject == 'society' || book.subject == 'science'
+            ? 2
+            : 0;
+        expect(
+          game.state.bookReadCounts[book.id] ?? 0,
+          want,
+          reason: '${book.name} (${book.subject})',
+        );
+      }
+    });
+
+    test("Luna's Hat grants its stat only when sleeping", () {
+      final effects = pack.items[30101]!.effects;
+      expect(effects, hasLength(1));
+      expect(effects.single['trigger'], 'onSleep');
+    });
+  });
 }

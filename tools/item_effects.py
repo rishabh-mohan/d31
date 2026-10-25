@@ -230,14 +230,20 @@ def _rule_stat(t: str, ctx: dict) -> list:
         r"(?:korean|english|maths?|science|humanities|society|all\s+subjects?|"
         r"all\s+stats?|all|elective\s*[12]?|first\s+elective|second\s+elective|"
         r"first\s+inquiry|inquiry\s*2|random\s+subject|random|desired|selected)"
-        r"(?:\s*,\s*(?:korean|english|maths?|science|humanities|society))*)"
+        r"(?:\s*(?:,|\band\b)\s*(?:korean|english|maths?|science|humanities|society))*)"
         rf"\s*(?:subject\s*)?(?:study\s*)?stats?\s*([+-])\s*{STAT_TOKEN}{NUM}"
     )
-    for m in re.finditer(pat, t, re.I):
+    # Luna's Hat ("When sleeping, random subject study stat +30") is only the
+    # onSleep trigger below; reading its tail here too granted it at once.
+    plain = re.sub(r"when\s+sleeping,?\s+", "\0", t, flags=re.I)
+    for m in re.finditer(pat, plain, re.I):
+        if plain[: m.start()].endswith("\0"):
+            continue
         phrase, sign, num = m.group(1), m.group(2), m.group(3)
         value = _n(num) * (-1 if sign == "-" else 1)
-        # A comma list ("Science, Humanities stats +75 each") is several effects.
-        parts = [p.strip() for p in re.split(r",", phrase) if p.strip()]
+        # A comma or "and" list ("Science, Humanities stats +75 each",
+        # "Science and Humanities Stats +150") is several effects.
+        parts = [p.strip() for p in re.split(r",|\band\b", phrase, flags=re.I) if p.strip()]
         subs = []
         for p in parts:
             s = _subject(re.sub(r"\b(subject|study|stats?)\b", "", p, flags=re.I).strip())
@@ -368,14 +374,21 @@ def _rule_exp(t: str, ctx: dict) -> list:
                 "value": _n(m.group(2)) * (-1 if m.group(1) == "-" else 1),
             }
         )
-    for m in re.finditer(rf"read\s+count\s+for\s+([A-Za-z]+)\s*\+{NUM}", t, re.I):
-        out.append(
-            {
-                "type": "readCount",
-                "subject": _subject(m.group(1)) or "all",
-                "value": _n(m.group(2)),
-            }
-        )
+    # "Read Count for Humanities +2, Science +2": every `<subject> +n` pair in
+    # the list after the phrase, not just the first (Academic Potion, A05).
+    for m in re.finditer(
+        rf"read\s+count\s+for\s+((?:[A-Za-z]+\s*\+{NUM}\s*(?:,|and)?\s*)+)",
+        t,
+        re.I,
+    ):
+        for pair in re.finditer(rf"([A-Za-z]+)\s*\+{NUM}", m.group(1)):
+            out.append(
+                {
+                    "type": "readCount",
+                    "subject": _subject(pair.group(1)) or "all",
+                    "value": _n(pair.group(2)),
+                }
+            )
     return out
 
 
