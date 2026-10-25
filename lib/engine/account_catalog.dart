@@ -57,8 +57,14 @@ class Puzzle {
   String get thumbnail => 'kss/images/wallpaper_thumbnail/$id.png';
 
   /// Full-screen art, where the app ships it (only the Amnesia desk does).
+  /// The original streams the rest from its Firebase Storage `wallpapers/`
+  /// folder (sub_aa702c), which is not reachable from here.
   String? get fullImage =>
       id == 'wallpaper0' ? 'kss/images/wallpaper_image/wallpaper0.png' : null;
+
+  /// What Home draws when this is the background: the full-screen art, or
+  /// failing that the square thumbnail, cropped to fill the screen.
+  String get wallpaper => fullImage ?? thumbnail;
 
   int get totalCookies => pieces.fold(0, (sum, p) => sum + p.cookies);
 }

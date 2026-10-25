@@ -147,6 +147,28 @@ void main() {
     await settle(tester);
     expect(find.text('(4/4)'), findsOneWidget);
     expect(AccountStore.current.cookies, 500 - 99);
+    // Finished, it can become the Home background (TODO 102).
+    expect(find.text('Use as Background'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('use-as-background')));
+    await settle(tester);
+    expect(AccountStore.current.background, 'wallpaper1');
+    expect(find.text('Current Background'), findsOneWidget);
+  });
+
+  testWidgets('a finished puzzle\'s green tag selects it', (tester) async {
+    await pumpPhone(
+      tester,
+      const PuzzleCollectionPage(
+        title: 'Event Limited',
+        storyId: 0,
+        installedStories: {16, 20},
+      ),
+    );
+    await settle(tester);
+    expect(AccountStore.current.background, 'wallpaper0');
+    await tester.tap(find.byKey(const ValueKey('puzzle-use-wallpaper1010')));
+    await settle(tester);
+    expect(AccountStore.current.background, 'wallpaper1010');
   });
 
   testWidgets('Manage Traits: buy, open, results, collection and combine', (

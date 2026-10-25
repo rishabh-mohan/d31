@@ -48,8 +48,15 @@ class HomeColors {
   static const trash = Color(0xFFE85A50);
 }
 
-/// The desk wallpaper every account page is drawn over.
-const homeWallpaper = 'kss/images/wallpaper_image/wallpaper0.png';
+/// The Amnesia desk: the default background and the fallback for an id the
+/// catalog no longer has.
+const deskWallpaper = 'kss/images/wallpaper_image/wallpaper0.png';
+
+/// The selected puzzle background that Home and every account page are
+/// drawn over (TODO 102).
+String homeWallpaper() =>
+    AccountStore.current.backgroundIn(AccountStore.catalog)?.wallpaper ??
+    deskWallpaper;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -303,7 +310,12 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // The wallpaper fills the screen and the paper blocks lie over
               // it (the original's wallpaper_block_right/bottom).
-              const Positioned.fill(child: PackImage(path: homeWallpaper)),
+              Positioned.fill(
+                child: PackImage(
+                  key: const ValueKey('home-wallpaper'),
+                  path: homeWallpaper(),
+                ),
+              ),
               Positioned.fill(
                 child: IgnorePointer(
                   ignoring: _sceneOnly,
@@ -321,7 +333,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (_sceneOnly)
+              if (_sceneOnly) ...[
+                // MM-02: the selected background's name, lower right.
+                Positioned(
+                  left: box.maxWidth * .42,
+                  right: box.maxWidth * .07,
+                  top: box.maxHeight * .90,
+                  height: box.maxHeight * .04,
+                  child: Container(
+                    key: const ValueKey('home-scene-label'),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xCCFCD9C4),
+                      borderRadius: BorderRadius.circular(18 * u),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12 * u),
+                        child: Text(
+                          AccountStore.current
+                                  .backgroundIn(AccountStore.catalog)
+                                  ?.name ??
+                              'Amnesia',
+                          style: TextStyle(
+                            fontSize: 17 * u,
+                            color: HomeColors.ink,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 Positioned.fill(
                   child: GestureDetector(
                     key: const ValueKey('home-scene-only'),
@@ -329,6 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () => setState(() => _sceneOnly = false),
                   ),
                 ),
+              ],
             ],
           );
         },

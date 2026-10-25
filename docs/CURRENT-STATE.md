@@ -2,6 +2,27 @@
 
 Read this checkpoint before dated historical notes. [TODO.md](../TODO.md) tracks per-item status; [the branch integration report](BRANCH-INTEGRATION-2026-10-25.md) records the original assignments and remaining blockers. Code/tests are the implementation source of truth; original-game references establish targets, not proof that a feature exists.
 
+## Puzzle backgrounds (TODO 102)
+
+A finished puzzle becomes the Home background, from its green tag in a
+collection or the Use as Background button in its detail panel. Home, the
+account pages and MM-02's scene-only view (which now shows the selected
+puzzle's name) all draw the selection, which is saved in the account.
+Event-limited puzzles (story 0: Cookie Parade levels, the Full Focus Package)
+count as held, because nothing here can earn their pieces.
+
+Limit: only the Amnesia desk ships full-screen art. The original streams the
+rest from its Firebase Storage `wallpapers/<id>.png` (`sub_aa702c`, cached
+as `wallpaper_version_<id>`), which is not fetched. Every other background
+fills the screen from its square thumbnail (564–2255 px), so it is cropped
+at the sides and the 564 px ones look soft. The equip interaction itself is
+the project's own; E19 (how the original shows equipped versus owned) is
+still uncaptured.
+
+Validation: 405 tests pass and analysis is clean. The profile APK
+(SHA-256 `09a4cc5c…`, matched on the device) is installed with data
+preserved on Nord N30 `7c2c1cc8`.
+
 ## School names and History recreation
 
 Eighty Global/Taiwan school labels are corrected in account and badge catalogs

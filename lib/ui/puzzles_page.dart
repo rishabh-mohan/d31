@@ -5,8 +5,10 @@
 /// reached, a story piece when the campaign is installed, a game-count
 /// piece per finished run (provisional), and every piece once bought.
 /// Progress and price are weighted by each piece's cookies, as the
-/// original's 2/4-yet-52% shows. Only the Amnesia desk ships full-screen
-/// art, so it is the one background; the Insta-draw tile is not built.
+/// original's 2/4-yet-52% shows. A finished puzzle becomes the Home
+/// background from its green tag or the detail panel (TODO 102). Only the
+/// Amnesia desk ships full-screen art; the others fill the screen from
+/// their square thumbnails. The Insta-draw tile is not built.
 library;
 
 import 'dart:async';
@@ -28,10 +30,17 @@ const _categories = [
   (0, 'Event Limited', 'kss/images/event'),
 ];
 
-class PuzzlesPage extends StatelessWidget {
+class PuzzlesPage extends StatefulWidget {
   /// Stories with an installed pack (their story pieces are held).
   final Set<int> installedStories;
   const PuzzlesPage({super.key, required this.installedStories});
+
+  @override
+  State<PuzzlesPage> createState() => _PuzzlesPageState();
+}
+
+class _PuzzlesPageState extends State<PuzzlesPage> {
+  Set<int> get installedStories => widget.installedStories;
 
   @override
   Widget build(BuildContext context) {
@@ -63,15 +72,19 @@ class PuzzlesPage extends StatelessWidget {
               title: art.endsWith('event')
                   ? 'kss/images/event_banner_title_img.png'
                   : '$art/banner_title_img.png',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => PuzzleCollectionPage(
-                    title: name,
-                    storyId: story,
-                    installedStories: installedStories,
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PuzzleCollectionPage(
+                      title: name,
+                      storyId: story,
+                      installedStories: installedStories,
+                    ),
                   ),
-                ),
-              ),
+                );
+                // The page is drawn over the background just chosen.
+                if (mounted) setState(() {});
+              },
             ),
             SizedBox(height: 26 * u),
           ],
@@ -237,7 +250,16 @@ class _PuzzleCollectionPageState extends State<PuzzleCollectionPage> {
                 ),
                 SizedBox(height: 6 * u),
                 if (complete)
-                  _OwnedTag(u: u, equipped: account.background == puzzle.id)
+                  _OwnedTag(
+                    key: ValueKey('puzzle-use-${puzzle.id}'),
+                    u: u,
+                    equipped: account.background == puzzle.id,
+                    onTap: () {
+                      account.useAsBackground(puzzle, widget.installedStories);
+                      unawaited(AccountStore.save());
+                      setState(() {});
+                    },
+                  )
                 else if (price != null)
                   _BuyTag(
                     u: u,
@@ -336,23 +358,37 @@ class _PuzzleArt extends StatelessWidget {
   }
 }
 
+/// A finished puzzle's tag: a check when it is the background, a double
+/// check otherwise. Tapping it makes it the background.
 class _OwnedTag extends StatelessWidget {
   final double u;
   final bool equipped;
-  const _OwnedTag({required this.u, required this.equipped});
+  final VoidCallback onTap;
+  const _OwnedTag({
+    super.key,
+    required this.u,
+    required this.equipped,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 64 * u,
-    height: 21 * u,
-    decoration: BoxDecoration(
-      color: const Color(0xFF4CB848),
-      borderRadius: BorderRadius.circular(4 * u),
-    ),
-    child: Icon(
-      equipped ? Icons.check : Icons.done_all,
-      color: Colors.white,
-      size: 18 * u,
+  Widget build(BuildContext context) => Tooltip(
+    message: equipped ? 'Current background' : 'Use as background',
+    child: GestureDetector(
+      onTap: equipped ? null : onTap,
+      child: Container(
+        width: 64 * u,
+        height: 21 * u,
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CB848),
+          borderRadius: BorderRadius.circular(4 * u),
+        ),
+        child: Icon(
+          equipped ? Icons.check : Icons.done_all,
+          color: Colors.white,
+          size: 18 * u,
+        ),
+      ),
     ),
   );
 }
@@ -558,6 +594,18 @@ class _PuzzleDetailState extends State<PuzzleDetail> {
                     ),
                   ),
                 ),
+                if (count == held.length) ...[
+                  SizedBox(height: 10 * u),
+                  _BackgroundButton(
+                    u: u,
+                    current: account.background == puzzle.id,
+                    onTap: () {
+                      account.useAsBackground(puzzle, widget.installedStories);
+                      unawaited(AccountStore.save());
+                      setState(() {});
+                    },
+                  ),
+                ],
                 SizedBox(height: 8 * u),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 22 * u),
@@ -701,6 +749,57 @@ class _PuzzleDetailState extends State<PuzzleDetail> {
       },
     );
   }
+}
+
+/// A finished puzzle's Use as Background control. The original's equip
+/// interaction is not captured (E19), so this is the project's own.
+class _BackgroundButton extends StatelessWidget {
+  final double u;
+  final bool current;
+  final VoidCallback onTap;
+
+  const _BackgroundButton({
+    required this.u,
+    required this.current,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.symmetric(horizontal: 30 * u),
+    child: Material(
+      color: current ? const Color(0xFF4CB848) : HomeColors.orange,
+      borderRadius: BorderRadius.circular(10 * u),
+      child: InkWell(
+        key: const ValueKey('use-as-background'),
+        borderRadius: BorderRadius.circular(10 * u),
+        onTap: current ? null : onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 7 * u),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                current ? Icons.check : Icons.wallpaper,
+                color: Colors.white,
+                size: 18 * u,
+              ),
+              SizedBox(width: 6 * u),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    current ? 'Current Background' : 'Use as Background',
+                    style: TextStyle(fontSize: 16 * u, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _PieceRow extends StatelessWidget {

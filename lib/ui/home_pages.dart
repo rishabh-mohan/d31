@@ -38,7 +38,7 @@ class MenuPage extends StatelessWidget {
           final u = box.maxWidth / 390;
           return Stack(
             children: [
-              const Positioned.fill(child: PackImage(path: homeWallpaper)),
+              Positioned.fill(child: PackImage(path: homeWallpaper())),
               Positioned.fill(
                 child: ColoredBox(
                   color: HomeColors.paper.withValues(alpha: wash),

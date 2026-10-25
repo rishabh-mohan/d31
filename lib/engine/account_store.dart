@@ -612,8 +612,11 @@ class Account implements SharedWallet {
 
   /// Which pieces are held. `gameCount` pieces need that many finished runs
   /// of the campaign (the first one run, the second two...): provisional,
-  /// the original's counts were not recovered. Invites and event packages
-  /// cannot be earned here.
+  /// the original's counts were not recovered. Invites cannot be earned
+  /// here. Event-package pieces (Cookie Parade levels, the Full Focus
+  /// Package) count as held: there are no events or purchases to earn them
+  /// from, and the user asked for the event-limited puzzles unlocked
+  /// (TODO 102).
   List<bool> piecesOf(Puzzle puzzle, Set<int> installedStories) {
     if (boughtPuzzles.contains(puzzle.id)) {
       return List.filled(puzzle.pieces.length, true);
@@ -627,6 +630,7 @@ class Account implements SharedWallet {
           'ending' => endings.contains(p.endingCode),
           'purchaseStory' => installedStories.contains(puzzle.storyId),
           'gameCount' => runs >= ++games,
+          'eventPackage' => true,
           _ => false,
         },
     ];
@@ -669,6 +673,22 @@ class Account implements SharedWallet {
     cookies -= price;
     boughtPuzzles.add(puzzle.id);
     return true;
+  }
+
+  /// Makes a finished puzzle the Home background (MM-11's green check).
+  /// An unfinished one is refused.
+  bool useAsBackground(Puzzle puzzle, Set<int> installedStories) {
+    if (!piecesOf(puzzle, installedStories).every((h) => h)) return false;
+    background = puzzle.id;
+    return true;
+  }
+
+  /// The selected background, or null when its id is not in [catalog].
+  Puzzle? backgroundIn(AccountCatalog catalog) {
+    for (final p in catalog.puzzles) {
+      if (p.id == background) return p;
+    }
+    return null;
   }
 
   // ---- Daily quest ----------------------------------------------------
