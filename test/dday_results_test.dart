@@ -248,14 +248,32 @@ void main() {
       expect(key('results-cards'), findsNothing);
       await browseAndConfirm(tester);
       expect(game.resultsRevealed, 3);
-      // The combined page is its own step with its own Confirm.
+      // The combined page has no aggregate Confirm: it settles into the Final
+      // Decision state by itself, confirming the engine once (TODO 105).
       expect(key('results-cards'), findsOneWidget);
-      expect(game.state.resultsReviewed, isFalse);
-      expect(key('final-decision-title'), findsOneWidget);
-      await tester.tap(key('results-confirm-all'));
       await wait(tester, 800);
+      expect(key('results-confirm-all'), findsNothing);
+      expect(key('final-decision-title'), findsOneWidget);
       expect(game.state.resultsReviewed, isTrue);
       expect(game.state.finalDecided, isFalse);
+    });
+
+    testWidgets('a tap anywhere opens the envelope, once', (tester) async {
+      final game = committed([false, false, false]);
+      await host(tester, DdayResultsFlow(game: game, onFinished: () {}));
+      await skipTitle(tester);
+      // Far from the Browse control; two taps in one frame start it once.
+      await tester.tapAt(const Offset(40, 120));
+      await tester.tapAt(const Offset(40, 120));
+      await tester.pump(const Duration(milliseconds: 2500));
+      expect(key('result-confirm'), findsNothing, reason: 'still opening');
+      await wait(tester, 5000);
+      expect(key('result-confirm'), findsOneWidget);
+      expect(game.resultsRevealed, 0);
+      // Tapping the stage while the card is up does nothing.
+      await tester.tapAt(const Offset(40, 120));
+      await wait(tester, 100);
+      expect(key('result-card-0'), findsOneWidget);
     });
 
     testWidgets('combined page lists the cards in submission order', (
