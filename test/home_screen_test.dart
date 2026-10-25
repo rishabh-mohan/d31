@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:d30mode/ui/home_pages.dart';
 import 'package:d30mode/ui/home_screen.dart';
@@ -45,12 +46,32 @@ void main() {
   ) async {
     await pumpPhone(tester, const HomeScreen());
     await tester.pump();
+    double opacity() => tester
+        .widget<AnimatedOpacity>(find.byKey(const ValueKey('home-menu-fade')))
+        .opacity;
+    // The fade's rendered opacity, mid-animation.
+    double shown() => tester
+        .renderObject<RenderAnimatedOpacity>(
+          find.byKey(const ValueKey('home-menu-fade')),
+        )
+        .opacity
+        .value;
     await tester.tap(find.byKey(const ValueKey('home-scene')));
     await tester.pump();
-    expect(find.text('Start'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(opacity(), 0);
+    expect(shown(), inExclusiveRange(0.05, 0.95), reason: 'fading out');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(shown(), 0);
+    // The faded menu takes no taps; the whole screen restores it.
     await tester.tap(find.byKey(const ValueKey('home-scene-only')));
     await tester.pump();
-    expect(find.text('Start'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(shown(), inExclusiveRange(0.05, 0.95), reason: 'fading in');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(shown(), 1);
+    expect(find.byKey(const ValueKey('home-scene-only')), findsNothing);
+    expect(find.text('Start').hitTestable(), findsOneWidget);
   });
 
   testWidgets('History lays out under its header', (tester) async {
