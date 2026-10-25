@@ -59,6 +59,7 @@ ExamCard?       game.currentExamCard
 bool            game.examCardsComplete
 ExamTurn?       game.takeExamSubject()     // null when nothing is pending
 void            game.completeExamCards()   // headless / legacy screen
+EventRun        game.examResponseEvent(turn) // presentation-only one-line scene for the response (docs/DDAY-UI.md)
 String          game.subjectLabel(subject)
 ```
 

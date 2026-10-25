@@ -22,6 +22,7 @@ import '../engine/state.dart';
 import 'csat_screen.dart';
 import 'dev_panel.dart';
 import 'end_screen.dart';
+import 'exam_cards.dart';
 import 'event_screen.dart';
 import 'day_transition.dart';
 import 'stationery_draw.dart';
@@ -317,6 +318,12 @@ class _GameScreenState extends State<GameScreen> {
   /// The CSAT, the applications, then the ending scenes in turn until one
   /// ends the run (or none claims it, and the admission itself is the end).
   Future<void> _sitCsat() async {
+    if (game.examCardsPending) {
+      // The hand area shows the exam cards; each tap goes through
+      // _takeExam, which comes back here after the last subject.
+      if (mounted) setState(() {});
+      return;
+    }
     if (state.csatPending) {
       await CsatScreen.show(context, game);
       if (!mounted) return;
@@ -390,6 +397,27 @@ class _GameScreenState extends State<GameScreen> {
       if (!_preparing && wasInClass && !game.inClass && !game.state.finished) {
         await _pickLocation(title: 'Class is over. Where do I go?');
       }
+    } finally {
+      _resolving = false;
+    }
+  }
+
+  /// Taps the current exam card: records the subject (one tick), plays its
+  /// response line as a normal message, and after the last subject goes on to
+  /// the score announcement.
+  Future<void> _takeExam() async {
+    if (_resolving || !game.examCardsPending) return;
+    _resolving = true;
+    try {
+      final turn = game.takeExamSubject();
+      if (turn == null) return;
+      setState(() {});
+      await EventScreen.show(context, game.examResponseEvent(turn));
+      if (!mounted) return;
+      setState(() {});
+      await _autoSave();
+      if (!mounted) return;
+      if (!game.examCardsPending) await _sitCsat();
     } finally {
       _resolving = false;
     }
@@ -556,6 +584,7 @@ class _GameScreenState extends State<GameScreen> {
                               bookFor: _bookFor,
                               onAct: _act,
                               onRefresh: _refresh,
+                              onExam: _takeExam,
                             ),
                     ),
                   ],
@@ -853,6 +882,7 @@ class _MainPanel extends StatelessWidget {
   final GameBook? Function(int, LocationAction) bookFor;
   final Future<void> Function(int, LocationAction) onAct;
   final VoidCallback onRefresh;
+  final Future<void> Function() onExam;
 
   const _MainPanel({
     required this.game,
@@ -861,6 +891,7 @@ class _MainPanel extends StatelessWidget {
     required this.bookFor,
     required this.onAct,
     required this.onRefresh,
+    required this.onExam,
   });
 
   @override
@@ -957,13 +988,19 @@ class _MainPanel extends StatelessWidget {
                                     onRefresh: onRefresh,
                                   ),
                                   const SizedBox(height: 6),
-                                  _ActionGrid(
-                                    game: game,
-                                    exhausted: exhausted,
-                                    actions: actions,
-                                    bookFor: bookFor,
-                                    onAct: onAct,
-                                  ),
+                                  if (game.examCardsPending)
+                                    _ExamHand(
+                                      label: game.currentExamCard!.label,
+                                      onTap: onExam,
+                                    )
+                                  else
+                                    _ActionGrid(
+                                      game: game,
+                                      exhausted: exhausted,
+                                      actions: actions,
+                                      bookFor: bookFor,
+                                      onAct: onAct,
+                                    ),
                                 ],
                               ),
                             ),
@@ -2175,4 +2212,23 @@ class _PressDownState extends State<_PressDown> {
       ),
     );
   }
+}
+
+/// The hand area on exam day: the current subject's card, alone.
+class _ExamHand extends StatelessWidget {
+  final String label;
+  final Future<void> Function() onTap;
+  const _ExamHand({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('exam-hand'),
+    padding: const EdgeInsets.fromLTRB(26, 10, 26, 8),
+    decoration: BoxDecoration(
+      color: D30Colors.panel,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: D30Colors.panelBorder, width: 1.5),
+    ),
+    child: ExamCardButton(label: label, onTap: onTap, height: 290),
+  );
 }

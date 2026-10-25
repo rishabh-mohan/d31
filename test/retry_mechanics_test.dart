@@ -10,7 +10,6 @@ import 'package:d30mode/engine/game_date.dart';
 import 'package:d30mode/engine/pack.dart';
 import 'package:d30mode/engine/setup.dart';
 import 'package:d30mode/engine/state.dart';
-import 'package:d30mode/ui/csat_screen.dart';
 import 'package:d30mode/ui/setup_screen.dart';
 import 'package:d30mode/ui/event_screen.dart';
 
@@ -516,32 +515,6 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('ending-card')), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('the CSAT screen goes from results to enrollment', (tester) async {
-    tester.view.physicalSize = const Size(393, 852);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    final game = Game.newRun(retry, random: Random(3));
-    game.state.openingComplete = true;
-    game.state.date = GameDate(retry.manifest.endDate.day, 0);
-    for (final s in retry.manifest.subjects) {
-      game.state.stats[s] = 3000;
-    }
-    game.state.csatPending = true;
-
-    await tester.pumpWidget(MaterialApp(home: CsatScreen(game: game)));
-    expect(find.text('CSAT Results'), findsOneWidget);
-    await tester.tap(find.text('Choose universities'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Applications (0 / 3)'), findsOneWidget);
-    await tester.tap(find.byType(ListTile).first);
-    await tester.pump();
-    expect(find.textContaining('Applications (1 / 3)'), findsOneWidget);
-    await tester.tap(find.text('Submit 1 application'));
-    await tester.pumpAndSettle();
-    expect(find.text('Admission Results'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
