@@ -26,6 +26,7 @@ import 'event_screen.dart';
 import 'day_transition.dart';
 import 'stationery_draw.dart';
 import 'day_menu.dart';
+import 'goal_met_dialog.dart';
 import 'commerce_screen.dart';
 import 'my_info.dart';
 import 'location_picker.dart';
@@ -192,6 +193,10 @@ class _GameScreenState extends State<GameScreen> {
       await EventScreen.show(context, event);
       if (!mounted) return;
     }
+    if (outcome.goalMet) {
+      await _announceGoalMet();
+      if (!mounted) return;
+    }
     if (outcome.exhausted && state.exhaustionPending) {
       setState(() => _exhaustionPresentation = true);
       if (outcome.event != null) {
@@ -221,6 +226,11 @@ class _GameScreenState extends State<GameScreen> {
 
     await _drainScheduledEvents();
     if (!mounted) return;
+    // An event's stat grant can meet the goal too.
+    if (game.settleWeeklyGoal()) {
+      await _announceGoalMet();
+      if (!mounted) return;
+    }
     if (state.dayEndPending) {
       if (state.finished) {
         state.dayEndPending = false;
@@ -266,6 +276,14 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {});
       await _autoSave();
     }
+  }
+
+  /// The goal was met and paid just now; the original says so mid-day.
+  Future<void> _announceGoalMet() async {
+    final goal = state.weeklyGoal;
+    if (goal == null || !mounted) return;
+    await GoalMetDialog.show(context, goal);
+    if (mounted) setState(() {});
   }
 
   /// Enrolment has turned the endings on but none has closed the run yet.
@@ -384,6 +402,7 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _openInventory() async {
     await Navigator.of(context)
         .push(CommerceScreen.route(game, menu: PackMenu.items));
+    if (mounted && game.settleWeeklyGoal()) await _announceGoalMet();
     if (mounted) setState(() {});
   }
 
@@ -394,6 +413,7 @@ class _GameScreenState extends State<GameScreen> {
         menu: stationery ? PackMenu.stationery : PackMenu.shop,
       ),
     );
+    if (mounted && game.settleWeeklyGoal()) await _announceGoalMet();
     if (mounted) setState(() {});
   }
 

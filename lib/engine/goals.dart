@@ -27,13 +27,28 @@ class WeeklyGoal {
   final int targetValue;
 
   final String rewardSubject;
+
+  /// The reward as paid, modifiers included. Bonuses held when the goal is
+  /// issued are folded in then and never re-read, so a Study Planner bought
+  /// midweek cannot raise the goal already on the board -- its text says
+  /// "effect begins the week after obtaining" (A08).
   final int rewardValue;
+
+  /// False only for goals loaded from saves written before [rewardValue]
+  /// was snapshotted; those still take the modifiers at payout.
+  final bool rewardFinal;
 
   /// Snapshot of the target stat when the goal was issued, so progress can be
   /// shown as a fraction of the week's work rather than of the whole run.
   final num startValue;
 
   bool met;
+
+  /// Set once the reward is in. Payment happens the moment the goal is met,
+  /// as the original's mid-day "Weekly Goals Met" popup does, so the final
+  /// partial week settles before the CSAT rather than on a Monday that never
+  /// comes (A09).
+  bool paid;
 
   WeeklyGoal({
     required this.weekIndex,
@@ -43,6 +58,8 @@ class WeeklyGoal {
     required this.rewardValue,
     required this.startValue,
     this.met = false,
+    this.paid = false,
+    this.rewardFinal = true,
   });
 
   double progressFrom(num current) {
@@ -59,6 +76,8 @@ class WeeklyGoal {
     'rewardValue': rewardValue,
     'startValue': startValue,
     'met': met,
+    'paid': paid,
+    'rewardFinal': rewardFinal,
   };
 
   static WeeklyGoal? fromJson(Map<String, dynamic>? j) {
@@ -71,6 +90,8 @@ class WeeklyGoal {
       rewardValue: (j['rewardValue'] as num?)?.toInt() ?? 0,
       startValue: (j['startValue'] as num?) ?? 0,
       met: j['met'] as bool? ?? false,
+      paid: j['paid'] as bool? ?? false,
+      rewardFinal: j['rewardFinal'] as bool? ?? false,
     );
   }
 }
@@ -108,9 +129,19 @@ class Goals {
       targetSubject: target,
       targetValue: threshold,
       rewardSubject: reward,
-      rewardValue: ((threshold - current) * rewardRatio).round(),
+      rewardValue: _withModifiers(
+        state,
+        (threshold - current) * rewardRatio,
+      ).round(),
       startValue: current,
     );
+  }
+
+  /// `goalReward` items and the reward traits, as held right now.
+  static num _withModifiers(GameState state, num base) {
+    final percent = state.passiveSum('goalReward', valueKey: 'percent');
+    final factor = TraitEngine(pack: state.pack).goalRewardFactor(state);
+    return base * (1 + percent / 100) * factor;
   }
 
   /// True when the current goal's threshold has just been reached.
@@ -122,28 +153,46 @@ class Goals {
     return true;
   }
 
-  /// Pays a met goal's reward. Rewards scale with `goalReward` effects.
+  /// What a met goal pays.
+  static int rewardAmount(WeeklyGoal goal, GameState state) => goal.rewardFinal
+      ? goal.rewardValue
+      : _withModifiers(state, goal.rewardValue).round();
+
+  /// Pays a met goal's reward, once.
   static void payReward(GameState state) {
     final goal = state.weeklyGoal;
-    if (goal == null || !goal.met) return;
-    final percent = state.passiveSum('goalReward', valueKey: 'percent');
-    final factor = TraitEngine(pack: state.pack).goalRewardFactor(state);
-    final amount = (goal.rewardValue * (1 + percent / 100) * factor).round();
+    if (goal == null || !goal.met || goal.paid) return;
+    goal.paid = true;
+    final amount = rewardAmount(goal, state);
     state.addStat(goal.rewardSubject, amount);
     state.note('Weekly goal met: ${goal.rewardSubject} +$amount.', 'effect');
+  }
+
+  /// Meets and pays the goal the moment its threshold is reached. True when
+  /// that just happened, so the host can show "Weekly Goals Met".
+  static bool settleIfMet(GameState state) {
+    if (!checkMet(state)) return false;
+    payReward(state);
+    return true;
+  }
+
+  /// Closes the current goal without issuing another: the Monday rollover,
+  /// and the final partial week on the eve of the exam.
+  static void settle(GameState state) {
+    final old = state.weeklyGoal;
+    if (old == null) return;
+    if (old.met) {
+      // Saves from before mid-day payment hold met-but-unpaid goals.
+      payReward(state);
+    } else if (!old.paid) {
+      state.note('Weekly goal failed.', 'system');
+    }
   }
 
   /// Called on each Monday rollover: settle the old goal, reset the weekly
   /// counters, issue the new one.
   static void rollOver(GameState state) {
-    final old = state.weeklyGoal;
-    if (old != null) {
-      if (old.met) {
-        payReward(state);
-      } else {
-        state.note('Weekly goal failed.', 'system');
-      }
-    }
+    settle(state);
     state.weeklyGoal = issue(state);
     state.studyBlocksThisWeek = 0;
     state.surplusStudyBlocks = 0;

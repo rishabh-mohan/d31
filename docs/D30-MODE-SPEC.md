@@ -1550,6 +1550,16 @@ What the UI strings establish:
   the week after obtaining"*; a `goalReward` trait; elite tiers; and a string
   *"Upcoming Weekly Goals stat rewards +30%"*.
 
+**Implemented timing (A08/A09, 2026-10-25).** The sketch below pays on the
+Monday rollover; the user's V02 recording instead shows a *"Weekly Goals
+Met"* popup mid-day, with objective, reward and Confirm. `Goals.settleIfMet`
+therefore pays the moment the threshold is reached (after an action, an
+event, or an item) and the host shows `GoalMetDialog`; Monday only reports a
+failure. The final partial week is settled on the rollover into exam day. The
+reward is snapshotted with the modifiers held when the goal is *issued*, so a
+planner bought midweek counts from the next goal, as its text says. Saves
+from before carry `rewardFinal: false` and keep the old payout-time bonus.
+
 ```dart
 // RECONSTRUCTED
 void rolloverWeeklyGoals() {
