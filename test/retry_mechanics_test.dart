@@ -519,7 +519,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the CSAT screen goes from results to enrolment', (tester) async {
+  testWidgets('the CSAT screen goes from results to enrollment', (tester) async {
     tester.view.physicalSize = const Size(393, 852);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

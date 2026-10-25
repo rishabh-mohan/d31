@@ -450,7 +450,7 @@ restore it from `isMale`. Character-event graphs in `events/events.json` carry
 `characterIdList` and are filtered to the selected character.
 
 CSAT save state includes `csatPending`, results, applications, admitted
-departments and enrolment. Exam day offers no ordinary action blocks. Task
+departments and enrollment. Exam day offers no ordinary action blocks. Task
 state includes deadlines/titles; ADD_TODO and ADD_TODO_2 schedule absolute and
 relative deadlines, and REMOVE_TODO removes them. These remain pack-controlled.
 

@@ -29,7 +29,7 @@ Evening evidence supplement:
 User corrections override older uncertain notes: protection persists after
 restart; any S draw resets mileage; Master of Notes' workbook precedes general
 completion gacha; continuous-condition mission failure notifies but unmet
-end-of-day expiry is silent; first college enrolment unlocks its achievement
+end-of-day expiry is silent; first college enrollment unlocks its achievement
 and grants two cookies. Inventory XP does not display the level-up event.
 
 1. [Evidence, sources and versions](#1-evidence-sources-and-versions)
@@ -156,7 +156,7 @@ flowchart TD
   Day --> Night[Day summary / next day / periodic rewards]
   Night --> Opening
   Day --> Exam[Scheduled exams]
-  Exam --> Admission[Applications, results, enrolment]
+  Exam --> Admission[Applications, results, enrollment]
   Admission --> Ending[Authored ending / completed record]
   Ending --> Account
 ```
@@ -534,7 +534,7 @@ exam/admission containers and predicates; **P** scorecards/achievements/history.
 | Applications | Choose department/university applications using exam results | V/N/R; current rebuild's up-to-three UI is not by itself proof of native limit |
 | Eligibility requirements | Some special departments need recommendation/product/state gates | D; exact entitlement behavior differs by version |
 | Admission results | Acceptance decisions exposed to follow-up selection/ending predicates | D/N |
-| Enrolment selection | Chosen university and major feed ending and badge logic | D/N |
+| Enrollment selection | Chosen university and major feed ending and badge logic | D/N |
 | No acceptance outcome | Cram-school/retake outcome supported by store description and notUniv catalog entry | D/W |
 | Acceptance modifiers | Traits/badges affect university acceptance chance | V/D; additive/multiplicative order unresolved |
 | Admission counts | Real-time counts by department are an original online feature | W/V; not reproduced by local simulated numbers |

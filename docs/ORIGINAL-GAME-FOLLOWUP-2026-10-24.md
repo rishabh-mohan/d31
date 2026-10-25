@@ -30,8 +30,8 @@ code. Evidence received does not mean implementation completed.
    to show it on closing inventory. Levels/EXP must still update correctly, and
    suppressed scenes must not leak into later unrelated events. Event-granted XP
    behavior is separate from this inventory rule.
-6. First enrolment at a college unlocks that college's achievement and gives
-   **two cookies**. This confirmation concerns first college enrolment; it does
+6. First enrollment at a college unlocks that college's achievement and gives
+   **two cookies**. This confirmation concerns first college enrollment; it does
    not establish department-specific or repeat awards.
 7. Research E33's remaining exam/application flow using public videos/wiki.
    Do not ask the user to reproduce the complete exam run again. The new History
@@ -190,13 +190,13 @@ watermark. Do not publish or use those frames as recreated game assets.
 | 10:06 (606s) | D-Day has a single large purple subject exam card, e.g. Science, in the normal hand area. This is the 31-Day campaign's exam presentation; do not apply it automatically to Retry Year. |
 | 10:14 (614s) | Graduation Exam Score Announcement floating modal: five colored subject headers, Score and Top % rows, orange Next. This older footage uses Society where the supplied current English capture uses Humanities. |
 | 10:18 (618s) | Second announcement modal displays a white printable scorecard with name/gender and the same two numeric rows. Turn in Papers button; divider and share section with Instagram, X and download icons. Distinguish summary results from the export-style scorecard. |
-| 10:24 (624s) | Full-screen Submit route: Quests top left, Turn In top right; Recommended Majors / Search within Schools / Search Majors tabs; Sort dropdown, Hide Applied Universities toggle, acceptance-rate range slider 20%-80%; scrollable crest/college/department/rate/enrolment-count cards and green Apply buttons. Bottom collapsible application tray has three slots, Auto Input and a handle. Two visible departments from the same university are offered; this does not prove duplicate identical programs can be submitted. |
+| 10:24 (624s) | Full-screen Submit route: Quests top left, Turn In top right; Recommended Majors / Search within Schools / Search Majors tabs; Sort dropdown, Hide Applied Universities toggle, acceptance-rate range slider 20%-80%; scrollable crest/college/department/rate/enrollment-count cards and green Apply buttons. Bottom collapsible application tray has three slots, Auto Input and a handle. Two visible departments from the same university are offered; this does not prove duplicate identical programs can be submitted. |
 | 10:30-10:36 (630-636s) | Apply fills the three candidate slots; slots show crests and predicted rates. In this example the chosen rates are 32%, 25%, 19%. Applied-university filter behavior/alternative search pages were not exercised in these sampled frames. |
 | 10:40 (640s) | Turn In opens Apply? confirmation listing all three college/department/rate choices, total-rejection chance 41.31%, top-right X and orange Confirm. The displayed value matches 0.68 x 0.75 x 0.81 = 0.4131 for this example; that arithmetic does not recover the upstream individual probability model. |
 | 10:44-11:08 (644-668s) | Dark Application Results Announcement, stacked colored crest envelopes animate/reveal one by one. Rejected result cards show college/department, red outcome and gold Confirm. The first and second sampled choices reject; this is not the static History list presentation. |
 | 11:20 (680s) | Final Decision screen shows Korea Retry Academy / Comprehensive Retake Course after rejection flow. This branch does not demonstrate selecting among several successful offers. |
 | 11:30-11:40 (690-700s) | Ending dialogue over results and black Retry Ending title/Confirm. Visible order should be preserved separately from fitted scoring logic. |
-| 11:44 (704s) | 'Obtain First Enrollment Reward!' with one Jumbo Trait Pack and 20 refresh tickets, with confetti and Confirm. This appears to be the account's first-enrolment reward in the older footage; it is a distinct context from the user's confirmed two-cookie first-college-achievement reward. Do not replace that confirmation with this different award. |
+| 11:44 (704s) | 'Obtain First Enrollment Reward!' with one Jumbo Trait Pack and 20 refresh tickets, with confetti and Confirm. This appears to be the account's first-enrollment reward in the older footage; it is a distinct context from the user's confirmed two-cookie first-college-achievement reward. Do not replace that confirmation with this different award. |
 
 Also inspected [Tutorial True Ending walkthrough, Part 2](https://www.youtube.com/watch?v=z9I19uKLRE0)
 (5m42s), which supplies a successful branch. Approximate sampled timestamps:
@@ -205,7 +205,7 @@ Also inspected [Tutorial True Ending walkthrough, Part 2](https://www.youtube.co
 - 3:17-3:37: sequential crest-envelope reveals and green accepted result cards.
   Applied program cards/percentages are shown, including three eventual offers.
 - 3:47: Final Decision presents three accepted college/department cards stacked
-  vertically; this is a choice of enrolment, not enrolment in all three.
+  vertically; this is a choice of enrollment, not enrollment in all three.
 - 3:57: selected Inje University certificate/result page, photo-upload control,
   confetti, sharing/download controls and Confirm; then ending dialogue.
 - 4:37: Tutorial True Ending title. Around 4:47, Ending Reward Obtained grants

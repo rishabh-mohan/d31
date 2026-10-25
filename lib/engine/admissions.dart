@@ -1,4 +1,4 @@
-/// The CSAT, university applications and enrolment.
+/// The CSAT, university applications and enrollment.
 ///
 /// The catalog is recovered: `admissions.json` is the global university and
 /// department lists, each department carrying its admission cutoff

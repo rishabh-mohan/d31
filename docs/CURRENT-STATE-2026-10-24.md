@@ -14,7 +14,7 @@ current coverage. Code and tests remain the source of truth.
   promotion proficiency notes, and a persistent Promotion Exam Kit display.
 - Imported global character events, filtered to the selected character;
   broader character parity remains incomplete.
-- Graduation Exam before the CSAT, applications, enrolment and ending scenes
+- Graduation Exam before the CSAT, applications, enrollment and ending scenes
   in both campaigns. The admissions catalog is imported; scoring and admission
   probabilities remain a fitted prototype model, not recovered formulas.
 - Working quiz question/answer macros and prize paths using 68 English school

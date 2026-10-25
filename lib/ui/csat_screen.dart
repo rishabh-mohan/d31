@@ -1,5 +1,5 @@
 /// Exam day after the Graduation Exam: the CSAT report card, the
-/// applications, and where to enrol.
+/// applications, and where to enroll.
 ///
 /// The original's admission screens were not captured, so this layout is the
 /// project's own. What it decides is the original's: the departments and their
@@ -263,7 +263,7 @@ class _CsatScreenState extends State<CsatScreen> {
     );
   }
 
-  // --- results and enrolment ----------------------------------------------
+  // --- results and enrollment ----------------------------------------------
 
   Widget _verdict() {
     final admitted = game.state.admittedDepartments;

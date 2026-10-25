@@ -1,5 +1,8 @@
 # d30mode project guide
 
+Use American English spelling: "enrollment" and "enroll" in UI text,
+documentation, comments and user-facing responses.
+
 Pack modularity is required: campaign-specific trait/character identities,
 special blocks and callback aliases belong in pack data, not engine branches.
 Read `docs/MODULAR-PACKS.md` for the format, validation evidence and

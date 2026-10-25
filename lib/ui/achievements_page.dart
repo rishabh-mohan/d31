@@ -1,7 +1,7 @@
 /// Achievements (MM-03..07): University, Campaign and Other tabs over one
 /// All / Incomplete / Complete filter.
 ///
-/// University counts are this account's own enrolments (the original's
+/// University counts are this account's own enrollments (the original's
 /// were online totals). A university is complete once enrolled in.
 /// Campaigns are the installed packs, with their endings from the account
 /// catalog; Other is the five achievements the capture shows that d30mode

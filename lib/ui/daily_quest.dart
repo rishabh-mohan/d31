@@ -1,4 +1,4 @@
-/// Daily Quests (MM-08), opened by Home's Missions: enrol in one named
+/// Daily Quests (MM-08), opened by Home's Missions: enroll in one named
 /// department today for 4 cookies. The quest is picked from the date, so it
 /// holds all day and changes at local midnight; a run finished today that
 /// enrolled there completes it, and Receive pays it out once.

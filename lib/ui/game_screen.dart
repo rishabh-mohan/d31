@@ -310,7 +310,7 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Enrolment has turned the endings on but none has closed the run yet.
+  /// Enrollment has turned the endings on but none has closed the run yet.
   bool get _endingsOpen =>
       !state.finished && state.switchValue('ENDING_CODE') == 1;
 
@@ -342,7 +342,7 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _closeRun() async {
     final record = await RecordStore.add(state, ending: game.outcome);
     if (record != null) {
-      // Endings, enrolments and achievements count toward the account.
+      // Endings, enrollments and achievements count toward the account.
       AccountStore.current.recordRun(record, AccountStore.catalog);
       await AccountStore.save();
     }
