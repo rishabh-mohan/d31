@@ -11,7 +11,7 @@ standalone example before extending these systems.
 Read these project documents before changing behavior:
 
 1. `docs/CURRENT-STATE.md` — latest integrated behavior, test/deployment evidence and limits.
-2. `TODO.md` — task IDs, checked implementations, partial work and evidence blockers.
+2. `TODO.md` — task IDs, checked implementations, partial work and evidence blockers. Finished entries live in `TODO-DONE.md`.
 3. `CLAUDE.md` — durable operational notes, user scope decisions and paid-for traps.
 4. `docs/BRANCH-INTEGRATION-2026-10-25.md` — original interrupted assignments and their outcomes.
 5. `docs/CLARIFIED-MECHANICS-2026-10-25.md` — later user choices for scavenging, persistent blocks and shop refresh.
