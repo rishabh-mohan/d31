@@ -221,6 +221,7 @@ TODO:
 78. Implement every item, and have the shop roll randomly every time, matching the original game's pseudocode for which items appear.
 79. Add a fade in transition for the info menu
 80. In the top left hamburger menu, "Main Menu" instead shows "Main M..." when there is plenty of space for the full title
+   DONE — The label now takes its full width and the "day is over" explanation wraps beside it; it was squeezed to a third of the row.
 91. Home's four-arrow (show background) button: fade the rest of the menu out, and back in on the tap that restores it, instead of switching with no transition.
 93. The banners in the main menu's submenus are all broken (Puzzles category banners and other submenu banner art).
 94. Achievements should be a full-page submenu like the other Home menus (Records, Puzzles, Select Game), not the current sheet over Home.
