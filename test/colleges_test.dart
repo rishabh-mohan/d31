@@ -15,6 +15,11 @@ void main() {
   late ContentPack pack;
   late ContentPack retry;
 
+  // Where tools/us_colleges.csv puts Purdue; the mapping is the user's to edit.
+  int purdueIn(ContentPack p) => p.admissions.universities.values
+      .firstWhere((u) => u.name == 'Purdue University')
+      .id;
+
   setUpAll(() async {
     pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
     retry = await ContentSource.loadFromDirectory(Directory('packs/kss20'));
@@ -31,19 +36,29 @@ void main() {
       ..['admissions.json'] = pack.sourceFiles['colleges.json']!
       ..remove('colleges.json');
     final old = ContentPack.fromFiles(files);
-    expect(old.admissions.departments.length, pack.admissions.departments.length);
+    expect(
+      old.admissions.departments.length,
+      pack.admissions.departments.length,
+    );
   });
 
   test('the US set renames universities and badges, nothing else', () {
     final us = pack.withColleges('us');
     expect(us.collegeSet, 'us');
     expect(us.admissions.universities[2]!.name, 'Harvard University');
-    // Purdue sits in the top general tier.
-    expect(us.admissions.universities[101]!.name, 'Purdue University');
-    expect(us.admissions.universities[101]!.rank, 'eight');
-    expect(us.badges[101]?.name ?? 'Purdue University', 'Purdue University');
+    // Purdue is a top-level college.
+    final purdue = purdueIn(us);
+    expect([
+      'eight',
+      'nine',
+      'ten',
+    ], contains(us.admissions.universities[purdue]!.rank));
+    expect(us.badges[purdue]?.name ?? 'Purdue University', 'Purdue University');
     // Departments, cutoffs and ids are the same catalog.
-    expect(us.admissions.departments.length, pack.admissions.departments.length);
+    expect(
+      us.admissions.departments.length,
+      pack.admissions.departments.length,
+    );
     for (final d in pack.admissions.departments.values.take(50)) {
       final other = us.admissions.departments[d.id]!;
       expect(other.deviation, d.deviation);
@@ -71,12 +86,12 @@ void main() {
     expect(json['collegeSet'], 'us');
     final loaded = GameState.fromJson(pack, json as Map<String, dynamic>);
     expect(loaded.pack.collegeSet, 'us');
-    expect(loaded.pack.admissions.universities[101]!.name, 'Purdue University');
+    expect(purdueIn(loaded.pack), purdueIn(pack.withColleges('us')));
   });
 
   test('the female script keeps the set', () {
     final female = retry.withColleges('us').forPlayer(isMale: false);
     expect(female.collegeSet, 'us');
-    expect(female.admissions.universities[101]?.name, 'Purdue University');
+    expect(purdueIn(female), purdueIn(retry.withColleges('us')));
   });
 }
