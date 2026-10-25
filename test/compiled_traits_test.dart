@@ -217,4 +217,21 @@ Future<void> main() async {
       expect(t.priceFactor(withTraits(const []).state, pack.items[1]), 1);
     });
   });
+
+  test('Developer 43 doubles the stamina from caffeine-tagged coffee', () {
+    num gainFrom(int itemId, List<int> traitIds) {
+      final game = withTraits(traitIds);
+      game.state.hp = 10;
+      game.state.addItem(itemId);
+      expect(game.useItem(itemId), isTrue);
+      return game.state.hp - 10;
+    }
+
+    expect(pack.items[1]!.detailTypes, contains('caffeine'));
+    expect(gainFrom(1, const []), 25);
+    expect(gainFrom(1, [TraitEngine.developer]), 50);
+    // Decaf Coffee is tagged food only: no caffeine, no doubling.
+    expect(gainFrom(2, [TraitEngine.developer]), 15);
+    expect(gainFrom(9, [TraitEngine.developer]), 30); // White Milk
+  });
 }
