@@ -313,6 +313,8 @@ class _GameScreenState extends State<GameScreen> {
   /// acknowledged, so a run is never more than one day from where it was.
   /// A run with no slot — a dev-panel run, say — simply has nowhere to go.
   Future<void> _autoSave() async {
+    // A shared wallet's spending lives on the account, saved alongside.
+    if (state.usesAccountWallet) await AccountStore.save();
     final slot = state.saveSlot;
     if (slot == null) return;
     await SaveStore.write(slot, state);
