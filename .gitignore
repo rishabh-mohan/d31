@@ -69,3 +69,10 @@ app.*.map.json
 
 # Original-game main-menu captures: local reference art, like references/screenshots.
 /screenshots/main-menu-2026-10-24/*.jpg
+# Later original-game captures: keep the media local, commit manifests/docs.
+/screenshots/original-game-followup-2026-10-24/**/*.jpg
+/screenshots/original-game-followup-2026-10-24/**/*.png
+/screenshots/original-game-followup-2026-10-24/**/*.mp4
+/screenshots/dday-applications-2026-10-25/**/*.jpg
+/screenshots/dday-applications-2026-10-25/**/*.png
+/screenshots/dday-applications-2026-10-25/**/*.mp4
