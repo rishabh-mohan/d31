@@ -273,7 +273,9 @@ class EventRun {
             current = _endBeat();
             return;
           }
-          current = _endBeat(node);
+          // Like a text line, a final line whose gate failed says its
+          // elseText rather than the primary text.
+          current = _endBeat(node, gateOk);
           return;
 
         case 'text':
@@ -333,14 +335,14 @@ class EventRun {
   /// can mark the event finished (state 2) for the conditions that wait on
   /// it -- `EVENT_191 equal 2` gates Readers' Response, and the storyline
   /// prerequisites the pack adds are written the same way.
-  EventBeat _endBeat([EventNode? node]) {
+  EventBeat _endBeat([EventNode? node, bool gateOk = true]) {
     state.eventStates[event.id] = 2;
     final next = node?.continueTargetSwitch;
     if (next != null && next.isNotEmpty) state.setSwitch(next, 1);
-    return _buildEndBeat(node);
+    return _buildEndBeat(node, gateOk);
   }
 
-  EventBeat _buildEndBeat([EventNode? node]) => EventBeat(
+  EventBeat _buildEndBeat([EventNode? node, bool gateOk = true]) => EventBeat(
     node:
         node ??
         EventNode(
@@ -363,7 +365,7 @@ class EventRun {
           conditionSet: null,
           eventSound: null,
         ),
-    text: expandEventText(node?.text ?? '', state),
+    text: node == null ? '' : _textOf(node, gateOk),
     speakerName: node == null ? null : _speakerName(node),
     backgroundImg: backgroundImg,
     choices: const [],

@@ -193,4 +193,45 @@ void main() {
       expect(game.state.stats['korean'], 5000);
     });
   });
+
+  group('L02 a gated final line', () {
+    // No shipped final node carries an elseText today, so the graph is
+    // written here: one `last` node gated on a switch.
+    String finalLine({required int gate}) {
+      final game = Game.newRun(original, random: Random(11));
+      const nodeId = 990000001;
+      original.nodes[nodeId] = EventNode.fromJson({
+        'id': nodeId,
+        'boxId': 990000001,
+        'type': 'last',
+        'text': 'Primary.',
+        'elseText': 'Otherwise.',
+        'conditionSet': {
+          'conditions': [
+            {
+              'targetType': 'eventSwitch',
+              'target': 'L02_GATE',
+              'compareType': 'equal',
+              'value': 1,
+            },
+          ],
+        },
+      });
+      addTearDown(() => original.nodes.remove(nodeId));
+      game.state.setSwitch('L02_GATE', gate);
+      final event = GameEvent.fromJson({
+        'id': 990000001,
+        'name': 'L02',
+        'rootNodeId': nodeId,
+      });
+      final run = game.events.begin(event, game.state);
+      expect(run.current!.isEnd, isTrue);
+      return run.current!.text;
+    }
+
+    test('says its elseText when the gate fails', () {
+      expect(finalLine(gate: 1), 'Primary.');
+      expect(finalLine(gate: 0), 'Otherwise.');
+    });
+  });
 }
