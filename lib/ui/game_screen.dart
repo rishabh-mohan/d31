@@ -6,6 +6,8 @@
 /// and the action card grid.
 library;
 
+import 'dart:async';
+
 import 'press_feedback.dart';
 
 import 'package:flutter/material.dart';
@@ -315,6 +317,10 @@ class _GameScreenState extends State<GameScreen> {
   bool get _endingsOpen =>
       !state.finished && state.switchValue('ENDING_CODE') == 1;
 
+  /// Set once the run has been closed and the summary shown, so the sitting
+  /// that started it does not carry on.
+  bool _concluded = false;
+
   /// The CSAT, the applications, then the ending scenes in turn until one
   /// ends the run (or none claims it, and the admission itself is the end).
   Future<void> _sitCsat() async {
@@ -325,22 +331,70 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
     if (state.csatPending) {
-      await CsatScreen.show(context, game);
-      if (!mounted) return;
+      await CsatScreen.show(context, game, endings: _endingsOverScene);
+      if (!mounted || _concluded) return;
       await _autoSave();
     }
+    await _playEndings();
+    if (!mounted) return;
+    await _concludeRun();
+  }
+
+  /// The enrollment scene is still on screen: save, then let the ending
+  /// events play over it (blurred and dimmed, as in the original) and go
+  /// straight to the summary (DDAY-C03).
+  Future<void> _endingsOverScene() async {
+    if (_concluded || !mounted) return;
+    await _autoSave();
+    if (!mounted) return;
+    await _playEndings();
+    if (!mounted) return;
+    await _concludeRun();
+  }
+
+  Future<void> _playEndings() async {
     for (var beats = 0; mounted && !state.finished && beats < 64; beats++) {
       final ending = game.nextEndingEvent();
       if (ending == null) break;
       await _showEvent(ending);
     }
-    if (!mounted) return;
+  }
+
+  /// Closes the run and replaces the game (and everything pushed over it)
+  /// with the completion summary. A black page covers the gap while the run
+  /// is recorded, so neither an empty dialogue nor the gameplay screen shows
+  /// between the ending title and the summary (DDAY-C02).
+  Future<void> _concludeRun() async {
+    if (_concluded) return;
+    _concluded = true;
+    final navigator = Navigator.of(context);
+    final gameRoute = ModalRoute.of(context);
+    unawaited(
+      navigator.push<void>(
+        PageRouteBuilder<void>(
+          opaque: true,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, _, _) => const ColoredBox(color: Colors.black),
+        ),
+      ),
+    );
     game.concludeRun();
     await _closeRun();
-    if (!mounted) return;
-    await Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => EndScreen(outcome: game.outcome, state: state),
+    var passedGame = false;
+    unawaited(
+      navigator.pushAndRemoveUntil<void>(
+        PageRouteBuilder<void>(
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, _, _) =>
+              EndScreen(outcome: game.outcome, state: state),
+        ),
+        (route) {
+          if (passedGame) return true;
+          if (identical(route, gameRoute)) passedGame = true;
+          return false;
+        },
       ),
     );
   }
