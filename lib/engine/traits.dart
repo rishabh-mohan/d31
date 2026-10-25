@@ -12,7 +12,7 @@
 /// `extraStat` as the x3-scaled field (High Potential: `+STAT_5`, extraStat 15).
 library;
 
-import 'dart:developer' as developer;
+import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'game_date.dart';
@@ -80,7 +80,7 @@ class TraitEngine {
   bool _unsupported(String what) {
     if (unknownConditions.add(what)) {
       assert(() {
-        developer.log('Unsupported trait condition $what; effect withheld.');
+        dev.log('Unsupported trait condition $what; effect withheld.');
         return true;
       }());
     }
