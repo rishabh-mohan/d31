@@ -63,34 +63,44 @@ class D30RaisedButton extends StatelessWidget {
   final Color color;
   final Color? edgeColor;
 
+  /// Height of the lower face, and how far a press sinks into it.
+  final double depth;
+
+  /// No lower face and no press motion (item buttons, TODO 77).
+  final bool flat;
+
   const D30RaisedButton({
     super.key,
     required this.child,
     required this.onPressed,
     this.color = D30Colors.accent,
     this.edgeColor,
+    this.depth = 6,
+    this.flat = false,
   });
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
+    padding: EdgeInsets.only(bottom: flat ? 0 : depth),
     child: DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: edgeColor ?? Color.lerp(color, Colors.black, .22)!,
-            offset: const Offset(0, 6),
-          ),
-          const BoxShadow(
-            color: Color(0x264A2B10),
-            blurRadius: 8,
-            offset: Offset(0, 8),
-          ),
-        ],
+        boxShadow: flat
+            ? const []
+            : [
+                BoxShadow(
+                  color: edgeColor ?? Color.lerp(color, Colors.black, .22)!,
+                  offset: Offset(0, depth),
+                ),
+                BoxShadow(
+                  color: const Color(0x264A2B10),
+                  blurRadius: 8,
+                  offset: Offset(0, depth + 2),
+                ),
+              ],
       ),
       child: PressFeedback(
-        travel: 6,
+        travel: flat ? 0 : depth,
         child: FilledButton(
           onPressed: onPressed,
           style: FilledButton.styleFrom(
