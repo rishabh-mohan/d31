@@ -117,12 +117,8 @@ class PackImage extends StatelessWidget {
                 base,
                 width: cacheW,
                 height: cacheH,
-                // `cover` crops, so the source must be at least as large as
-                // the box on both axes; `exact` guarantees that. Everything
-                // else only has to fit inside it.
-                policy: fit == BoxFit.cover
-                    ? ResizeImagePolicy.exact
-                    : ResizeImagePolicy.fit,
+                // Preserve the source aspect ratio before painting/cropping.
+                policy: ResizeImagePolicy.fit,
                 allowUpscaling: false,
               );
 

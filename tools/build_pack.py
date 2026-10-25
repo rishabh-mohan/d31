@@ -703,9 +703,9 @@ def build_rules(out: Path):
         # shown in the top bar. Both are account-level in the original.
         # `shared` spends the account wallet instead of a per-run counter;
         # `initial` is then a one-time grant to the account (TODO 84 M04).
-        # Refresh stays per-run (50 every run, TODO 31) until something
-        # earns refresh tickets account-wide.
-        "refresh": {"initial": 50, "shared": False},
+        # Refresh is shared too (user, 2026-10-25): the account gets 50 once;
+        # earning more is TODO 95.
+        "refresh": {"initial": 50, "shared": True},
         "cookies": {"initial": 20, "shared": True},
         "day": {
             "ticksPerDay": 15,

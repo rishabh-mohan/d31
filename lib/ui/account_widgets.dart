@@ -65,6 +65,7 @@ class AccountSheet extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
+                    width: double.infinity,
                     height: 48 * u,
                     color: HomeColors.orange,
                     child: Stack(

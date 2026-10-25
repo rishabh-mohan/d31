@@ -8,9 +8,6 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../engine/account_store.dart';
-import '../engine/content_source.dart';
-import '../engine/pack.dart';
 import '../engine/record_store.dart';
 import '../engine/save_store.dart';
 import 'home_screen.dart';
@@ -661,107 +658,4 @@ class EmptyMenuPage extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// The gear. The original's settings inventory was never captured, so this
-/// holds the project's own: the university catalog and the packs.
-class SettingsPage extends StatefulWidget {
-  final List<(ContentPack, PackLocation)> campaigns;
-  final Future<void> Function() onReload;
-
-  const SettingsPage({
-    super.key,
-    required this.campaigns,
-    required this.onReload,
-  });
-
-  @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<SettingsPage> {
-  bool _reloading = false;
-
-  Future<void> _setUniversities(UniversitySet value) async {
-    setState(() => AccountStore.current.universities = value);
-    await AccountStore.save();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MenuPage(
-      title: 'Settings',
-      wash: .8,
-      body: (context, u) {
-        final label = TextStyle(fontSize: 16 * u, color: HomeColors.ink);
-        final note = TextStyle(fontSize: 12.5 * u, color: HomeColors.muted);
-        return ListView(
-          padding: EdgeInsets.fromLTRB(25 * u, 24 * u, 25 * u, 30 * u),
-          children: [
-            Text('Universities', style: label),
-            SizedBox(height: 8 * u),
-            SegmentedButton<UniversitySet>(
-              key: const ValueKey('settings-universities'),
-              segments: [
-                for (final set in UniversitySet.values)
-                  ButtonSegment(value: set, label: Text(set.label)),
-              ],
-              selected: {AccountStore.current.universities},
-              onSelectionChanged: (s) => _setUniversities(s.single),
-            ),
-            SizedBox(height: 6 * u),
-            Text(
-              'Which catalog new runs apply to. Global universities stay the '
-              'same in both.',
-              style: note,
-            ),
-            SizedBox(height: 28 * u),
-            Text('Packs', style: label),
-            SizedBox(height: 8 * u),
-            for (final (pack, location) in widget.campaigns)
-              Container(
-                margin: EdgeInsets.only(bottom: 10 * u),
-                padding: EdgeInsets.all(12 * u),
-                decoration: _cardDecoration(u),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(pack.manifest.name, style: label),
-                    SizedBox(height: 4 * u),
-                    Text(
-                      '${pack.manifest.totalDays} days  ·  '
-                      '${pack.locations.length} locations  ·  '
-                      '${pack.events.length} events  ·  '
-                      '${pack.items.length} items  ·  '
-                      '${pack.traits.length} traits',
-                      style: note,
-                    ),
-                    Text(
-                      location.editable
-                          ? 'Editable pack: ${location.describe}'
-                          : location.describe,
-                      style: note.copyWith(fontStyle: FontStyle.italic),
-                    ),
-                  ],
-                ),
-              ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _reloading
-                    ? null
-                    : () async {
-                        setState(() => _reloading = true);
-                        await widget.onReload();
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Reload packs'),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

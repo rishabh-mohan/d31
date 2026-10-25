@@ -3,8 +3,8 @@
 /// Laid out on the original's 390 x 844 design canvas (its wallpaper block
 /// SVGs are drawn at that size) and scaled to the screen width, so positions
 /// read straight off the reference. The original's Rank (leaderboard) is
-/// left out on purpose, as are mail, the seasonal badge, Charging, Store and
-/// Notices, whose destinations were never captured.
+/// left out on purpose. Captured account dialogs open from Mail, the profile,
+/// Charging and Store; Notices and the seasonal entry remain undocumented.
 ///
 /// Home also owns pack loading, which used to sit behind the old title
 /// screen's slot list: the campaigns load here, and Start, Records and
@@ -25,6 +25,7 @@ import '../engine/save_store.dart';
 import '../engine/setup.dart';
 import 'day_transition.dart';
 import 'game_screen.dart';
+import 'account_menus.dart';
 import 'account_widgets.dart';
 import 'achievements_page.dart';
 import 'daily_quest.dart';
@@ -271,15 +272,18 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  Future<void> _openSettings() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SettingsPage(
-          campaigns: [for (final c in _campaigns.values) c],
-          onReload: _load,
-        ),
-      ),
-    );
+  Future<void> _openSettings() => _openSheet(
+    SettingsSheet(
+      campaigns: [for (final c in _campaigns.values) c],
+      onReload: _load,
+    ),
+  );
+
+  /// Settings, Mail Box, profile, Charging and Store float over Home
+  /// (TODO 84 M01); the balance pill updates when they close.
+  Future<void> _openSheet(Widget sheet) async {
+    await pushOverlay<void>(context, sheet);
+    unawaited(AccountStore.save());
     if (mounted) setState(() {});
   }
 
@@ -394,6 +398,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ),
     Positioned(
+      left: 62 * u,
+      top: y(46),
+      child: _SquareButton(
+        key: const ValueKey('home-mail'),
+        u: u,
+        icon: Icons.mail,
+        tooltip: 'Mail Box',
+        onTap: () => _openSheet(const MailBoxSheet()),
+      ),
+    ),
+    Positioned(
       right: 40 * u,
       top: y(46),
       child: _BalancePill(u: u, account: AccountStore.current),
@@ -450,11 +465,32 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : _error != null
           ? _LoadError(error: _error!, onRetry: _load)
-          : Text(
-              _pack?.manifest.name ?? '',
-              style: TextStyle(fontSize: 19.5 * u, color: HomeColors.ink),
+          : _AccountName(
+              u: u,
+              name: AccountStore.current.username,
+              onTap: () => _openSheet(ProfileSheet(pack: _pack)),
             ),
     ),
+    for (final (i, (label, key, icon, sheet)) in [
+      (
+        'Charging',
+        'home-charging',
+        Icons.cookie_outlined,
+        const ChargingSheet(),
+      ),
+      ('Store', 'home-store', Icons.storefront, StoreSheet(pack: _pack)),
+    ].indexed)
+      Positioned(
+        left: (20 + 73 * i) * u,
+        top: y(673),
+        child: _TileButton(
+          key: ValueKey(key),
+          u: u,
+          label: label,
+          icon: icon,
+          onTap: () => _openSheet(sheet),
+        ),
+      ),
   ];
 }
 
@@ -607,6 +643,108 @@ class _SquareButton extends StatelessWidget {
             borderRadius: radius,
             onTap: onTap,
             child: Icon(icon, size: 30 * u, color: HomeColors.orange),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The account name opens the profile (F05).
+class _AccountName extends StatelessWidget {
+  final double u;
+  final String name;
+  final VoidCallback onTap;
+  const _AccountName({
+    required this.u,
+    required this.name,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    key: const ValueKey('home-profile'),
+    onTap: onTap,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            name,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 19.5 * u, color: HomeColors.ink),
+          ),
+        ),
+        SizedBox(width: 7 * u),
+        CircleAvatar(
+          radius: 10 * u,
+          backgroundColor: HomeColors.orange,
+          child: Text(
+            'i',
+            style: TextStyle(
+              fontSize: 14 * u,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Charging / Store: icon over label in a cream square (MM-01).
+class _TileButton extends StatelessWidget {
+  final double u;
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _TileButton({
+    super.key,
+    required this.u,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(6 * u);
+    return Container(
+      width: 62 * u,
+      height: 62 * u,
+      decoration: BoxDecoration(
+        color: HomeColors.face,
+        borderRadius: radius,
+        border: Border.all(color: HomeColors.outline, width: 1.6 * u),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x334A2B10),
+            blurRadius: 4 * u,
+            offset: Offset(0, 2.5 * u),
+          ),
+        ],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 26 * u, color: HomeColors.ink),
+              SizedBox(height: 3 * u),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5 * u,
+                  height: 1.15,
+                  color: HomeColors.ink,
+                ),
+              ),
+            ],
           ),
         ),
       ),

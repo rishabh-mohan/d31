@@ -408,3 +408,17 @@ refer to the entries above). Effort is a rough guide, not a commitment.
   entry (no capture).
 - Deferred or out of scope: 4/F06 Elite; 42/F07 other campaigns; 23 umbrella;
   88-90 process; 39 recurring reminder.
+
+## Interrupted branch checkpoint — 2026-10-25
+
+See [the branch audit](docs/INTERRUPTED-BRANCH-AUDIT-2026-10-25.md) before resuming: branch tips are merged, but b-flow/c-traits/d-ui/e-account retain uncommitted drafts. In particular A11, Walking Enthusiast, the empty stationery border refactor, and M01 account dialogs are not in main. Free first rename and TODO 92 remain incomplete. Earlier unchecked entries and the difficulty index have not been comprehensively reconciled with merged commits; do not use them alone to infer implementation state.
+
+95. In Select Game, ongoing games character icons look squished. Check portrait aspect ratio/cropping against MM-26 at the Nord phone size; preserve the character proportions.
+
+## Home implementation follow-up — 2026-10-25
+
+M01 partial implementation: integrated and refined the e-account worktree's Settings, Mail Box, Profile/rename, Charging and Store screens. Home now has the captured envelope, username/info, Charging and Store entry points. Dialogs follow F01-F16; nested views retain the parent. Settings preferences persist, university/pack controls remain under expandable Game settings, balances read the account wallet, and trait-pack shortcuts open Manage Traits. First rename is free, subsequent renames cost nine cookies; the count persists and older custom usernames migrate as already renamed.
+
+Fixed shared orange title bars shrinking around their labels in account overlays. Image decoding now preserves source aspect ratio, addressing the likely cause of TODO 95's squished ongoing-save portraits and distorted banner art; confirm those on the Nord. Existing 91 fade and 94 full-page Achievements preserved.
+
+Remaining Home scope: real audio/haptics, mail delivery/claims, paid purchases/restoration, invitations/account services, Notices/seasonal entry (no destination evidence), History's detailed Info/Score Card/University Apps recreation, remaining puzzle full-screen art and provisional collection rules. Store/Charging purchases and external-service actions currently display an unavailable notice and make no transaction. Settings audio toggles persist preferences but playback is not implemented. Do not mark all of M01 DONE.
