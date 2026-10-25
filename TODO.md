@@ -16,33 +16,9 @@ guides. Quick: ~20-60k tokens. Moderate: ~60-200k. Large: ~200-600k. Very large:
 
 ## Quick (~20-60k tokens each)
 
-108. Add a Teaching Physics major to Ball State University
-   *Estimate: ~20k. The D-Day handoff lists Ball State's Teaching Physics as an existing user choice; check whether the 137-university catalog rebuild dropped it.*
-   DONE — Ball State University (US set, both campaigns) offers Teaching Physics (id 118022, cutoff 52.5, matching its sports major) via `US_DEPARTMENTS` in tools/us_colleges.py; the Korean set is unchanged. Covered by test/colleges_test.dart.
-
-111. The refresh token button (to use one) shouldn't move down when pressed.
-   *Estimate: ~20k. Press feedback on the in-game refresh control.*
-
 110. The sort option in Achievements isn't filled in properly with orange.
    *Estimate: ~25k. Achievements sort/filter pill styling (lib/ui/achievements_page.dart).*
-
-105. Remove the confirm button from the college decisions system, just have it go straight to showing the final decision button
-   *Estimate: ~25k. Results flow only (lib/ui/dday_results.dart).*
-
-104. Should be able to click anywhere on the screen to open the envelopes
-   *Estimate: ~25k. Envelope stack tap target.*
-
-109. For the college ID picture, have the seal in the background not be cutoff prematurely (have it be cutoff by the edges of the card and the title of the ID, but it currently cuts off a few pixels above and beloe)
-   *Estimate: ~30k. StudentIdCard clipping in lib/ui/dday_widgets.dart.*
-
-107. character icons from the retry year pack do not appear to show up in Records
-   *Estimate: ~35k. Records/History portrait lookup for the kss20 pack.*
-
-101. Beggar event is broken, even with enough gold he will claim you are broke
-   *Estimate: ~50k. Debug the event condition against the gold check.*
-
-- **F03** (audit 85): Effective Rumble/haptics with verified trigger points.
-  *Estimate: ~50k. Trigger points would be reconstructed unless evidence turns up.*
+   DONE (confirm on the Nord) — The orange arrow cell sat unclipped inside the rounded bordered pill, so it did not follow the corners or fill to the border; the pill now clips it (antiAlias), matching MM-03.
 
 ## Moderate (~60-200k tokens each)
 
