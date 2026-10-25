@@ -591,6 +591,24 @@ extension DDayFlow on Game {
   /// The results animation / combined list was confirmed. Idempotent.
   void confirmResults() {
     state.resultsReviewed = true;
+    state.resultsRevealed = state.applications.length;
+  }
+
+  /// How many envelope results the player has opened and confirmed (saved).
+  /// All of them once [confirmResults] ran.
+  int get resultsRevealed => state.resultsReviewed
+      ? state.applications.length
+      : state.resultsRevealed.clamp(0, state.applications.length);
+
+  /// The player confirmed the next envelope's result card. Advances by one,
+  /// never past the number of applications; the UI calls it once per
+  /// Confirm. Returns the new count.
+  int confirmNextResult() {
+    if (state.resultsReviewed) return resultsRevealed;
+    if (state.resultsRevealed < state.applications.length) {
+      state.resultsRevealed++;
+    }
+    return state.resultsRevealed;
   }
 
   // --- final decision ------------------------------------------------------
