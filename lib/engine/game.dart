@@ -1641,7 +1641,20 @@ class Game {
     final item = state.pack.items[itemId];
     if (item == null || state.itemCount(itemId) <= 0) return false;
     if (!item.isConsumable) return false;
-    effects.applyItem(item, state);
+    // Developer doubles the stamina a coffee restores.
+    final hpFactor = TraitEngine(pack: state.pack).itemHpFactor(state, item);
+    if (hpFactor == 1) {
+      effects.applyItem(item, state);
+    } else {
+      for (final e in item.effects) {
+        if (e['trigger'] != null) continue;
+        final v = e['value'];
+        effects.applyItemEffect(
+          e['type'] == 'hp' && v is num ? {...e, 'value': v * hpFactor} : e,
+          state,
+        );
+      }
+    }
     state.itemUseCounts[itemId] = (state.itemUseCounts[itemId] ?? 0) + 1;
     // A checking tool (the Promotion Exam Kit) is read, not used up.
     if (!item.effects.any((e) => e['keepItem'] == true)) {
