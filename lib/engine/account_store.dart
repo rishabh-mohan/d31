@@ -167,6 +167,10 @@ class Account implements SharedWallet {
   /// The name under Home's scene and on the profile (F05/F07).
   String username;
 
+  /// First rename is free; later changes cost nine cookies.
+  int renameCount;
+  int get renameCost => renameCount == 0 ? 0 : renameCookies;
+
   /// Settings toggles (F01). Stored for when audio and haptics exist;
   /// nothing plays or rumbles yet (TODO 85 F02/F03).
   bool bgm;
@@ -219,6 +223,7 @@ class Account implements SharedWallet {
     this.quest,
     Set<String>? walletGrants,
     this.username = defaultUsername,
+    this.renameCount = 0,
     this.bgm = true,
     this.sfx = true,
     this.rumble = true,
@@ -251,6 +256,7 @@ class Account implements SharedWallet {
     'quest': ?quest?.toJson(),
     'walletGrants': walletGrants.toList(),
     'username': username,
+    'renameCount': renameCount,
     'bgm': bgm,
     'sfx': sfx,
     'rumble': rumble,
@@ -305,6 +311,9 @@ class Account implements SharedWallet {
       final String name when validUsername(name) => name,
       _ => defaultUsername,
     },
+    renameCount:
+        (j['renameCount'] as num?)?.toInt() ??
+        (j['username'] != null && j['username'] != defaultUsername ? 1 : 0),
     bgm: j['bgm'] as bool? ?? true,
     sfx: j['sfx'] as bool? ?? true,
     rumble: j['rumble'] as bool? ?? true,
@@ -327,14 +336,15 @@ class Account implements SharedWallet {
       return 'Use $usernameMinLength-$usernameMaxLength characters.';
     }
     if (name.trim() == username) return 'That is already your username.';
-    if (cookies < renameCookies) return 'Not enough cookies.';
+    if (cookies < renameCost) return 'Not enough cookies.';
     return null;
   }
 
-  /// Change Username: costs [renameCookies]. False when refused.
+  /// First valid rename is free; later changes cost [renameCookies].
   bool rename(String name) {
     if (renameProblem(name) != null) return false;
-    cookies -= renameCookies;
+    cookies -= renameCost;
+    renameCount++;
     username = name.trim();
     return true;
   }

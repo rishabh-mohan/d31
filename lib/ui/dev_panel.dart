@@ -111,6 +111,50 @@ void _saveWallet(GameState s) {
   if (s.usesAccountWallet) unawaited(AccountStore.save());
 }
 
+Future<void> _setBalance(
+  BuildContext context,
+  String label,
+  int value,
+  ValueChanged<int> apply,
+) async {
+  final field = TextEditingController(text: '$value');
+  try {
+    final amount = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        void confirm() {
+          final n = int.tryParse(field.text);
+          if (n != null && n >= 0) Navigator.of(context).pop(n);
+        }
+
+        return AlertDialog(
+          title: Text('Set $label'),
+          content: TextField(
+            autofocus: true,
+            controller: field,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(labelText: 'Amount'),
+            onSubmitted: (_) => confirm(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(onPressed: confirm, child: const Text('Apply')),
+          ],
+        );
+      },
+    );
+    if (amount != null) apply(amount);
+  } finally {
+    // Wait for the dialog's closing transition before disposing its field.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    field.dispose();
+  }
+}
+
 class _StateTab extends StatelessWidget {
   final Game game;
   final void Function(VoidCallback) onChange;
@@ -122,6 +166,50 @@ class _StateTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _header(context, 'Wallet — tap a balance to set it'),
+        // A shared balance is the account's: editing it edits the wallet
+        // Home shows, and saves it.
+        _NumberRow(
+          label: s.usesAccountWallet && s.sharesWallet('cookies')
+              ? 'Cookies (account)'
+              : 'Cookies',
+          onSet: () => _setBalance(
+            context,
+            'Cookies',
+            s.cookies,
+            (v) => onChange(() {
+              s.cookies = v;
+              _saveWallet(s);
+            }),
+          ),
+          value: s.cookies,
+          onChanged: (v) => onChange(() {
+            s.cookies = v < 0 ? 0 : v.round();
+            _saveWallet(s);
+          }),
+          steps: const [-50, -5, 5, 50],
+        ),
+        _NumberRow(
+          label: s.usesAccountWallet && s.sharesWallet('refresh')
+              ? 'Refresh tokens (account)'
+              : 'Refresh tokens',
+          onSet: () => _setBalance(
+            context,
+            'Refresh tokens',
+            s.rerolls,
+            (v) => onChange(() {
+              s.rerolls = v;
+              _saveWallet(s);
+            }),
+          ),
+          value: s.rerolls,
+          onChanged: (v) => onChange(() {
+            s.rerolls = v < 0 ? 0 : v.round();
+            _saveWallet(s);
+          }),
+          steps: const [-50, -5, 5, 50],
+        ),
+        const Divider(height: 28),
         _header(context, 'Subject stats'),
         for (final key in s.stats.keys.toList())
           _NumberRow(
@@ -143,30 +231,6 @@ class _StateTab extends StatelessWidget {
           value: s.money,
           onChanged: (v) => onChange(() => s.money = v < 0 ? 0 : v),
           steps: const [-10000, -1000, 1000, 10000],
-        ),
-        // A shared balance is the account's: editing it edits the wallet
-        // Home shows, and saves it.
-        _NumberRow(
-          label: s.usesAccountWallet && s.sharesWallet('cookies')
-              ? 'Cookies (account)'
-              : 'Cookies',
-          value: s.cookies,
-          onChanged: (v) => onChange(() {
-            s.cookies = v < 0 ? 0 : v.round();
-            _saveWallet(s);
-          }),
-          steps: const [-50, -5, 5, 50],
-        ),
-        _NumberRow(
-          label: s.usesAccountWallet && s.sharesWallet('refresh')
-              ? 'Refresh tickets (account)'
-              : 'Refresh tickets',
-          value: s.rerolls,
-          onChanged: (v) => onChange(() {
-            s.rerolls = v < 0 ? 0 : v.round();
-            _saveWallet(s);
-          }),
-          steps: const [-50, -5, 5, 50],
         ),
         const Divider(height: 28),
         _header(context, 'Experience'),
@@ -292,11 +356,14 @@ class _NumberRow extends StatelessWidget {
   final ValueChanged<num> onChanged;
   final List<num> steps;
 
+  final VoidCallback? onSet;
+
   const _NumberRow({
     required this.label,
     required this.value,
     required this.onChanged,
     required this.steps,
+    this.onSet,
   });
 
   @override
@@ -307,9 +374,15 @@ class _NumberRow extends StatelessWidget {
         children: [
           Expanded(
             flex: 3,
-            child: Text(
-              '$label: ${value.round()}',
-              overflow: TextOverflow.ellipsis,
+            child: InkWell(
+              onTap: onSet,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  '$label: ${value.round()}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
           ),
           for (final s in steps)
