@@ -21,6 +21,7 @@ import '../engine/account_store.dart';
 import '../engine/pack.dart';
 import 'account_widgets.dart';
 import 'home_screen.dart';
+import 'haptics.dart';
 import 'pack_image.dart';
 
 class ManageTraitsSheet extends StatefulWidget {
@@ -1022,6 +1023,7 @@ class _PackRevealState extends State<PackReveal> {
           setState(() => _face = widget.pool[_rng.nextInt(widget.pool.length)]);
         });
       case _Stage.rolling:
+        Haptics.stop();
         _spin?.cancel();
         setState(() => _stage = _Stage.results);
       case _Stage.results:
