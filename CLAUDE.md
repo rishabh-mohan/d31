@@ -1,5 +1,59 @@
 # d30mode — durable notes
 
+### Read first — integrated checkpoint (2026-10-25)
+
+Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md), [TODO.md](TODO.md) and
+[docs/BRANCH-INTEGRATION-2026-10-25.md](docs/BRANCH-INTEGRATION-2026-10-25.md)
+before starting work. The five interrupted branches' recoverable work is now
+integrated on main; their original worktrees are recovery copies, not newer
+source to copy over main. A14 Practice Block insertion and I03 Hiking Gloves'
+extra yield remain evidence-blocked. Current validation is 311 passing tests,
+clean analysis and a successfully installed/cold-started Nord profile build.
+The dated notes below remain useful evidence but may describe older behavior.
+
+Keep TODO statuses and the current checkpoint synchronized after changes.
+Record partial work as 1R/2R/3R with the remaining requirement; mark DONE only
+for implemented, verified scope. Reference capture is not implementation.
+Put durable operational lessons here and feature details in the related docs.
+
+
+### Coordination and parity backlog (2026-10-24)
+
+Current E33 visual evidence (2026-10-25): before recreating D-Day, college
+applications/results or the retake completion flow, read
+[the user's recording handoff](docs/D-DAY-APPLICATIONS-REFERENCE-2026-10-25.md).
+It includes 70 native-resolution frames, a searchable gallery, candidate-edit
+detail sheets and a portable ZIP. Current user footage overrides older public
+footage for observed labels/layout. It demonstrates rejection/retake only;
+successful offers and hidden scoring/RNG remain separately sourced. Evidence
+collection is not implementation DONE; preserve other agents' account work.
+
+Evening evidence update: read
+[docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md](docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md)
+before implementing account/traits/History/missions. It specifies 30 new captures,
+three recordings and all 12 public trait-pack rate tables. User confirms:
+protection persists after restart; ANY S draw resets mileage; Master of Notes'
+workbook precedes completion gacha; first college enrolment unlocks its achievement
+and gives two cookies. Continuous-condition mission failure notifies, unmet
+end-of-day objectives expire silently. Inventory XP does NOT show a level-up
+event: audit A13 is withdrawn; do not add that notification. Keep level state
+correct and distinguish event XP. E33's remaining live exam flow is research work,
+not another screenshot request to the user.
+
+Historical coordination note: Claude originally owned the main-menu work. It
+is now integrated; preserve the current account/History/save/Home implementation.
+TODO.md entries 81-90 record the original-game code audit, separating confirmed
+bugs, missing functions, latent port hazards and unrecovered rules. Main-menu
+findings describe the audit baseline and need rechecking after integration.
+This follow-up changes documentation only.
+
+Stationery ownership/equipment starts fresh EVERY run (user confirmation).
+Same-run save/resume preserves it; cross-run stationery carryover is not needed.
+The former carryover instruction in START-GAME-INITIALIZATION.md is corrected.
+See [docs/IMPLEMENTATION-EVIDENCE-REQUESTS.md](docs/IMPLEMENTATION-EVIDENCE-REQUESTS.md)
+for remaining screenshot/recording/rule requests, excluding references already
+supplied. Do not mark a feature DONE merely because it is documented.
+
 ### Current shared-tree checkpoint (2026-10-24)
 
 Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) and
@@ -335,14 +389,16 @@ Korean. The English 1.27.4 build ships those same lists already translated, so
 
 ## 4. Build, test, deploy
 
-```bash
-export PATH="/c/Users/stewc/flutter/bin:$PATH"      # Flutter lives here
-export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
-
-python tools/build_pack.py && python tools/copy_assets.py   # regenerate pack
-flutter analyze && flutter test                             # see CURRENT-STATE.md for validation
-flutter build apk --debug
+```powershell
+& 'C:/Users/stewc/flutter/bin/flutter.bat' analyze
+& 'C:/Users/stewc/flutter/bin/flutter.bat' test
+& 'C:/Users/stewc/flutter/bin/flutter.bat' build apk --profile
 ```
+
+Regenerate both packs only when generator/content changes require it, using
+`tools/build_pack.py --story 16` and `--story 20` with the documented Python.
+Do not routinely rerun placeholder-art copy scripts over recovered presentation
+assets. Packs are bundled by pubspec and refreshed on-device from the APK.
 
 ### Device: OnePlus Nord N30, serial `7c2c1cc8`
 
@@ -353,15 +409,16 @@ enable USB debugging. Build/test first, then check the device and install.
 (`/sdcard/Android/data/dev.d30mode.d30mode/files/packs/<id>`) from the APK and
 re-seeds it whenever the bundled pack changes (a `.bundle-stamp` beside it).
 Files pushed by adb belong to `shell`, the app cannot overwrite them, and an
-old copy then shadows every update. Reinstalling the APK is enough; to force a
-reseed, `rm -rf` that packs folder (saves live elsewhere).
+old copy then shadows every update. Reinstalling the APK is enough for routine
+updates. If seeding fails, inspect ownership and the bundle stamp and back up
+editable packs/image overrides before any targeted recovery.
 
 **Use PowerShell for adb, never Git Bash.** MSYS2 rewrites `/sdcard/...` into
 a Windows path and `adb push` then reports success while nothing lands.
 
 ```powershell
-$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
-& $adb -s 7c2c1cc8 install -r build\app\outputs\flutter-apk\app-debug.apk
+$adb = 'C:/Users/stewc/AppData/Local/Android/Sdk/platform-tools/adb.exe'
+& $adb -s 7c2c1cc8 install -r build\app\outputs\flutter-apk\app-profile.apk
 ```
 
 **Normal play and performance checks must use hardware rendering.** Prefer
@@ -376,22 +433,10 @@ uses hardware Skia. A software-renderer screenshot workaround is diagnostic
 only: immediately restore the normal hardware launch afterwards. Do not ship
 or benchmark a session left in software rendering.
 
-**Update the editable packs after changing pack JSON**, or the app keeps its
-old disk copy even after APK installation. Push the pack directories into their
-existing parent (including new optional files such as admissions/quizzes and
-the female script), then use **Pack -> Reload from disk** or reopen the app:
-
-```powershell
-& $adb -s 7c2c1cc8 push packs/kss16 /sdcard/Android/data/dev.d30mode.d30mode/files/packs/
-& $adb -s 7c2c1cc8 push packs/kss20 /sdcard/Android/data/dev.d30mode.d30mode/files/packs/
-```
-
-Preserve saves and image overrides; do not delete the editable packs just to
-refresh their JSON. Back up the old pack files before replacing them.
-
-The editable pack lives at
-`/sdcard/Android/data/dev.d30mode.d30mode/files/packs/kss16/`; push a file
-there and use the dev panel's **Pack → Reload from disk**.
+The older manual `adb push packs/...` instructions are superseded by bundle-stamp
+seeding. Do not push individual pack JSON files after an APK update. Pack → Reload
+from disk is for app-owned editable data, not a replacement for APK bundling.
+Preserve existing saves, account data and image overrides.
 
 ### Python
 
@@ -407,28 +452,28 @@ anything containing backticks, and always `assert s != o` after a replace.
 
 ## 5. Current state
 
-Implemented: calendar, locations, the block hand, lessons, study/work/exercise
-/sleep, the event engine (147 events, 3,094 nodes, 225 switches, 37 `FUNC_`
-predicates, 55 effect verbs), 177 items with parsed effects, weekly goals,
-save/load, the dev panel.
+[docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) is the maintained implementation
+checkpoint. Main includes both campaigns' current exam/admission/ending flow,
+Home/account collections and captured dialogs, shared wallets, the integrated
+branch fixes, saved score cards and debug wallet entry. Current verification:
+311 tests passing and no analysis issues. The latest profile APK is installed
+on the Nord; its local hash and deployment evidence are in that checkpoint.
 
-Traits are live: all 244 load and their effects apply through
-`lib/engine/traits.dart`. Setup grants eligible initial traits; events and the
-dev panel grant live traits — see §6 for the recovered rules.
+The trait catalog loads 244 entries; structured effects and supported compiled
+callbacks run through TraitEngine. This does not establish every catalog trait
+as complete. Current TODO checkboxes and explicit partial notes take precedence
+over older baseline audit descriptions. Preserve the stationery name-fit cache.
 
-Not built: exam/admission/endings, event-set triggers, compiled character
-special abilities, sudden missions, Elite gameplay, account progression and audio. Store and stationery now live in `commerce_screen.dart`.
+Remaining limits include unrecovered event-dispatch/scoring/RNG rules, A14/I03,
+missions, audio/haptics, broader character/crafting support and service-backed
+account features. Elite and additional campaigns remain deferred.
 
-UI screens: title, game, event (overlay panel, blurred behind), location
-picker ("Class is over. Where do I go?"), My Info, day transition, inventory,
-end, dev panel (State / Events / Content / Traits / Rules / Pack).
+My Info fits seven selected university badges without scrolling. Debug has
+State / Events / Content / Traits / Rules / Pack; State starts with Wallet.
 
-My Info displays the seven selected university badges with original crests;
-the entire panel fits the viewport without page scrolling.
+### Historical catalog observations (counts predate integration)
 
-### Known gaps worth remembering
-
-- **Current English event coverage is 50/147** in the seeded sweep. Event-set
+- **Historical English event coverage was 50/147** in the seeded sweep. Event-set
   triggers are still unimplemented; that gap is independent of the migration.
 - The English pack contains 147 events and 3,444 node records / 3,094 unique
   node IDs. The former Korean campaign is retained only in the reference
