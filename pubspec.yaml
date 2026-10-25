@@ -26,6 +26,7 @@ flutter:
   # app copies it to a writable directory on first run and loads that copy, so
   # it can be edited and reloaded without rebuilding. See docs/PACK-FORMAT.md.
   assets:
+    - assets/account/
     - packs/kss16/
     - packs/kss16/events/
     - packs/kss20/

@@ -10,6 +10,7 @@ import 'press_feedback.dart';
 
 import 'package:flutter/material.dart';
 
+import '../engine/account_store.dart';
 import '../engine/content_source.dart';
 import '../engine/game.dart';
 import '../engine/event_engine.dart';
@@ -297,7 +298,12 @@ class _GameScreenState extends State<GameScreen> {
 
   /// The run is over: it moves from Select Game to History (TODO 40).
   Future<void> _closeRun() async {
-    await RecordStore.add(state, ending: game.outcome);
+    final record = await RecordStore.add(state, ending: game.outcome);
+    if (record != null) {
+      // Endings, enrolments and achievements count toward the account.
+      AccountStore.current.recordRun(record, AccountStore.catalog);
+      await AccountStore.save();
+    }
     final slot = state.saveSlot;
     state.saveSlot = null;
     if (slot != null) await SaveStore.delete(slot);
