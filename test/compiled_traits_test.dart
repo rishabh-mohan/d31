@@ -179,4 +179,42 @@ Future<void> main() async {
       }
     });
   });
+
+  group('store discounts', () {
+    test('Limited Offer 34 halves every Store price for its three days', () {
+      final game = withTraits([TraitEngine.limitedOffer]);
+      for (final id in pack.shop.keys) {
+        final listed = pack.shop[id]!['price'] as num;
+        expect(game.priceOf(id), (listed / 2).round());
+      }
+      // The checkout charges the shown price.
+      game.state.money = 10000;
+      expect(game.purchase(8), isNull);
+      expect(game.state.money, 10000 - 750);
+
+      // initialLifeTime 3: gone after the third rollover.
+      for (var d = 0; d < 3; d++) {
+        expect(game.priceOf(8), 750);
+        game.state.expireTraitsForNewDay();
+      }
+      expect(game.priceOf(8), 1500);
+    });
+
+    test('Solitary Gourmet 21 discounts only food-tagged items', () {
+      final game = withTraits([TraitEngine.solitaryGourmet]);
+      final t = game.traits;
+      expect(t.priceFactor(game.state, pack.items[1]), 0.8); // Coffee: food
+      expect(t.priceFactor(game.state, pack.items[11]), 0.8); // Royal Meal
+      expect(t.priceFactor(game.state, pack.items[18]), 1); // Coffee Machine
+      expect(t.priceFactor(game.state, pack.items[8]), 1); // Weird Workbook
+      // None of the five current offers is food, so the Store is unchanged.
+      for (final id in pack.shop.keys) {
+        expect(game.priceOf(id), pack.shop[id]!['price']);
+      }
+
+      game.state.grantTrait(TraitEngine.limitedOffer);
+      expect(t.priceFactor(game.state, pack.items[1]), closeTo(0.4, 1e-9));
+      expect(t.priceFactor(withTraits(const []).state, pack.items[1]), 1);
+    });
+  });
 }
