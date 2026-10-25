@@ -11,7 +11,8 @@ import 'admissions.dart';
 import 'game_date.dart';
 import 'quiz.dart';
 
-export 'admissions.dart' show AdmissionsCatalog, University, Department;
+export 'admissions.dart'
+    show AdmissionsCatalog, University, Department, collegesFile, overlayColleges;
 
 /// Thin wrapper so hand-edited JSON yields a useful message instead of a cast
 /// error ten frames deep.
@@ -773,6 +774,29 @@ class ContentPack {
   ContentPack? _femaleScript;
   ContentPack? _maleScript;
 
+  /// Which university set the catalog and badges carry (TODO 41): `korean`,
+  /// the pack's own `colleges.json`, or a set overlaid from
+  /// `colleges_<set>.json` by [withColleges].
+  final String collegeSet;
+  ContentPack? _collegeBase;
+  final Map<String, ContentPack> _collegeVariants = {};
+
+  /// This pack with another university set's names and colours laid over
+  /// the catalog and the badges. Departments, cutoffs and ids are untouched,
+  /// so content that asks where you enrolled still works. Built once per set;
+  /// a set the pack does not ship gives the pack's own. Call before
+  /// [forPlayer], which keeps the set.
+  ContentPack withColleges(String set) {
+    final base = _collegeBase ?? this;
+    if (set == base.collegeSet) return base;
+    final overlay = base.sourceFiles['colleges_$set.json'];
+    if (overlay == null) return base;
+    return base._collegeVariants[set] ??= ContentPack.fromFiles(
+      overlayColleges(base.sourceFiles, overlay),
+      collegeSet: set,
+    ).._collegeBase = base;
+  }
+
   /// Retry Year ships a second script for a female protagonist
   /// (`events_female.json`): the same story with the friends' genders
   /// swapped -- a male Ji Suin and Jian Lee, for one -- and lines to match.
@@ -820,7 +844,7 @@ class ContentPack {
     return _femaleScript ??= ContentPack.fromFiles({
       ...sourceFiles,
       'events/events.json': female,
-    }).._maleScript = this;
+    }, collegeSet: collegeSet).._maleScript = this;
   }
   final LevelTable studyLevels;
   final LevelTable exerciseLevels;
@@ -857,6 +881,7 @@ class ContentPack {
     this.badges = const {},
     this.admissions = const AdmissionsCatalog(),
     this.sourceFiles = const {},
+    this.collegeSet = 'korean',
     this.quizzes = const [],
     this.eventSets = const [],
     required this.studyLevels,
@@ -876,7 +901,10 @@ class ContentPack {
   /// Builds a pack from already-read file contents, keyed by the pack-relative
   /// path. Keeping IO out of here means the same loader serves bundled assets,
   /// a directory on disk, and tests.
-  factory ContentPack.fromFiles(Map<String, String> files) {
+  factory ContentPack.fromFiles(
+    Map<String, String> files, {
+    String collegeSet = 'korean',
+  }) {
     String need(String name) {
       final v = files[name];
       if (v == null) throw PackFormatException(name, 'missing from the pack');
@@ -1030,6 +1058,7 @@ class ContentPack {
           (j['universityId'] as num).toInt(): UniversityBadge.fromJson(j),
       },
       sourceFiles: Map.unmodifiable(files),
+      collegeSet: collegeSet,
       eventSets: opt('events/sets.json') == null
           ? const []
           : _list(
@@ -1044,11 +1073,11 @@ class ContentPack {
               _obj('quizzes.json', opt('quizzes.json')!),
               'problems',
             ).map(QuizProblem.fromJson).toList(),
-      admissions: opt('admissions.json') == null
-          ? const AdmissionsCatalog()
-          : AdmissionsCatalog.fromJson(
-              _obj('admissions.json', opt('admissions.json')!),
-            ),
+      // colleges.json is the catalog; admissions.json is its older name.
+      admissions: switch (collegesFile(files)) {
+        null => const AdmissionsCatalog(),
+        final name => AdmissionsCatalog.fromJson(_obj(name, files[name]!)),
+      },
       shop: indexed('commerce.json', 'offers', (j) => j),
       stationery: indexed('commerce.json', 'stationery', (j) => j),
       stationerySets: opt('commerce.json') == null
@@ -1080,6 +1109,8 @@ class ContentPack {
     'commerce.json',
     'characters.json',
     'badges.json',
+    'colleges.json',
+    'colleges_us.json',
     'admissions.json',
     'events/events_female.json',
     'quizzes.json',

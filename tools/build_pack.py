@@ -29,6 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import item_effects  # noqa: E402
 import presentation_assets  # noqa: E402
+import us_colleges  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -462,6 +463,10 @@ def build_admissions(out: Path):
     `deviation` is each department's admission cutoff on the CSAT's standard
     score scale (25.3 .. 80.85). Story-only universities (`onlyAvailableStories`)
     appear only in their own story.
+
+    Written as colleges.json (a pack author edits it to change the colleges),
+    with colleges_us.json beside it: the US set Settings can switch to, an
+    overlay of names and colours by university id (tools/us_colleges.py).
     """
     unis = clean(load(GLOBAL / "university/universities.json"))["universities"]
     depts = clean(load(GLOBAL / "university/departments.json"))["departments"]
@@ -497,9 +502,18 @@ def build_admissions(out: Path):
         if d["id"] in APPLY_REQUIREMENTS:
             row["requires"] = APPLY_REQUIREMENTS[d["id"]]
         out_depts.append(row)
-    write(out, "admissions.json", {"universities": list(keep.values()),
-                                   "departments": out_depts})
+    write(out, "colleges.json", {"universities": list(keep.values()),
+                                 "departments": out_depts})
+    # The catalog's name before TODO 41; the loader prefers colleges.json.
+    (out / "admissions.json").unlink(missing_ok=True)
     print(f"    {len(keep)} universities, {len(out_depts)} departments")
+
+    us_colleges.check(unis)
+    write(out, "colleges_us.json", {"universities": [
+        {"id": uid, "name": name, "colorCode": color}
+        for uid, (name, color) in us_colleges.US_COLLEGES.items()
+        if uid in keep
+    ]})
 
 
 def build_quizzes(out: Path):
@@ -886,7 +900,7 @@ def main() -> int:
     build_characters(out)
     print(" badges")
     build_badges(out)
-    print(" admissions")
+    print(" colleges")
     build_admissions(out)
     print(" quizzes")
     build_quizzes(out)

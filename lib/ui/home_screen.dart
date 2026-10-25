@@ -123,16 +123,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// The plus tile: setup, then a run with a save of its own from the start.
   Future<void> _newGame() async {
-    final pack = _pack;
+    final base = _pack;
     final location = _location;
-    if (pack == null || location == null) return;
+    if (base == null || location == null) return;
     PackImages.use(location);
+    // The Settings university set applies from setup on (badge names) and
+    // stays with the run.
+    final colleges = AccountStore.current.universities.name;
+    final pack = base.withColleges(colleges);
     final game = await Navigator.of(context).push<Game>(
       MaterialPageRoute(
         builder: (_) => SetupScreen(
           pack: pack,
           draft: _setup ??= RunSetup(pack),
-          campaigns: _campaigns.values.map((entry) => entry.$1).toList(),
+          campaigns: [
+            for (final (campaign, _) in _campaigns.values)
+              campaign.withColleges(colleges),
+          ],
         ),
       ),
     );

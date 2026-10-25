@@ -404,8 +404,14 @@ carried but not yet read.
 ## Current coverage and remaining gaps
 
 Both campaigns now run their Graduation Exam, the CSAT/admissions UI and ending
-scenes. `admissions.json` holds the recovered university/department catalog;
-`rules.exam` holds the explicitly fitted scoring/admission model. See
+scenes. `colleges.json` holds the recovered university/department catalog
+(packs built before it call the same file `admissions.json`, which still loads);
+edit it to change a pack's colleges. `colleges_us.json` is an optional overlay,
+`{"universities": [{"id", "name", "colorCode"}]}`, that renames listed
+universities in the catalog and in `badges.json` when Settings selects US
+universities; departments, cutoffs and ids stay the same, and a run keeps the
+set it started with. `rules.exam` holds the explicitly fitted scoring/admission
+model. See
 [RETRY-YEAR.md](RETRY-YEAR.md) for recovered mechanics and remaining gaps.
 
 Event sets and overall dispatch order remain incompletely recovered. Portraits,

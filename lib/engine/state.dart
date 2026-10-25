@@ -632,6 +632,7 @@ class GameState {
 
   Map<String, dynamic> toJson() => {
     'packId': pack.manifest.id,
+    'collegeSet': pack.collegeSet,
     'difficulty': difficulty,
     'characterId': characterId,
     'badgeIds': badgeIds,
@@ -699,8 +700,11 @@ class GameState {
   String toPrettyJson() => const JsonEncoder.withIndent('  ').convert(toJson());
 
   static GameState fromJson(ContentPack base, Map<String, dynamic> j) {
-    // A female protagonist's run continues in the female script.
-    final pack = base.forPlayer(isMale: j['isMale'] as bool? ?? true);
+    // A run keeps the university set it started with, and a female
+    // protagonist's run continues in the female script.
+    final pack = base
+        .withColleges(j['collegeSet'] as String? ?? 'korean')
+        .forPlayer(isMale: j['isMale'] as bool? ?? true);
     final state = GameState(
       pack: pack,
       date: GameDate.tryParse(j['date'] as String?) ?? pack.manifest.startDate,

@@ -11,7 +11,57 @@
 /// accepted you, and `FUNC_IS_ENTER_UNIV*` ask where you enrolled.
 library;
 
+import 'dart:convert';
 import 'dart:math';
+
+/// The pack's catalog file: `colleges.json`, or `admissions.json`, the name
+/// packs built before TODO 41 used.
+String? collegesFile(Map<String, String> files) => files.containsKey(
+  'colleges.json',
+)
+    ? 'colleges.json'
+    : files.containsKey('admissions.json')
+    ? 'admissions.json'
+    : null;
+
+/// Lays a university set over a pack's files. [overlay] is a
+/// `colleges_<set>.json`: `{"universities": [{"id", "name", "colorCode"?}]}`.
+/// Each listed university is renamed (and recoloured) in the catalog and in
+/// `badges.json`; anything unlisted, and every department, stays as it was.
+Map<String, String> overlayColleges(
+  Map<String, String> files,
+  String overlay,
+) {
+  final replace = <int, Map<String, dynamic>>{
+    for (final u
+        in ((jsonDecode(overlay) as Map)['universities'] as List? ?? const [])
+            .whereType<Map<String, dynamic>>())
+      if (u['id'] is num) (u['id'] as num).toInt(): u,
+  };
+  String rewrite(String text, String listKey, String idKey) {
+    final json = jsonDecode(text) as Map<String, dynamic>;
+    for (final row
+        in (json[listKey] as List? ?? const [])
+            .whereType<Map<String, dynamic>>()) {
+      final id = row[idKey];
+      final swap = id is num ? replace[id.toInt()] : null;
+      if (swap == null) continue;
+      if (swap['name'] is String) row['name'] = swap['name'];
+      if (swap['colorCode'] is String) row['colorCode'] = swap['colorCode'];
+    }
+    return jsonEncode(json);
+  }
+
+  final out = Map<String, String>.of(files);
+  final catalog = collegesFile(files);
+  if (catalog != null) {
+    out[catalog] = rewrite(files[catalog]!, 'universities', 'id');
+  }
+  if (files['badges.json'] case final badges?) {
+    out['badges.json'] = rewrite(badges, 'badges', 'universityId');
+  }
+  return out;
+}
 
 class University {
   final int id;
