@@ -12,12 +12,19 @@ clarifications in docs/CLARIFIED-MECHANICS-2026-10-25.md, including the provisio
 Pack-specific abilities, special blocks, predicates and story callbacks now
 belong in `mechanics.json`, not engine checks for a catalog ID. Read
 `docs/MODULAR-PACKS.md` and `examples/packs/workshop` before adding pack behavior.
-Validation: clean analysis, 323-test full suite plus four additional
-custom-pack regressions (327 unique tests). Consult CURRENT-STATE for the latest
+Latest validation: clean analysis and 333 passing tests after school-name,
+History and enrollment-reward changes. Consult CURRENT-STATE for the latest
 Nord deployment evidence.
 The dated notes below remain useful evidence but may describe older behavior.
 
 Keep TODO statuses and the current checkpoint synchronized after changes.
+
+Latest reference-recreation pass: `docs/HISTORY-DETAILS.md` (History snapshots,
+three tabs, legacy fallbacks, first-enrollment cookies) and
+`docs/UNIVERSITY-NAMES.md` (shared Global/Taiwan label overlay). The user's
+"ORIGINAL_GAME_LAYOUT.md" means `docs/ORIGINAL-GAME-FUNCTIONS.md` plus its
+original-game companion atlases. Never backfill old History details from the
+current pack or carry recorded stationery into a fresh run.
 Record partial work as 1R/2R/3R with the remaining requirement; mark DONE only
 for implemented, verified scope. Reference capture is not implementation.
 Put durable operational lessons here and feature details in the related docs.

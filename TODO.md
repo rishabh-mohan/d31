@@ -8,7 +8,7 @@ This is not a current total or an original-game parity percentage. Later entries
 and the audit below remain part of the backlog; this older summary can lag fixes.
 
 **Current integration:** recoverable work from all five interrupted branches is
-on main; 327 tests pass (re-verified 2026-10-25) and analysis is clean. Read
+on main; 333 tests pass (re-verified 2026-10-25) and analysis is clean. Read
 [CURRENT-STATE.md](docs/CURRENT-STATE.md) and
 [the per-branch completion report](docs/BRANCH-INTEGRATION-2026-10-25.md).
 A14 and I03 have since been implemented using the user's clarified persistent-block
@@ -40,7 +40,7 @@ prototype tuning; the dedicated Quizmaster bank and general scheduler remain
 unrecovered. Recovered exam thresholds are unchanged by the book-gain fix, so
 Retry Year's exam progression balance needs separate verification.
 
-Latest completed combined review (2026-10-25): **327 tests passed** (re-verified after the modular-pack commit), analysis
+Latest completed combined review (2026-10-25): **333 tests passed** (school names, History snapshots and enrollment rewards), analysis
 clean; the integrated profile APK is installed on the Nord. Current deployment,
 artifact hash and evidence: [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md).
 Historical 214/114-test checkpoints are retained in the archived state document.
@@ -313,6 +313,7 @@ work must be reviewed before asserting those baseline gaps still exist.
      1R (Claude) — Account wallet exists (cookies/refresh tokens on Home, persisted, earned from endings/achievements/quests). Still separate from the in-run cookie/refresh counters; unifying them is open.
      DONE (2026-10-25) — Runs spend and earn from the account wallet. Both cookies and refresh tickets are shared in both packs (user decision: one-time grants of 20 cookies and 50 refresh tickets). Nothing earns refresh tickets yet: TODO 97.
    - [ ] M05: Persistent earned badge collection for later runs when gating is enabled; keep the user's currently unlocked setup prototype. User confirms first college enrolment unlocks that college's achievement and grants two cookies. Repeat/department-specific awards are not established.
+     2R (2026-10-25) — First enrollment now pays the configured two cookies once per school; existing persistent enrollment counts prevent repeat rewards after restart. Earned achievements retain ownership. Setup remains unlocked as requested; optional ownership-gated setup is still future work.
    - [x] M06: Discovered endings and authored cookie rewards, including first-time/repeat rules.
      DONE (Claude) — Endings reached are kept per account; first-time reach pays the ending's catalog cookies; Endings List shows cookie or check. Repeat rules beyond 'pay once' are not established.
    - [x] M07: Trait-pack stock, purchase/open, mileage guarantee/reset, tap-stopped one-card roulette, result browsing and optional Draw More. User confirms mileage resets after ANY S-tier draw. All 12 pack rate tables recovered from the supplied public Notion page; see docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md (per-card rates differ from pack-wide cumulative rates).
@@ -480,3 +481,9 @@ Current evidence/rule record: [CLARIFIED-MECHANICS-2026-10-25.md](docs/CLARIFIED
 - T03/T13 evidence review — the user knows no exact rates or published help for Stubborn, I will not falter!, or Energizer. A read-only smaller-agent review of local pseudocode/catalogs did not recover attributable arithmetic. Keep 30%/70%/5% labeled provisional, with existing rules.traits.chances overrides; do not present them as original odds.
 
 97. Add a way to earn refresh tickets. Refresh tickets now come from the shared account wallet (one-time grant of 50, user decision 2026-10-25), and nothing refills them, so the balance runs out after a few runs. Find or design the earning source (original-game evidence first: quests, endings, ads, store) and wire it to the account wallet.
+
+98. Correct the Global and Taiwan school names.
+   DONE — Shared tracked name overlay corrects 80 account/badge labels in both campaigns, preserving IDs and mechanics. See docs/UNIVERSITY-NAMES.md for sources and the explicitly inferred Bombay counterpart.
+
+99. Recreate documented History record details (ORIGINAL-GAME-FUNCTIONS and F17/F18).
+   2R — Three-tab, near-full-height Info/Score Card/University Apps panel; new completion snapshots retain EXP, Gold, traits, equipped stationery and application outcomes. Legacy records remain readable without fabricated missing data. Photo upload/sharing, exact student-number rule and further score-card typography remain open. See docs/HISTORY-DETAILS.md.

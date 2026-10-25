@@ -2,6 +2,26 @@
 
 Read this checkpoint before dated historical notes. [TODO.md](../TODO.md) tracks per-item status; [the branch integration report](BRANCH-INTEGRATION-2026-10-25.md) records the original assignments and remaining blockers. Code/tests are the implementation source of truth; original-game references establish targets, not proof that a feature exists.
 
+## School names and History recreation
+
+Eighty Global/Taiwan school labels are corrected in account and badge catalogs
+through a tracked shared overlay; IDs/effects/ranks/colors are unchanged.
+See [UNIVERSITY-NAMES.md](UNIVERSITY-NAMES.md) for sources and explicit identity
+inferences. Both campaign badge files and the account catalog were regenerated.
+
+History cards open the reference-style Info / Score Card / University Apps
+panel. Newly completed runs retain compact, detached snapshots of EXP, Gold,
+traits, equipped stationery, college display data and application outcomes.
+Legacy records remain readable without inventing missing details. The confirmed
+first-university enrollment reward now pays two cookies once per school and
+survives account reloads; setup collections remain unlocked. Further details and
+limits: [HISTORY-DETAILS.md](HISTORY-DETAILS.md).
+
+Validation: 333 tests pass; the final UI adjustment also passed six focused
+tests and three rendered tabs at reference size, with layout checks at 320,
+390 and 430 logical pixels. Analysis is clean. Profile deployment is in progress;
+the artifact record below still describes the preceding modular build.
+
 ## Modular pack mechanics
 
 Custom trait/character abilities, special blocks, callbacks, predicates, text

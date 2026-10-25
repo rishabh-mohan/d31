@@ -20,6 +20,8 @@ import json
 import sys
 from pathlib import Path
 
+import university_names
+
 D30 = Path(__file__).resolve().parent.parent
 PROJECTS = D30.parent
 GLOBAL = PROJECTS / "kss/assetpack1_dec/assets/assets/global_data"
@@ -37,6 +39,7 @@ def main() -> int:
     if not GLOBAL.exists():
         print(f"missing {GLOBAL}", file=sys.stderr)
         return 1
+    university_names.check(load("university/universities.json")["universities"])
     endings = [
         {"code": e["endingCode"], "name": e["endingName"],
          **({"cookies": e["cookieCount"]} if e.get("cookieCount") else {})}
@@ -63,7 +66,7 @@ def main() -> int:
         for s in load("stories.json")["stories"]
     }
     universities = [
-        {"id": u["id"], "name": u.get("engName") or u.get("korName"),
+        {"id": u["id"], "name": university_names.display_name(u),
          "rank": u.get("rank", "none"), "colorCode": u.get("colorCode"),
          "region": REGIONS[u.get("type")], "sortId": u.get("sortId", u["id"])}
         for u in load("university/universities.json")["universities"]
@@ -74,6 +77,7 @@ def main() -> int:
     OUT.write_text(json.dumps({
         "endings": endings, "wallpapers": wallpapers, "stories": stories,
         "universities": universities,
+        "rewards": json.loads((D30 / "content/kss/account-rules.json").read_text(encoding="utf-8")),
     }, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{OUT}: {len(endings)} endings, {len(wallpapers)} puzzles, "
           f"{len(universities)} universities")

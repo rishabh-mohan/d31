@@ -287,17 +287,24 @@ class AccountCatalog {
   final List<Puzzle> puzzles;
   final Map<int, String> stories;
   final List<CatalogUniversity> universities;
+  final int firstUniversityEnrollmentCookies;
 
   const AccountCatalog({
     this.endings = const {},
     this.puzzles = const [],
     this.stories = const {},
     this.universities = const [],
+    this.firstUniversityEnrollmentCookies = 0,
   });
 
   static const empty = AccountCatalog();
 
   factory AccountCatalog.fromJson(Map<String, dynamic> j) => AccountCatalog(
+    firstUniversityEnrollmentCookies:
+        ((j['rewards'] as Map?)?['firstUniversityEnrollmentCookies'] as num?)
+            ?.toInt()
+            .clamp(0, 1000000) ??
+        0,
     endings: {
       for (final e in (j['endings'] as List? ?? const []).cast<Map>())
         (e['code'] as num).toInt(): EndingInfo(

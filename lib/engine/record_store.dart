@@ -18,6 +18,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'state.dart';
 import 'admissions.dart';
+import 'pack.dart' show LevelTable;
 
 class RunRecord {
   final int id;
@@ -45,6 +46,10 @@ class RunRecord {
   final int exerciseLevel;
   final int partTimeLevel;
 
+  /// Display-only snapshot: no live pack lookup or reward recalculation.
+  /// Older records intentionally leave this absent.
+  final Map<String, dynamic>? details;
+
   const RunRecord({
     required this.id,
     required this.name,
@@ -62,6 +67,7 @@ class RunRecord {
     this.endingCode,
     this.exerciseLevel = 0,
     this.partTimeLevel = 0,
+    this.details,
   });
 
   int get statTotal => stats.values.fold<num>(0, (a, b) => a + b).round();
@@ -95,6 +101,7 @@ class RunRecord {
       endingCode: state.endingCode,
       exerciseLevel: state.exerciseLevel.level,
       partTimeLevel: state.partTimeLevel.level,
+      details: _captureDetails(state),
     );
   }
 
@@ -115,6 +122,7 @@ class RunRecord {
     'endingCode': ?endingCode,
     'exerciseLevel': exerciseLevel,
     'partTimeLevel': partTimeLevel,
+    'details': ?details,
   };
 
   static RunRecord fromJson(int id, Map<String, dynamic> j) => RunRecord(
@@ -139,7 +147,73 @@ class RunRecord {
     endingCode: (j['endingCode'] as num?)?.toInt(),
     exerciseLevel: (j['exerciseLevel'] as num?)?.toInt() ?? 0,
     partTimeLevel: (j['partTimeLevel'] as num?)?.toInt() ?? 0,
+    details: (j['details'] as Map?)?.cast<String, dynamic>(),
   );
+
+  static Map<String, dynamic> _captureDetails(GameState state) {
+    double progress(LevelTable table, num exp) {
+      final tier = table.tierFor(exp);
+      final next = table.nextThresholdAfter(exp);
+      return next == null || next <= tier.exp
+          ? 1
+          : ((exp - tier.exp) / (next - tier.exp)).clamp(0, 1).toDouble();
+    }
+
+    Map<String, dynamic>? application(int id) {
+      final department = state.pack.admissions.departments[id];
+      if (department == null) return null;
+      final university =
+          state.pack.admissions.universities[department.universityId];
+      return {
+        'departmentId': id,
+        'department': department.name,
+        'universityId': department.universityId,
+        'university': university?.name,
+        'crest': university?.crestPath,
+        'colorCode': university?.colorCode,
+        'accepted': state.admittedDepartments.contains(id),
+        'enrolled': state.enrolledDepartment == id,
+      };
+    }
+
+    final data = <String, dynamic>{
+      'studyLevel': state.studyLevel.level,
+      'studyName': state.studyLevel.name,
+      'studyExp': state.studyExp,
+      'studyNext': state.pack.studyLevels.nextThresholdAfter(state.studyExp),
+      'money': state.money,
+      'exerciseProgress': progress(
+        state.pack.exerciseLevels,
+        state.exerciseExp,
+      ),
+      'partTimeProgress': progress(
+        state.pack.partTimeLevels,
+        state.partTimeExp,
+      ),
+      'traits': [
+        for (final id in state.traits)
+          if (state.pack.traits[id] case final trait?)
+            {
+              'id': id,
+              'name': trait.name,
+              'description': trait.description,
+              'type': trait.type,
+              'rank': trait.rank,
+            },
+      ],
+      'stationery': [
+        for (final entry in state.equippedStationery.entries)
+          if (state.pack.stationery[entry.value] case final item?)
+            {'id': entry.value, 'slot': entry.key, 'item': item},
+      ],
+      'applications': [for (final id in state.applications) ?application(id)],
+      'enrollment': state.enrolledDepartment == null
+          ? null
+          : application(state.enrolledDepartment!),
+    };
+    // Detach nested catalog/list objects from the mutable live run.
+    return (jsonDecode(jsonEncode(data)) as Map).cast<String, dynamic>();
+  }
 }
 
 class RecordStore {

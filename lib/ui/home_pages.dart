@@ -12,7 +12,7 @@ import '../engine/record_store.dart';
 import '../engine/save_store.dart';
 import 'home_screen.dart';
 import 'pack_image.dart';
-import 'score_card.dart';
+import 'record_details.dart';
 
 /// Header, washed wallpaper and a body laid out at [u] units per design pixel.
 class MenuPage extends StatelessWidget {
@@ -590,84 +590,7 @@ class _RecordCard extends StatelessWidget {
     );
   }
 
-  /// What a record opens is not in the captures; this shows what it kept.
-  void _showDetail(BuildContext context) {
-    String cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(record.name.isEmpty ? 'Unnamed' : record.name),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(record.modeTitle),
-              Text(record.ending),
-              const SizedBox(height: 12),
-              for (final e in record.stats.entries)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [Text(cap(e.key)), Text('${e.value.round()}')],
-                ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [const Text('Total'), Text('${record.statTotal}')],
-              ),
-              if (record.csatStandardScore case final score?)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('CSAT standard score'),
-                    Text(score.toStringAsFixed(1)),
-                  ],
-                ),
-              if (record.scoreCard case final card?)
-                TextButton.icon(
-                  icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Score Card'),
-                  onPressed: () => showDialog<void>(
-                    context: context,
-                    builder: (context) => Dialog(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: ExamScoreCard(
-                                name: record.name,
-                                result: card,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (record.enrolled case final enrolled?)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('Enrolled: $enrolled'),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
+  void _showDetail(BuildContext context) => RecordDetails.show(context, record);
 }
 
 /// A collection that has no content yet (Achievements stays empty for now).
