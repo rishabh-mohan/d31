@@ -15,8 +15,12 @@ Android. See [MODULAR-PACKS.md](MODULAR-PACKS.md) for the format and limits.
 Validation: both campaigns regenerate; analysis clean; 323-test full suite
 (including 200 seeded complete runs) plus four additional custom regressions,
 covering 327 unique tests. Logs are listed in the authoring guide.
-Profile build and phone deployment are in progress; the installed-artifact
-record below still identifies the previous build until replacement completes.
+Profile APK built and installed with data-preserving replacement on Nord N30
+`7c2c1cc8`; cold launch returned Status: ok and the app process remained alive.
+Sampled app logs contain no fatal, Flutter or pack-format errors. Hardware
+Impeller rendering initialized. Visual confirmation remains pending: the phone
+was asleep, so its screenshot was black. Automatic approval review rejected
+dismissing the lock screen; no unlock or security change was performed.
 TODO 39 includes shop refresh notification, reroll previews and their screenshots
 as reminder-only work alongside book-completion item gacha.
 
@@ -54,12 +58,12 @@ provisional. Unknown trait proc rates remain provisional after local review.
 
 ## Verification and deployment
 
-Earlier branch integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`. Later clarified mechanics are recorded in CLARIFIED-MECHANICS-2026-10-25.md. Full suite: **318 passing tests**; Flutter analysis: **no issues**. Five Nord-size branch/shop renders passed; the expanded stationery grid was visually checked at 393×873. The original corner complaint and specific saved-character thumbnails still merit user device confirmation.
+Earlier branch integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`. Later clarified mechanics are recorded in CLARIFIED-MECHANICS-2026-10-25.md. That earlier checkpoint passed 318 tests and clean analysis; latest modular validation is recorded above. Five Nord-size branch/shop renders passed; the expanded stationery grid was visually checked at 393×873. The original corner complaint and specific saved-character thumbnails still merit user device confirmation.
 
 The final profile APK was installed with data-preserving replacement on Nord N30 serial `7c2c1cc8` and cold-launched successfully. No fatal/Flutter application errors appeared in the sampled startup log; unrelated Android wakelock permission messages were present. Hardware rendering is required for normal play; never leave software rendering enabled after a temporary diagnostic.
 
-Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385414826 bytes. Local SHA-256: `ad9f3cacd643dcdfca89c7de1eec9dd1c47c293a5dfb35dcbfb11ef712f66b0b`. This records the local APK used for installation, not a separately pulled device checksum. Latest clarified-mechanics code: `7e1884e`; installed with data-preserving replacement and cold-launched successfully.
+Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385546086 bytes. Local SHA-256: `cd8343b2b8c20354951e25b222130880e1dde1be415ad4dbe568a41602784060`. This is the local APK installed, not a separately pulled device checksum. Mechanics source commit: `fb231c9`. Both bundled mechanics files were verified inside the APK (22 KSS16 / 23 KSS20 pack callbacks). Data-preserving install and cold launch succeeded; on-device visual verification remains pending while the phone is asleep.
 
 Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Do not adb-push packs**: the app seeds/reseeds editable JSON when the APK's bundle stamp changes. Manual pushes create shell-owned files that can shadow future updates. Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
 
-Latest validation logs: `build/clarified-final-tests.log`, `build/clarified-final-build.log`, `build/clarified-final-render.log`; earlier integration logs remain under build/; review images: `build/branch-review/`. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
+Latest validation logs: `build/modular-final-tests.log`, `build/modular-custom-tests.log`, `build/modular-gates-tests.log`, `build/modular-analysis-final.log`, `build/modular-profile-retry.log`, `build/modular-install.log`, `build/modular-launch.log`, `build/modular-startup-final.log`; earlier integration logs remain under build/; review images: `build/branch-review/`. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
