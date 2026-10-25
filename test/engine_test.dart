@@ -1140,6 +1140,7 @@ Future<void> main() async {
     // drew. tools/build_pack.py adds the prerequisite the set logic implied.
     Game atComeOnDay() {
       final game = Game.newRun(pack, random: Random(189));
+      game.state.careerSets = null; // every career storyline open
       game.state.date = GameDate(DateTime(2023, 10, 20), 0);
       return game;
     }

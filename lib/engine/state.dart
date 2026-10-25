@@ -176,6 +176,56 @@ class GameState {
   /// The soft currency in the top bar, separate from in-run money.
   int cookies = 0;
 
+  /// The career storylines (rank-A event sets) this run plays. The original
+  /// keeps one selected A set per story (`eventset_selected_a_<story>`);
+  /// the others' events never fire. Null means every set (old saves, packs
+  /// without career sets).
+  Set<int>? careerSets;
+
+  /// Picks this run's careers by the sets' own weights:
+  /// `rules.events.careersPerRun` of them (1, as the original's single
+  /// selection; 0 turns the limit off).
+  void chooseCareerSets() {
+    final count = pack.rules.number('events', 'careersPerRun', 1).toInt();
+    final careers = pack.eventSets
+        .where((s) => s['rank'] == 'A' && s['id'] is num)
+        .toList();
+    if (count <= 0 || careers.length <= count) {
+      careerSets = null;
+      return;
+    }
+    final pool = List.of(careers);
+    final chosen = <int>{};
+    while (chosen.length < count && pool.isNotEmpty) {
+      final total = pool.fold<num>(
+        0,
+        (a, s) => a + ((s['weight'] as num?) ?? 1),
+      );
+      var roll = random.nextDouble() * total;
+      var pick = pool.last;
+      for (final s in pool) {
+        roll -= (s['weight'] as num?) ?? 1;
+        if (roll <= 0) {
+          pick = s;
+          break;
+        }
+      }
+      chosen.add((pick['id'] as num).toInt());
+      pool.remove(pick);
+    }
+    careerSets = chosen;
+  }
+
+  /// Whether an event's storyline is in play this run.
+  bool eventSetActive(int? setId) {
+    final careers = careerSets;
+    if (careers == null || setId == null) return true;
+    final isCareer = pack.eventSets.any(
+      (s) => (s['id'] as num?)?.toInt() == setId && s['rank'] == 'A',
+    );
+    return !isCareer || careers.contains(setId);
+  }
+
   /// The quiz question on screen, if a choice asked one. Not saved: a quiz
   /// lives only as long as its choice.
   QuizDraw? quiz;
@@ -239,6 +289,7 @@ class GameState {
     }
     state.unlockedLocations.add(state.locationId);
     state._seedInitialTasks();
+    state.chooseCareerSets();
     state.rerolls = r.number('refresh', 'initial', 0).toInt();
     state.cookies = r.number('cookies', 'initial', 0).toInt();
     state.applyStartingTraitEffects();
@@ -633,6 +684,7 @@ class GameState {
     'endingLabel': endingLabel,
     'endingCode': endingCode,
     'csatPending': csatPending,
+    if (careerSets != null) 'careerSets': careerSets!.toList(),
     'csat': csat?.toJson(),
     'applications': applications,
     'admittedDepartments': admittedDepartments,
@@ -766,12 +818,21 @@ class GameState {
     state.endingLabel = j['endingLabel'] as String?;
     state.endingCode = (j['endingCode'] as num?)?.toInt();
     state.csatPending = j['csatPending'] == true;
-    state.csat = CsatResult.fromJson((j['csat'] as Map?)?.cast<String, dynamic>());
+    if (j['careerSets'] is List) {
+      state.careerSets = {
+        for (final n in (j['careerSets'] as List).whereType<num>()) n.toInt(),
+      };
+    }
+    state.csat = CsatResult.fromJson(
+      (j['csat'] as Map?)?.cast<String, dynamic>(),
+    );
     for (final key in ['applications', 'admittedDepartments']) {
       final list = key == 'applications'
           ? state.applications
           : state.admittedDepartments;
-      list.addAll((j[key] as List? ?? const []).whereType<num>().map((n) => n.toInt()));
+      list.addAll(
+        (j[key] as List? ?? const []).whereType<num>().map((n) => n.toInt()),
+      );
     }
     state.enrolledDepartment = (j['enrolledDepartment'] as num?)?.toInt();
     return state;

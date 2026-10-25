@@ -762,6 +762,10 @@ class ContentPack {
   /// Questions for the quiz choice macros.
   final List<QuizProblem> quizzes;
 
+  /// Weighted event sets (events/sets.json): `{id, name, rank, weight}`.
+  /// Story 16's seven rank-A sets are its career storylines.
+  final List<Map<String, dynamic>> eventSets;
+
   /// The files this pack was read from, kept so the female script can be
   /// built from the same sources (see [forPlayer]).
   final Map<String, String> sourceFiles;
@@ -854,6 +858,7 @@ class ContentPack {
     this.admissions = const AdmissionsCatalog(),
     this.sourceFiles = const {},
     this.quizzes = const [],
+    this.eventSets = const [],
     required this.studyLevels,
     required this.exerciseLevels,
     required this.partTimeLevels,
@@ -1025,6 +1030,13 @@ class ContentPack {
           (j['universityId'] as num).toInt(): UniversityBadge.fromJson(j),
       },
       sourceFiles: Map.unmodifiable(files),
+      eventSets: opt('events/sets.json') == null
+          ? const []
+          : _list(
+              'events/sets.json',
+              _obj('events/sets.json', opt('events/sets.json')!),
+              'eventSets',
+            ),
       quizzes: opt('quizzes.json') == null
           ? const []
           : _list(
