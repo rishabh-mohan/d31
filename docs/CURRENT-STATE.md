@@ -11,16 +11,25 @@ puzzle's name) all draw the selection, which is saved in the account.
 Event-limited puzzles (story 0: Cookie Parade levels, the Full Focus Package)
 count as held, because nothing here can earn their pieces.
 
-Limit: only the Amnesia desk ships full-screen art. The original streams the
-rest from its Firebase Storage `wallpapers/<id>.png` (`sub_aa702c`, cached
-as `wallpaper_version_<id>`), which is not fetched. Every other background
-fills the screen from its square thumbnail (564–2255 px), so it is cropped
-at the sides and the 564 px ones look soft. The equip interaction itself is
-the project's own; E19 (how the original shows equipped versus owned) is
-still uncaptured.
+Full-screen art: the original ships only the Amnesia desk and downloads the
+rest on first display from Firebase Storage `wallpapers/<id>.png`
+(`sub_aa702c`), caching it as `app_flutter/assets_images_wallpaper_image_<id>.png`
+with a `wallpaper_version_<id>` preference. The device log shows the Firebase
+Storage SDK at work (`StorageTask`, App Check placeholder token) but the SDK
+logs no paths. On 2026-10-25 the user opened every wallpaper their account
+owns in KSS 1.29.3 on the rooted Nord, and 11 were pulled from that cache:
+180–183, 200–204, 1014 and 1015, all 2629×4776 except 202/203 (1124×2048
+pixel art). `tools/import_wallpapers.py` bundles them from
+`references/recovery/wallpapers-1.29.3/` (local only), and
+`build_account_catalog.py` now reads the 1.29.3 catalog there, which adds
+event puzzles 1013–1015, and flags each puzzle that has bundled art. The
+rest (wallpaper1–6, 1003, 1010–1013) are not owned on that account, so they
+still fill the screen from their square thumbnails. The equip interaction
+itself is the project's own; E19 (how the original shows equipped versus
+owned) is still uncaptured.
 
 Validation: 405 tests pass and analysis is clean. The profile APK
-(SHA-256 `09a4cc5c…`, matched on the device) is installed with data
+(SHA-256 `469e75b5…`, matched on the device) is installed with data
 preserved on Nord N30 `7c2c1cc8`.
 
 ## School names and History recreation

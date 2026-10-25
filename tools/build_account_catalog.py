@@ -26,6 +26,10 @@ D30 = Path(__file__).resolve().parent.parent
 PROJECTS = D30.parent
 GLOBAL = PROJECTS / "kss/assetpack1_dec/assets/assets/global_data"
 OUT = D30 / "assets/account/catalog.json"
+# The 1.29.3 puzzle catalog captured by tools/import_wallpapers.py, when
+# present: it adds wallpaper1013-1015 and otherwise matches 1.27.4.
+NEWER_WALLPAPERS = D30 / "references/recovery/wallpapers-1.29.3/wallpapers.json"
+WALLPAPER_IMAGES = D30 / "assets/images/kss/images/wallpaper_image"
 
 REGIONS = {None: "korea", "notReal": "special", "studyAbroad": "global",
            "studyTw": "taiwan"}
@@ -46,7 +50,9 @@ def main() -> int:
         for e in load("endings.json")["endings"]
     ]
     wallpapers = []
-    for w in load("wallpapers.json")["wallpapers"]:
+    source = (json.loads(NEWER_WALLPAPERS.read_text(encoding="utf-8"))
+              if NEWER_WALLPAPERS.exists() else load("wallpapers.json"))
+    for w in source["wallpapers"]:
         row = {
             "id": w["id"], "name": w["name"], "description": w["description"],
             "storyId": w["storyId"], "color": w.get("color"),
@@ -60,6 +66,9 @@ def main() -> int:
             row["excludeGacha"] = True
         if w.get("gachaWeight"):
             row["gachaWeight"] = w["gachaWeight"]
+        # Full-screen art is bundled for this one (see import_wallpapers.py).
+        if (WALLPAPER_IMAGES / f"{w['id']}.png").exists():
+            row["fullImage"] = True
         wallpapers.append(row)
     stories = {
         str(s["id"]): s.get("engName") or s.get("name")

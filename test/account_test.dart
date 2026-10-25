@@ -179,6 +179,10 @@ void main() {
     expect(a.useAsBackground(event, const {}), isTrue);
     // No full-screen art ships for it, so Home fills from the thumbnail.
     expect(a.backgroundIn(catalog)!.wallpaper, event.thumbnail);
+    // Art captured from a real install's cache is drawn full-screen.
+    final pino = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper180');
+    expect(pino.wallpaper, 'kss/images/wallpaper_image/wallpaper180.png');
+    expect(File('assets/images/${pino.wallpaper}').existsSync(), isTrue);
     expect(Account.fromJson(a.toJson()).background, 'wallpaper1011');
     // An id the catalog no longer has falls back to the desk.
     a.background = 'wallpaper9999';
