@@ -40,6 +40,15 @@ def _load():
 # id: (name, colorCode, crest)
 US_COLLEGES = _load()
 
+# Additional majors belong only to the US set. Keep these here so rebuilding
+# either campaign preserves them. The cutoff matches Ball State's sports major.
+US_DEPARTMENTS = [
+    {"id": 118022, "universityId": uid, "name": "Teaching Physics",
+     "deviation": 52.5}
+    for uid, (name, _, _) in US_COLLEGES.items()
+    if name == "Ball State University"
+]
+
 # Words that would echo a global university's name.
 GLOBAL_NAME_CLASHES = ("stanford", "oakland", "oxford", "melbourne", "toronto",
                        "tsinghua", "tokyo", "humboldt", "auckland", "nanyang",
