@@ -101,10 +101,13 @@ def main() -> int:
     # Each selectable character's own portrait, for the Student ID card on the
     # character-select carousel. `skeleton.imgPath` is the finished artwork.
     characters = 0
-    characters_file = D30 / "packs" / "kss16" / "characters.json"
-    if characters_file.exists():
-        wanted = {c["id"] for c in
-                  json.loads(characters_file.read_text(encoding="utf-8"))["characters"]}
+    # Every pack's roster: Retry Year (kss20) characters have their own ids, and
+    # Records/Select Game cards look their portraits up here too.
+    wanted = set()
+    for characters_file in sorted((D30 / "packs").glob("*/characters.json")):
+        wanted |= {c["id"] for c in
+                   json.loads(characters_file.read_text(encoding="utf-8"))["characters"]}
+    if wanted:
         catalog = json.loads(
             (KSS / "global_data/characters.json").read_text(encoding="utf-8"))["characters"]
         for c in catalog:

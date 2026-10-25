@@ -541,6 +541,7 @@ class GameState {
     'DATE_WEEK',
     'DATE_INT',
     'WEEKCODE',
+    'MONEY',
   };
 
   int switchValue(String name) {
@@ -562,6 +563,9 @@ class GameState {
         return date.day.weekday;
       case 'DATE_INT':
         return date.asInt;
+      case 'MONEY':
+        // The Beggar's "500 gold" check reads the wallet through this name.
+        return money.floor();
     }
     return switches[name] ?? 0;
   }
