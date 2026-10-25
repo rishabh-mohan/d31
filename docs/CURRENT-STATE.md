@@ -40,7 +40,7 @@ Earlier branch integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`.
 
 The final profile APK was installed with data-preserving replacement on Nord N30 serial `7c2c1cc8` and cold-launched successfully. No fatal/Flutter application errors appeared in the sampled startup log; unrelated Android wakelock permission messages were present. Hardware rendering is required for normal play; never leave software rendering enabled after a temporary diagnostic.
 
-Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385414826 bytes. Local SHA-256: `0a22f2cbf4eea2bbde09b2effd82fdac30acef7e687dd82452b13033a98e19d0`. This records the local APK used for installation, not a separately pulled device checksum.
+Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385414826 bytes. Local SHA-256: `ad9f3cacd643dcdfca89c7de1eec9dd1c47c293a5dfb35dcbfb11ef712f66b0b`. This records the local APK used for installation, not a separately pulled device checksum. Latest clarified-mechanics code: `7e1884e`; installed with data-preserving replacement and cold-launched successfully.
 
 Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Do not adb-push packs**: the app seeds/reseeds editable JSON when the APK's bundle stamp changes. Manual pushes create shell-owned files that can shadow future updates. Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
 

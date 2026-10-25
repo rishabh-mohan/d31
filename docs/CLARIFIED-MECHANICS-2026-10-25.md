@@ -27,3 +27,6 @@ Seven targeted tests cover both gender graphs, seeded 20% duplicate behavior, ex
 
 
 Final validation: all 318 tests pass and analysis reports no issues. Phone-size visual review passes, including the shop refresh row. Evidence: build/clarified-final-tests.log and build/clarified-final-render.log. Device installation details follow after the final profile APK finishes.
+
+
+Deployment: code commit 7e1884e, profile APK 385414826 bytes, installed successfully on Nord 7c2c1cc8 and cold-launched successfully (1102 ms). Existing saves/account data were not cleared. Local APK SHA-256: ad9f3cacd643dcdfca89c7de1eec9dd1c47c293a5dfb35dcbfb11ef712f66b0b. Both Retry Year scripts were regenerated; no manual pack push was used.
