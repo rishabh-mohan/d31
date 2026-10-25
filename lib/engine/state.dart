@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'admissions.dart';
+import 'conditions.dart';
 import 'game_date.dart';
 import 'goals.dart';
 import 'quiz.dart';
@@ -604,6 +605,9 @@ class GameState {
       for (final e in item.effects) {
         if (e['type'] != effectType) continue;
         if (!_scopeMatches(e['scope'])) continue;
+        // Level 8 Suit is "[If Exercise Level >= 8]": a held passive pays
+        // only while its own conditions hold, exactly as a used one does.
+        if (!itemConditionsHold(e)) continue;
         if (subject != null) {
           final s = e['subject'] as String?;
           if (s != null && s != 'all' && s != subject) continue;
@@ -616,6 +620,45 @@ class GameState {
     // (`plusStat`, not `studyEfficiency`) and carry conditions, scope and a
     // lifetime, so they go through `TraitEngine` instead.
     return total;
+  }
+
+  /// An item effect's own `conditions`, AND-ed. Shared by consumables on use
+  /// and by held passives in [passiveSum].
+  bool itemConditionsHold(Map<String, dynamic> e) {
+    final conds = e['conditions'];
+    if (conds is! List) return true;
+    for (final c in conds.whereType<Map>()) {
+      if (!_itemCondition(c.cast<String, dynamic>())) return false;
+    }
+    return true;
+  }
+
+  bool _itemCondition(Map<String, dynamic> c) {
+    final target = c['target'] as String?;
+    if (target == null) return true;
+    num? actual;
+    switch (target) {
+      case 'EXERCISE_LEVEL':
+        actual = exerciseLevel.level;
+      case 'PART_TIME_JOB_LEVEL':
+        actual = partTimeLevel.level;
+      case 'STUDY_LEVEL':
+        actual = studyLevel.level;
+      case 'LOCATION_ID':
+        actual = locationId;
+      case 'TICK':
+        actual = date.tick;
+      case 'DATE_INT':
+        actual = date.asInt;
+      default:
+        return true; // unknown gate: do not block the effect
+    }
+    final want = (c['intValue'] as num?) ?? (c['value'] as num?) ?? 0;
+    return ConditionEvaluator.compare(
+      actual,
+      c['compareType'] as String?,
+      want,
+    );
   }
 
   bool _scopeMatches(dynamic scope) {
