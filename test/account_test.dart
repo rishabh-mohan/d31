@@ -160,9 +160,29 @@ void main() {
     expect(a.completeNow(seoA, const {}), isTrue);
     expect(a.piecesOf(seoA, const {}).every((h) => h), isTrue);
     expect(a.cookies, 200 - weight);
-    // An event-only puzzle cannot be bought.
-    final event = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper1010');
-    expect(a.completeNowPrice(event, const {}), isNull);
+    // Event-limited puzzles are unlocked: nothing here can earn their
+    // Cookie Parade or package pieces (TODO 102).
+    for (final event in catalog.puzzles.where((p) => p.storyId == 0)) {
+      expect(a.piecesOf(event, const {}).every((h) => h), isTrue);
+      expect(a.completeNowPrice(event, const {}), 0, reason: event.id);
+    }
+  });
+
+  test('only a finished puzzle can become the background', () {
+    final a = Account();
+    expect(a.background, 'wallpaper0');
+    expect(a.backgroundIn(catalog)!.wallpaper, contains('wallpaper_image'));
+    final ihyeon = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper1');
+    expect(a.useAsBackground(ihyeon, const {}), isFalse);
+    expect(a.background, 'wallpaper0');
+    final event = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper1011');
+    expect(a.useAsBackground(event, const {}), isTrue);
+    // No full-screen art ships for it, so Home fills from the thumbnail.
+    expect(a.backgroundIn(catalog)!.wallpaper, event.thumbnail);
+    expect(Account.fromJson(a.toJson()).background, 'wallpaper1011');
+    // An id the catalog no longer has falls back to the desk.
+    a.background = 'wallpaper9999';
+    expect(a.backgroundIn(catalog), isNull);
   });
 
   test('the daily quest is stable for the day and pays once', () {

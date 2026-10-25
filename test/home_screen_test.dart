@@ -63,6 +63,9 @@ void main() {
     expect(shown(), inExclusiveRange(0.05, 0.95), reason: 'fading out');
     await tester.pump(const Duration(milliseconds: 300));
     expect(shown(), 0);
+    // MM-02 names the selected background.
+    expect(find.byKey(const ValueKey('home-scene-label')), findsOneWidget);
+    expect(find.text('Amnesia'), findsOneWidget);
     // The faded menu takes no taps; the whole screen restores it.
     await tester.tap(find.byKey(const ValueKey('home-scene-only')));
     await tester.pump();
