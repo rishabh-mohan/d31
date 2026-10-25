@@ -50,6 +50,9 @@ class RunRecord {
   /// Older records intentionally leave this absent.
   final Map<String, dynamic>? details;
 
+  /// The player's own Student ID photo (absolute path), when one was added.
+  final String? studentPhoto;
+
   const RunRecord({
     required this.id,
     required this.name,
@@ -68,6 +71,7 @@ class RunRecord {
     this.exerciseLevel = 0,
     this.partTimeLevel = 0,
     this.details,
+    this.studentPhoto,
   });
 
   int get statTotal => stats.values.fold<num>(0, (a, b) => a + b).round();
@@ -102,6 +106,7 @@ class RunRecord {
       exerciseLevel: state.exerciseLevel.level,
       partTimeLevel: state.partTimeLevel.level,
       details: _captureDetails(state),
+      studentPhoto: state.studentPhotoPath,
     );
   }
 
@@ -123,6 +128,7 @@ class RunRecord {
     'exerciseLevel': exerciseLevel,
     'partTimeLevel': partTimeLevel,
     'details': ?details,
+    'studentPhoto': ?studentPhoto,
   };
 
   static RunRecord fromJson(int id, Map<String, dynamic> j) => RunRecord(
@@ -148,6 +154,7 @@ class RunRecord {
     exerciseLevel: (j['exerciseLevel'] as num?)?.toInt() ?? 0,
     partTimeLevel: (j['partTimeLevel'] as num?)?.toInt() ?? 0,
     details: (j['details'] as Map?)?.cast<String, dynamic>(),
+    studentPhoto: j['studentPhoto'] as String?,
   );
 
   static Map<String, dynamic> _captureDetails(GameState state) {
