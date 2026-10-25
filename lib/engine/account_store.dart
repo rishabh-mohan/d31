@@ -132,6 +132,31 @@ class AchievementInfo {
 /// The daily quest's reward (MM-08 shows 4).
 const dailyQuestCookies = 4;
 
+/// Trait packs a completed run pays out, once per run (RECONSTRUCTED).
+/// The recording shows "Ending Reward Obtained! 2 Standard Trait Pack(s)"
+/// with "X2 Reward Pack active"; the base of one is inferred from the
+/// doubling, and this build has no purchase that could double it.
+const endingRewardPackId = 'standard';
+const endingRewardPacks = 1;
+
+/// An ending reward waiting for the "Ending Reward Obtained!" dialog. The
+/// packs are already in the inventory; [AccountStore] persists this until
+/// the player confirms ([Account.acknowledgeEndingReward]).
+class EndingReward {
+  final String packId;
+  final int count;
+  const EndingReward(this.packId, this.count);
+
+  Map<String, dynamic> toJson() => {'packId': packId, 'count': count};
+
+  static EndingReward? fromJson(Object? j) => j is Map
+      ? EndingReward(
+          j['packId'] as String? ?? endingRewardPackId,
+          (j['count'] as num?)?.toInt() ?? 0,
+        )
+      : null;
+}
+
 /// Mileage that guarantees an S-tier card (MM-14: 490/1000).
 const mileageMax = 1000;
 
@@ -184,6 +209,18 @@ class Account implements SharedWallet {
   /// Enrollments per university id, this account's own count.
   final Map<int, int> enrollments;
 
+  /// Enrollments per department id: the "# Enrollments" of a major. Counts
+  /// start when this field was introduced (older runs are not backfilled;
+  /// [countByDepartment] recounts from History records if wanted).
+  final Map<int, int> departmentEnrollments;
+
+  /// Runs whose ending reward was paid (record id + finish time), so
+  /// replaying the completion can never pay twice.
+  final Set<String> endingRewardsPaid;
+
+  /// The reward awaiting its dialog, if any.
+  EndingReward? pendingEndingReward;
+
   /// Finished runs per pack id.
   final Map<String, int> clears;
   int bestExerciseLevel;
@@ -210,6 +247,9 @@ class Account implements SharedWallet {
     this.universities = UniversitySet.korean,
     Set<int>? endings,
     Map<int, int>? enrollments,
+    Map<int, int>? departmentEnrollments,
+    Set<String>? endingRewardsPaid,
+    this.pendingEndingReward,
     Map<String, int>? clears,
     this.bestExerciseLevel = 0,
     this.bestPartTimeLevel = 0,
@@ -231,6 +271,8 @@ class Account implements SharedWallet {
   }) : walletGrants = walletGrants ?? {},
        endings = endings ?? {},
        enrollments = enrollments ?? {},
+       departmentEnrollments = departmentEnrollments ?? {},
+       endingRewardsPaid = endingRewardsPaid ?? {},
        clears = clears ?? {},
        achievementsPaid = achievementsPaid ?? {},
        packs = packs ?? {},
@@ -243,6 +285,11 @@ class Account implements SharedWallet {
     'universities': universities.name,
     'endings': endings.toList(),
     'enrollments': {for (final e in enrollments.entries) '${e.key}': e.value},
+    'departmentEnrollments': {
+      for (final e in departmentEnrollments.entries) '${e.key}': e.value,
+    },
+    'endingRewardsPaid': endingRewardsPaid.toList(),
+    'pendingEndingReward': ?pendingEndingReward?.toJson(),
     'clears': clears,
     'bestExerciseLevel': bestExerciseLevel,
     'bestPartTimeLevel': bestPartTimeLevel,
@@ -280,6 +327,15 @@ class Account implements SharedWallet {
       for (final e in ((j['enrollments'] as Map?) ?? const {}).entries)
         int.parse('${e.key}'): (e.value as num).toInt(),
     },
+    departmentEnrollments: {
+      for (final e
+          in ((j['departmentEnrollments'] as Map?) ?? const {}).entries)
+        int.parse('${e.key}'): (e.value as num).toInt(),
+    },
+    endingRewardsPaid: {
+      for (final v in j['endingRewardsPaid'] as List? ?? const []) '$v',
+    },
+    pendingEndingReward: EndingReward.fromJson(j['pendingEndingReward']),
     clears: {
       for (final e in ((j['clears'] as Map?) ?? const {}).entries)
         '${e.key}': (e.value as num).toInt(),
@@ -365,12 +421,47 @@ class Account implements SharedWallet {
         paid += catalog.firstUniversityEnrollmentCookies;
       }
       enrollments[uni] = (enrollments[uni] ?? 0) + 1;
+      if (record.enrolledDepartmentId case final dep?) {
+        departmentEnrollments[dep] = (departmentEnrollments[dep] ?? 0) + 1;
+      }
+    }
+    // One ending trait pack per completed run, once.
+    final rewardKey = '${record.id}@${record.finishedAt.toIso8601String()}';
+    if (endingRewardsPaid.add(rewardKey)) {
+      packs[endingRewardPackId] =
+          (packs[endingRewardPackId] ?? 0) + endingRewardPacks;
+      pendingEndingReward = EndingReward(
+        endingRewardPackId,
+        (pendingEndingReward?.count ?? 0) + endingRewardPacks,
+      );
     }
     clears[record.packId] = (clears[record.packId] ?? 0) + 1;
     bestExerciseLevel = max(bestExerciseLevel, record.exerciseLevel);
     bestPartTimeLevel = max(bestPartTimeLevel, record.partTimeLevel);
     cookies += paid;
     return paid + payAchievements();
+  }
+
+  /// The player confirmed the "Ending Reward Obtained!" dialog.
+  void acknowledgeEndingReward() => pendingEndingReward = null;
+
+  /// How many of this account's finished runs enrolled at [universityId]:
+  /// the school browser's "enrollees : n". LOCAL; never a global count.
+  int universityEnrollees(int universityId) => enrollments[universityId] ?? 0;
+
+  /// The same for one major: "# Enrollments".
+  int majorEnrollments(int departmentId) =>
+      departmentEnrollments[departmentId] ?? 0;
+
+  /// Recounts per department from History [records] (authoritative when the
+  /// stored counters predate department tracking).
+  static Map<int, int> countByDepartment(Iterable<RunRecord> records) {
+    final out = <int, int>{};
+    for (final r in records) {
+      final id = r.enrolledDepartmentId;
+      if (id != null) out[id] = (out[id] ?? 0) + 1;
+    }
+    return out;
   }
 
   int achievementProgress(AchievementInfo a) => switch (a.id) {

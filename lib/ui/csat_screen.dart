@@ -1,8 +1,9 @@
 /// Exam day after the Graduation Exam: the CSAT report card, the
 /// applications, and where to enroll.
 ///
-/// The original's admission screens were not captured, so this layout is the
-/// project's own. What it decides is the original's: the departments and their
+/// A plain functional screen over the engine's D-Day API (see
+/// docs/DDAY-FLOW.md); the recreated Submit / envelope / Final Decision
+/// screens are built on the same API. What it decides is the original's: the departments and their
 /// cutoffs are the shipped catalog, and enrolling raises `ENDING_CODE`, which
 /// is what every ending waits on.
 library;
@@ -35,15 +36,26 @@ class CsatScreen extends StatefulWidget {
 }
 
 class _CsatScreenState extends State<CsatScreen> {
-  late _Phase _phase = widget.game.state.applications.isEmpty
-      ? _Phase.results
-      : _Phase.verdict;
-  final List<int> _chosen = [];
+  late _Phase _phase = switch (widget.game.ddayStage) {
+    DDayStage.results || DDayStage.finalDecision => _Phase.verdict,
+    DDayStage.drafting => _Phase.apply,
+    _ => _Phase.results,
+  };
   int? _enrolIn;
   String _query = '';
   bool _reachableOnly = true;
 
   Game get game => widget.game;
+
+  List<int> get _chosen => game.draftSlots.whereType<int>().toList();
+
+  @override
+  void initState() {
+    super.initState();
+    // This screen has no exam-card UI: take any cards left (the game screen
+    // plays them one by one when it shows them).
+    game.completeExamCards();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,17 +87,14 @@ class _CsatScreenState extends State<CsatScreen> {
         _Panel(
           child: Column(
             children: [
-              const _Row(
-                cells: ['Subject', 'Score', 'Grade'],
-                header: true,
-              ),
+              const _Row(cells: ['Subject', 'Score', 'Top %'], header: true),
               const Divider(height: 12),
               for (final s in subjects)
                 _Row(
                   cells: [
                     _cap(s),
-                    (csat.subjectScores[s] ?? 0).toStringAsFixed(1),
-                    '${csat.grades[s] ?? 9}',
+                    '${csat.examScores[s] ?? 0}',
+                    '${csat.topPercents[s] ?? 0}%',
                   ],
                 ),
             ],
@@ -110,8 +119,14 @@ class _CsatScreenState extends State<CsatScreen> {
         ),
         const SizedBox(height: 24),
         D30RaisedButton(
-          onPressed: () => setState(() => _phase = _Phase.apply),
-          child: const Text('Choose universities', style: TextStyle(fontSize: 17)),
+          onPressed: () => setState(() {
+            game.confirmScoreAnnouncement();
+            _phase = _Phase.apply;
+          }),
+          child: const Text(
+            'Choose universities',
+            style: TextStyle(fontSize: 17),
+          ),
         ),
       ],
     );
@@ -122,7 +137,7 @@ class _CsatScreenState extends State<CsatScreen> {
   Widget _apply(CsatResult csat) {
     final limit = game.applicationLimit;
     final query = _query.trim().toLowerCase();
-    final departments = game.departmentsByCutoff().where((d) {
+    final departments = game.eligibleDepartments().where((d) {
       if (_reachableOnly && game.admissionChance(d) < 0.15) return false;
       if (query.isEmpty) return true;
       final university = game.pack.admissions.universities[d.universityId];
@@ -181,7 +196,7 @@ class _CsatScreenState extends State<CsatScreen> {
                 child: D30RaisedButton(
                   color: const Color(0xFF9A8F86),
                   onPressed: () => setState(() {
-                    game.submitApplications(const []);
+                    game.confirmResults();
                     _phase = _Phase.verdict;
                   }),
                   child: const Text(
@@ -197,7 +212,7 @@ class _CsatScreenState extends State<CsatScreen> {
                   onPressed: _chosen.isEmpty
                       ? null
                       : () => setState(() {
-                          game.submitApplications(_chosen);
+                          game.submitDraft();
                           _phase = _Phase.verdict;
                         }),
                   child: Text(
@@ -221,7 +236,7 @@ class _CsatScreenState extends State<CsatScreen> {
     final allowed = game.canApply(d);
     final chosen = _chosen.contains(d.id);
     final sameSchool = !chosen && game.sameSchoolChosen(d, _chosen);
-    final chance = game.admissionChance(d);
+    final chance = game.displayedRate(d) / 100;
     final (label, colour) = switch (chance) {
       >= 0.85 => ('Safe', D30Colors.hpGreen),
       >= 0.45 => ('Fair', D30Colors.accentDark),
@@ -232,7 +247,11 @@ class _CsatScreenState extends State<CsatScreen> {
       child: ListTile(
         enabled: allowed && !sameSchool && (chosen || _chosen.length < limit),
         onTap: () => setState(() {
-          chosen ? _chosen.remove(d.id) : _chosen.add(d.id);
+          if (chosen) {
+            game.removeFromDraft(game.draftSlots.indexOf(d.id));
+          } else {
+            game.addToDraft(d.id);
+          }
         }),
         title: Text(
           university?.name ?? '',
@@ -267,6 +286,7 @@ class _CsatScreenState extends State<CsatScreen> {
 
   Widget _verdict() {
     final admitted = game.state.admittedDepartments;
+    game.confirmResults();
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
       children: [
@@ -285,7 +305,10 @@ class _CsatScreenState extends State<CsatScreen> {
         if (admitted.isEmpty)
           D30RaisedButton(
             onPressed: _finish,
-            child: const Text('Retake the year', style: TextStyle(fontSize: 17)),
+            child: const Text(
+              'Retake the year',
+              style: TextStyle(fontSize: 17),
+            ),
           )
         else
           D30RaisedButton(
@@ -327,18 +350,17 @@ class _CsatScreenState extends State<CsatScreen> {
   }
 
   void _finish() {
-    game.enroll(_enrolIn);
+    if (_enrolIn == null) {
+      game.enrollRetake();
+    } else {
+      game.enroll(_enrolIn);
+    }
     Navigator.of(context).pop();
   }
 
   /// The chance an application is accepted, as the list shows it: whole
   /// percents, with "<1%" and ">99%" at the ends rather than a flat 0 or 100.
-  static String _percent(double chance) {
-    final p = chance * 100;
-    if (p < 1) return '<1%';
-    if (p > 99) return '>99%';
-    return '${p.round()}%';
-  }
+  static String _percent(double chance) => '${(chance * 100).round()}%';
 
   static String _cap(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

@@ -17,6 +17,7 @@ import 'dart:math';
 
 import 'admissions.dart';
 import 'conditions.dart';
+import 'dday.dart';
 import 'effects.dart';
 import 'event_engine.dart';
 import 'game_date.dart';
@@ -24,6 +25,8 @@ import 'goals.dart';
 import 'pack.dart';
 import 'state.dart';
 import 'traits.dart';
+
+export 'dday.dart';
 
 /// Which card shape an action gets drawn as.
 enum ActionKind { study, lesson, partTimeJob, exercise, sleep, special }
@@ -266,11 +269,21 @@ class Game {
     // "University acceptance rate +1%" items move the score by the points
     // that are worth around the middle of the curve.
     standard += state.passiveSum('acceptanceRate', valueKey: 'percent') * 0.25;
+    // The Graduation Exam's announced Score and Top % (fitted; see
+    // GraduationExam). Scores recorded at the exam cards are kept as taken.
+    final examScores = <String, int>{
+      for (final subject in subjects) subject: examScoreFor(subject),
+    };
     final result = CsatResult(
       standardScore: standard,
       subjectScores: scores,
       grades: {
         for (final e in scores.entries) e.key: Admissions.gradeFor(e.value),
+      },
+      examScores: examScores,
+      topPercents: {
+        for (final e in examScores.entries)
+          e.key: GraduationExam.topPercent(e.value, examTopTable),
       },
     );
     state.csat = result;
@@ -292,7 +305,8 @@ class Game {
         return c != 0 ? c : a.id.compareTo(b.id);
       });
 
-  /// Whether an application to [department] may be sent at all.
+  /// Whether an application to [department] may be sent at all (items it
+  /// needs). Story availability is [isEligible]'s concern.
   bool canApply(Department department) =>
       department.requiredItems.every((id) => state.itemCount(id) > 0);
 
@@ -306,6 +320,8 @@ class Game {
                 department.universityId,
       );
 
+  /// The chance (0-1) this run's score gets into [department]. The model
+  /// behind [displayedRate]; the roll uses the rounded displayed rate.
   double admissionChance(Department department) => Admissions.acceptanceChance(
     takeCsat().standardScore,
     department.deviation,
@@ -315,36 +331,42 @@ class Game {
   );
 
   /// Sends the applications and decides each one. Returns the departments
-  /// that accepted.
+  /// that accepted. Headless/legacy entry: it fills the draft with [departmentIds]
+  /// (skipping the ineligible and second departments of one school) and
+  /// commits it. An empty list commits nothing. See `submitDraft`.
   List<int> submitApplications(List<int> departmentIds) {
-    if (state.applications.isNotEmpty) return state.admittedDepartments;
+    if (state.applicationsCommitted) return state.admittedDepartments;
     for (final id in departmentIds) {
-      if (state.applications.length >= applicationLimit) break;
-      final department = pack.admissions.departments[id];
-      if (department == null ||
-          !canApply(department) ||
-          sameSchoolChosen(department, state.applications)) {
-        continue;
-      }
-      state.applications.add(id);
-      if (state.random.nextDouble() < admissionChance(department)) {
-        state.admittedDepartments.add(id);
-      }
+      addToDraft(id);
     }
+    submitDraft();
     return state.admittedDepartments;
   }
 
-  /// Enrolls (or, with null, retakes the year) and turns the endings on.
-  void enroll(int? departmentId) {
+  /// Enrolls in an accepted department, or (null) takes the retake academy,
+  /// and turns the endings on. Idempotent: once the final decision is made a
+  /// second call changes nothing and returns false. A department that did
+  /// not accept the student is refused (false, nothing changes).
+  bool enroll(int? departmentId) {
+    if (state.finalDecided) return false;
     if (departmentId != null &&
-        state.admittedDepartments.contains(departmentId)) {
+        !state.admittedDepartments.contains(departmentId)) {
+      return false;
+    }
+    if (departmentId != null) {
       state.enrolledDepartment = departmentId;
       final d = pack.admissions.departments[departmentId]!;
       final u = pack.admissions.universities[d.universityId];
       state.note('Enrolled: ${u?.name ?? ''}, ${d.name}.', 'system');
+    } else {
+      state.note('Retake the year.', 'system');
     }
+    state.scoreAnnounced = true;
+    state.resultsReviewed = true;
+    state.finalDecided = true;
     state.csatPending = false;
     state.setSwitch('ENDING_CODE', 1);
+    return true;
   }
 
   /// The next ending scene, once enrollment has turned the endings on.
