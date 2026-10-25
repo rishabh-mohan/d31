@@ -742,3 +742,20 @@ copy stationery rerolls into the trait-pack opening flow.
 - When implementing later, capture matching states with hardware rendering and
   compare overlays, proportions, crop, spacing and text wrapping. Still images
   cannot specify animation durations or replace performance measurements.
+
+## Settings: Rumble trigger points (F03, reconstructed)
+
+The original captures show the Rumble toggle but no evidence of which moments
+vibrate. These triggers are a conservative reconstruction, not recovered
+behaviour. All go through `lib/ui/haptics.dart`, which does nothing when the
+persisted Rumble setting is off (Flutter `HapticFeedback`, no extra package):
+
+| Moment | Haptic |
+|---|---|
+| Exhaustion / collapse begins | heavy impact |
+| A level-up scene opens | medium impact |
+| D-Day envelope opens onto its result card | light impact |
+| Stationery draw stopped (Stop all / card tap) | selection click |
+| Trait-pack roulette stopped | selection click |
+
+Change the list only with original evidence.
