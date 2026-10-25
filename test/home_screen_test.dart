@@ -79,6 +79,19 @@ void main() {
     await tester.pump();
     expect(find.text('History'), findsOneWidget);
     expect(find.byKey(const ValueKey('menu-back')), findsOneWidget);
+    // TODO 93: the header strip spans the page, with the chevron at its
+    // left edge, rather than shrinking to the title in the middle.
+    final strip = find
+        .ancestor(
+          of: find.byKey(const ValueKey('menu-back')),
+          matching: find.byType(DecoratedBox),
+        )
+        .first;
+    expect(tester.getSize(strip).width, closeTo(390, .5));
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('menu-back'))).dx,
+      lessThan(20),
+    );
   });
 
   testWidgets('Select Game lays out its plus tile', (tester) async {
