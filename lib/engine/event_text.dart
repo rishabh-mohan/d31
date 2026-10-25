@@ -1,3 +1,4 @@
+import 'conditions.dart';
 import 'state.dart';
 
 /// The English content retains Korean name macros. Substitute when displaying
@@ -77,8 +78,7 @@ String expandEventText(String source, GameState state) {
       // With the Scouter in the bag, the sing-off choice shows its forecast.
       case 'IS_SING_WIN':
         if (state.itemCount(90021) == 0) return '';
-        return state.switchValue('SING_COUNT') >=
-                state.switchValue('SING_TARGET')
+        return ConditionEvaluator.singOffWins(state)
             ? '(Scouter: you will win)'
             : '(Scouter: you will lose)';
       // Not recoverable from the data; drop the marker rather than show it.

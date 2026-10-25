@@ -284,10 +284,7 @@ class ConditionEvaluator {
     },
     // ttl (0xadf8a4): enough practice for the opponent SET_SING_TARGET drew.
     // Character 67's ability is a guaranteed win.
-    'FUNC_SING_TARGET': (s, a) => _b(
-      s.characterId == 67 ||
-          s.switchValue('SING_COUNT') >= s.switchValue('SING_TARGET'),
-    ),
+    'FUNC_SING_TARGET': (s, a) => _b(singOffWins(s)),
 
     'FUNC_COMPARE_SWITCH': (s, a) {
       final name = a.isNotEmpty ? a[0]?.toString() : null;
@@ -317,7 +314,13 @@ class ConditionEvaluator {
       return _b(department != null && department.percentile >= rate);
     },
     'FUNC_IS_ENTER_UNIV_WITH_DEPART_TYPE': (s, a) => 0,
-    'FUNC_IS_IN_CHARACTER_LIST': (s, a) => 0,
+    // Is the player one of these characters? Retry Year asks it of a single
+    // id (58's branches in #189/#210, 66's Weird Cookie), but the name and
+    // the sibling *_LIST predicates take any number.
+    'FUNC_IS_IN_CHARACTER_LIST': (s, a) => _b(
+      s.characterId != null &&
+          a.any((id) => _intArg([id], 0) == s.characterId),
+    ),
 
     // Store / regional predicates with no meaning in a local build. They
     // report "no premium, not the JP build" so the content that branches on
@@ -325,6 +328,14 @@ class ConditionEvaluator {
     'FUNC_GET_PREMIUM_LEVEL': (s, a) => 0,
     'FUNC_IS_PLAYED_JP': (s, a) => 0,
   };
+
+  /// The sing-off's result, shared by FUNC_SING_TARGET and the Scouter's
+  /// forecast so the two can never disagree: enough practice for the
+  /// opponent SET_SING_TARGET drew, or character 67, whose ability is a
+  /// guaranteed win.
+  static bool singOffWins(GameState s) =>
+      s.characterId == 67 ||
+      s.switchValue('SING_COUNT') >= s.switchValue('SING_TARGET');
 
   static int _taskDays(GameState state, List<dynamic> args) {
     // Whole-day view of the authored task deadline. Native partial-day
