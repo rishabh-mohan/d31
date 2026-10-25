@@ -470,42 +470,74 @@ APPLY_REQUIREMENTS = {
     54002: {"items": [90019]},  # Pharmacy: the same, plus the deluxe
 }
 
-# University types that a Korean run cannot apply to: the Retry Academy is
-# the failure outcome, and the Taiwanese and study-abroad lists belong to
-# other regions' builds.
-EXCLUDED_UNIVERSITY_TYPES = {"notUniv", "studyTw", "studyAbroad"}
+# `type` in the original universities.json -> the category the school browser
+# (Korea / Special / Global / Taiwan tabs) files it under. No `type` is the
+# regular Korean set; `notReal` are the Special schools (Basakan, the Retry
+# universities...); `notUniv` is the Retry Academy, the failure outcome, which
+# is listed but is never an application candidate.
+CATEGORY_OF_TYPE = {
+    None: "korea",
+    "notReal": "special",
+    "studyAbroad": "global",
+    "studyTw": "taiwan",
+    "notUniv": "retake",
+}
+
+# The star ladder the school browser prints: rank "ten" is five stars, "nine"
+# four and a half, down to "one" at half a star (ten -> 5.0, nine -> 4.5 ...).
+RANK_VALUE = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+              "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
 
 
 def build_admissions(out: Path):
-    """The CSAT application catalog: every university this story can apply to.
+    """The application catalog: every university in the original game.
 
-    `deviation` is each department's admission cutoff on the CSAT's standard
-    score scale (25.3 .. 80.85). Story-only universities (`onlyAvailableStories`)
-    appear only in their own story.
+    All 137 universities and the departments of those this story can reach.
+    Each carries a `category` (korea / special / global / taiwan / retake),
+    `stars` (rank / 2), its colour and crest. `deviation` is each department's
+    admission cutoff on the CSAT's standard-score scale (25.3 .. 80.85).
+
+    Story-only universities (`onlyAvailableStories`) are always listed, so the
+    Special tab can show a Retry University darkened with "Available for
+    admission in ..."; `availableStories` names the stories that may apply,
+    and a school outside this story gets no departments here. The Retry
+    Academy (category retake) keeps its single department for the Final
+    Decision card but is never offered as an application.
 
     Written as colleges.json (a pack author edits it to change the colleges),
     with colleges_us.json beside it: the US set Settings can switch to, an
-    overlay of names and colours by university id (tools/us_colleges.py).
+    overlay of names and colours by university id (tools/us_colleges.py) that
+    renames only the regular Korean set.
     """
     unis = clean(load(GLOBAL / "university/universities.json"))["universities"]
     depts = clean(load(GLOBAL / "university/departments.json"))["departments"]
+    university_names.check(unis)
     keep = {}
+    reachable = set()
     for u in unis:
-        if u.get("type") in EXCLUDED_UNIVERSITY_TYPES:
-            continue
         only = u.get("onlyAvailableStories")
-        if only and STORY_ID not in only:
-            continue
-        keep[u["id"]] = {
+        category = CATEGORY_OF_TYPE[u.get("type")]
+        row = {
             "id": u["id"],
-            "name": u.get("engName") or u.get("korName") or f"University {u['id']}",
+            "name": university_names.display_name(u)
+                    or f"University {u['id']}",
+            "category": category,
             "rank": u.get("rank", "none"),
+            "stars": RANK_VALUE.get(u.get("rank"), 0) / 2,
             "colorCode": u.get("colorCode"),
             "storyOnly": bool(only),
         }
+        if u["id"] == 0:
+            row["crest"] = "kss/images/university/0.svg"
+        if only:
+            row["availableStories"] = only
+        if category == "retake" or not only or STORY_ID in only:
+            reachable.add(u["id"])
+        row["available"] = u["id"] in reachable
+        keep[u["id"]] = row
     out_depts = []
     for d in depts:
-        if d["universityId"] not in keep:
+        if d["universityId"] not in reachable:
             continue
         # Elite Mode departments cannot be entered from a standard run.
         if "Elite Mode" in (d.get("enApplyConditionDescription") or ""):
@@ -859,6 +891,19 @@ def build_rules(out: Path):
             # Spread of the admission draw around a cutoff, in standard-score
             # points: a score exactly at the cutoff is a coin flip.
             "admissionSpread": 2,
+            # What the exam cards and score announcement print. Display names
+            # are the recording's ("Maths", "Humanities"); the pack's own
+            # subject list gives the order and which slots are the electives.
+            "subjectLabels": {"korean": "Korean", "math": "Maths",
+                              "english": "English", "science": "Science",
+                              "society": "Humanities"},
+            # FITTED to the D-Day recording (docs/DDAY-FLOW.md): the engine's
+            # GraduationExam holds the curve; set scoreCurve / topTable here
+            # to override it. confidentScore picks the exam-card response.
+            "gradExam": {"variation": 1.0, "confidentScore": 60,
+                         "responses": {
+                             "unsure": "I'm not so sure about this...",
+                             "confident": "That wasn't so bad..."}},
         },
     }
     if STORY_ID == 20:
