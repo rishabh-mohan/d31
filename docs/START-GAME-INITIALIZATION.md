@@ -1,5 +1,13 @@
 # To-do: complete start-game initialization
 
+Current follow-up (25 October 2026): Home Start opens Select Game before setup.
+Both campaigns use shared account cookies and refresh tokens with one-time
+starting grants; new runs do not refill an existing shared balance. Each new
+run still starts fresh stationery ownership/equipment, while resuming a run
+preserves its stationery. Prototype unlocked characters/badges/eligible traits
+remain intentional. See [CURRENT-STATE.md](CURRENT-STATE.md); dated setup notes
+below describe the implementation stage when written.
+
 ## Implementation checkpoint — 2026-10-23
 
 Title Start now opens `SetupScreen`: mode, character, badges, traits, name.
@@ -166,8 +174,10 @@ Last Name fields, and large orange Start Game button.
   as the initial location and reset the daily clock/used blocks/event allowance.
 - Initialize ordinary run stats/EXP/money/book progress from the pack, then apply
   selected character, difficulty, badge and initial-trait modifiers exactly once.
-- Carry valid equipped stationery and apply individual/set efficiency once.
-  Preserve the account's stationery collection and cookie wallet separately.
+- Start each new run with fresh stationery ownership and equipment (user
+  confirmation, 2026-10-24); do not inherit another run's stationery bonuses.
+  Preserve inventory, equipment and pending draws when resuming the same run.
+  Keep the account cookie wallet separate from per-run stationery state.
 - Start with full stamina at the correctly modified maximum. The unmodified
   reference has subject stats 50, 0 Gold, study LV1 0/495, exercise/part-time LV0.
 - Show the initial navy D-31/Monday screen with baseline stats and no daily gains,

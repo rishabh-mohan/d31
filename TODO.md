@@ -1,15 +1,20 @@
 For any agents reading this page: respond with progress or completion using 1R, 2R, 3R underneath the entry detailing what has been done if half complete, or writing DONE if complete
 
-## Current status - 2026-10-24
+## Current status - 2026-10-25
 
 Historical checkpoint before entries 73 onward: **56 implemented entries,
 15 open/partial, and one recurring reminder** (72 entries at that checkpoint).
 This is not a current total or an original-game parity percentage. Later entries
 and the audit below remain part of the backlog; this older summary can lag fixes.
 
-**Coordination: Claude is currently implementing the main menu**, including
-account, History and save integration. Preserve his shared-tree changes and
-recheck those findings after integration; do not start a competing rewrite.
+**Current integration:** recoverable work from all five interrupted branches is
+on main; 311 tests pass and analysis is clean. Read
+[CURRENT-STATE.md](docs/CURRENT-STATE.md) and
+[the per-branch completion report](docs/BRANCH-INTEGRATION-2026-10-25.md).
+A14 Practice Block insertion and I03 Hiking Gloves' extra yield remain
+specifically evidence-blocked. The older difficulty index is historical, not
+an authoritative current open-item list. Preserve original worktrees as recovery
+copies and do not overwrite newer main files with them.
 **Stationery starts fresh every run.** Missing cross-run stationery ownership
 is NOT a bug. Same-run inventory, equipment and pending draws must survive saves.
 
@@ -22,7 +27,7 @@ for the remaining screenshots, recordings and rule details the user can supply.
 | Regressions fixed | 19: software-rendered launches caused the whole-game low FPS. Hardware-rendered profile build installed and verified; user confirms it is much smoother. 70: starter-book gains restored from +45 to +15 without buffs. |
 | Implemented prototype | Setup/save slots, inventory/stationery, portraits and unknown names, 100 stamina, global level-up scenes, dorm return/roll call, gender scripts, proficiency kit, character-event imports, exam/admissions/ending flow. |
 | Partial | 4 setup/Elite/entitlements; 18 reference UI extras; 23 full Retry Year parity; 34 special blocks; 37 original Quizmaster bank; 42 more campaign packs; 48 full character abilities; 50 original event dispatcher. |
-| Open / in progress | 36 random-event/set selection; 40/41 Home/Records/college toggle under Claude's current work; 74 character organization; 78 items/shop; 79 info fade; 80 menu label; audit 81-89. Recheck integrated work before claiming it remains absent. |
+| Open / in progress | 36 random-event/set selection; 74 character organization; 78 items/shop; unresolved audit/evidence items 81-89. Home/account/college-toggle and 79/80 are integrated; broader original parity remains partial. See checked audit IDs and the current integration report. |
 | Later completed UI fixes | 66 calendar discovery filtering; 67 acquisition popup; 68 ending title presentation; 69 gameplay portrait placement/scale; 72/73 gender flow and phone pack refresh; 75-77 item-popup/button refinements. See each entry for scope. |
 | Recurring only | 39: remind about book-completion item gacha; do not implement it yet. |
 
@@ -35,9 +40,10 @@ prototype tuning; the dedicated Quizmaster bank and general scheduler remain
 unrecovered. Recovered exam thresholds are unchanged by the book-gain fix, so
 Retry Year's exam progression balance needs separate verification.
 
-Latest completed combined review: 214 tests passed, analysis clean. This follow-up
-adds starter-book and efficiency preview/actual-gain regressions; the latest
-engine/campaign/setup selection passes all 114 tests, including 200 seeded runs. Current deployment/evidence: docs/CURRENT-STATE.md and docs/PERFORMANCE-REGRESSION.md.
+Latest completed combined review (2026-10-25): **311 tests passed**, analysis
+clean; the integrated profile APK is installed on the Nord. Current deployment,
+artifact hash and evidence: [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md).
+Historical 214/114-test checkpoints are retained in the archived state document.
 
 TODO:
 1. Traits in the "Traits" menu on the day start screen should have a green, red, or purple background depending on the effect of the trait (positive green, negative red, neutral purple). The backgrounds are implemented in the info menu

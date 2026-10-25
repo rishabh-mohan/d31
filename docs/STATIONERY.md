@@ -1,5 +1,12 @@
 # Stationery
 
+## Ownership lifetime (user-confirmed, 2026-10-24)
+
+Stationery starts fresh for every new run. It is not an account collection to
+carry into later runs. Saving/resuming the same run must preserve its owned
+copies, equipment and pending draws. Account cookies used for redraws have a
+separate lifetime. Missing cross-run stationery carryover is not a parity bug.
+
 ## Flow and presentation
 
 Wednesday's night summary closes first. At Thursday tick zero, a navy draw
@@ -11,8 +18,18 @@ Closing grants the final five cards once. A resumed pending draw reopens first.
 The reference's redraw screen guarantees B or better; locked positions survive
 redraws. The first redraw is free, subsequent redraws cost one cookie, matching
 the recovered one-unit charge in `sub_ba75e0` (label: stationery redraw).
-Ad-network integration is omitted. The initial card-stop animation is omitted;
-all five cards are immediately visible and may be locked.
+Ad-network integration is omitted. Cards cycle on the draw stage until a card
+or Stop All is tapped; then lock/redraw/claim controls appear. Reduced motion
+keeps faces still and suppresses confetti. Draw-stop and combination results
+use stationery's S rainbow / A gold / B blue / C gray palette, distinct from
+trait-pack confetti. Overlays ignore touches.
+
+The shared real StationeryCard used by CommerceScreen reserves a two-pixel
+outline inset, clips inner art/fills and paints its rounded outline last.
+Empty hub slots use the same inset/clip approach. The 393×873 real-asset review
+checks the expanded grid; the user's specific Nord corner complaint still
+merits playtest confirmation. Preserve the measured stationery-name-fit cache.
+See [the integration report](BRANCH-INTEGRATION-2026-10-25.md) for validation.
 
 Inventory and combination use four compact columns, ordered S, A, B, C then ID.
 Art occupies 64% of its tile. S uses a rainbow gradient, A gold, B pale blue,

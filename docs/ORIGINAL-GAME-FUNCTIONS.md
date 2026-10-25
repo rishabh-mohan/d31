@@ -6,7 +6,24 @@ It combines original extracted JSON, recovered Korean sibling-build pseudocode,
 native analysis, original-game screenshots, user playtest confirmations and
 internet research. It is an evidence map, not a claim of full original parity.
 
+Follow-up audit: [TODO entries 81-90](../TODO.md) distinguish implementation
+defects, missing features and unrecovered models. See the remaining
+[implementation evidence requests](IMPLEMENTATION-EVIDENCE-REQUESTS.md).
+The recoverable main-menu/branch work is now integrated. Check
+[CURRENT-STATE.md](CURRENT-STATE.md) and [the branch report](BRANCH-INTEGRATION-2026-10-25.md)
+before treating audit-baseline defects as still open. User clarification: stationery
+starts fresh each run; the same run's stationery survives save/resume. Do not
+infer account persistence for stationery from other collection systems.
+
 ## Contents
+
+Evening evidence supplement:
+[30 screenshots, three recordings and trait-pack probabilities](ORIGINAL-GAME-FOLLOWUP-2026-10-24.md).
+User corrections override older uncertain notes: protection persists after
+restart; any S draw resets mileage; Master of Notes' workbook precedes general
+completion gacha; continuous-condition mission failure notifies but unmet
+end-of-day expiry is silent; first college enrolment unlocks its achievement
+and grants two cookies. Inventory XP does not display the level-up event.
 
 1. [Evidence, sources and versions](#1-evidence-sources-and-versions)
 2. [Game structure and campaigns](#2-game-structure-and-campaigns)
@@ -260,7 +277,7 @@ Sources: **G** book directories/study_levels/traits/equipment; **C** actions;
 | Book unlock | Conditions include previous-book/after and stat thresholds | D/V |
 | Book progress | Read count, completion target and extra reads are distinct fields | D/V |
 | Book completion | `BOOK_DONE`, `DONE_BOOK_`, `UNLOCK_BOOK_CODE` and completion-triggered traits establish a real event boundary | D/N |
-| Completion rewards | Master of Notes describes receiving a Weird Workbook after finishing a book | V/D; general item-gacha pool/rates still need recovery |
+| Completion rewards | Master of Notes grants a Weird Workbook before the separate completion item gacha | V/user; F21/F22 and V01/V02 in evening supplement; general gacha pool/rates remain unrecovered |
 | Study combo | Repeating subject/action history affects study behavior and conditions | D/N; exact multiplier/reset timing unresolved |
 | Preview | Card shows projected subject gain, cost and book progress | V; preview and actual effect should agree |
 | Base study gain | Current observed target: power-5 starter book gives +15 unbuffed | V/user playtest; universal `power * 3` formula across all versions is not proven |
@@ -296,7 +313,7 @@ Sources: **P**, **C** exercise/work tables and actions, **G** effects, **N** ver
 | Stamina cap | 100 in the two inspected/rebuilt short campaigns, including dev/playtest boundary | V; no unsupported +4 per workout level |
 | Workout efficiency | Exercise progression improves stamina efficiency rather than increasing this cap | V/D; original rounding must be measured |
 | Exercise EXP | Exercise action, items and story effects can raise workout EXP | D/N |
-| Workout level scene | Global level-up event can follow an EXP threshold crossing | D/V; include event/item gains, not just exercise cards |
+| Workout level scene | Global level-up event can follow an EXP threshold crossing; inventory XP does not show the scene | D/V/user; distinguish event-granted XP from inventory use, keep level state updated |
 | Work action | Earn run Gold through location/level-specific jobs | V/D/W |
 | Work EXP | Separate level track, thresholds, money multipliers and EXP modifiers | D |
 | Job descriptions | Location-specific shift labels change with work level | D |
@@ -373,7 +390,7 @@ Sources: **G** characters/traits/badges/elite_levels, **P** MM-14–25/27 and se
 | Jumbo pack | Screenshot shows 5-or-more C-and-above traits, 20-cookie price, 20 mileage | V; version-specific displayed offer |
 | Owned pack stock | Open disabled at zero, enabled with owned copies | V |
 | Buy versus Open | Buying pack stock is separate from opening it | V/R; transaction screens not supplied |
-| Mileage guarantee | At full 1000 mileage, opening guarantees S tier; earlier S resets mileage | V, explanatory text MM-14/15; detailed multi-card ordering unresolved |
+| Mileage guarantee | At full 1000 mileage, opening guarantees S tier; ANY S-tier draw resets mileage | V/user; includes early and guaranteed S; detailed multi-card ordering unresolved |
 | Pack reveal | Single-card roulette stops on tap; no rerolls | V, user-confirmed |
 | Pack result browsing | Arrows and index show obtained batch; Exit and optional Draw More | V |
 | Pack confetti | After roulette ends, mixed brown/gray/gold confetti | V, user-confirmed |
@@ -435,7 +452,7 @@ registries, **P** preparation/goal popup/Daily Quest.
 | Trait goal rewards | Native names/log strings support trait awards | N |
 | Delayed reward bonuses | Some planners/traits state effect begins next week | D/V; do not apply retroactively to an already-created goal |
 | Goal history | Success records feed statistics and conditions | N |
-| Sudden Missions | Nine templates across money/stat/stamina requirements and normal/hard variants | D, not the same as Home Daily Quests |
+| Sudden Missions | Nine templates across money/stat/stamina requirements and normal/hard variants; unmet end-of-day goals expire silently, continuous-condition violations notify failure | D/V/user; F23-F26 offer/success/failure; distinct from Home Daily Quests |
 | Hold money target | `MONEY_OVER` | D; target generation unresolved |
 | Subject threshold | `STAT_OVER` | D |
 | Exact stamina | `HP_EXACTLY`, distinct finish-of-day `HP_EXACTLY_FINISH` | D |

@@ -1,5 +1,12 @@
 # Main menu reference: 24 October 2026
 
+Implementation status, 25 October 2026: captured Home/account destinations are
+integrated; [CURRENT-STATE.md](CURRENT-STATE.md) and [the branch report](BRANCH-INTEGRATION-2026-10-25.md)
+record current scope and limits. This atlas preserves original screenshots and
+target behavior; older statements about an unbuilt screen are historical.
+Home/debug edits must persist to the shared account wallet. No real account
+services or purchases are implied by displaying their reference layouts.
+
 These **27 original-game screenshots** specify the home menu and its connected
 screens. Originals are preserved, without resizing or renaming, in
 [`screenshots/main-menu-2026-10-24/`](../screenshots/main-menu-2026-10-24/).
@@ -678,6 +685,13 @@ Do not invent a save/confirmation dialog: none is visible.
 
 ## Questions and missing evidence
 
+Evening follow-up: [new screenshots/recordings and recovered rates](ORIGINAL-GAME-FOLLOWUP-2026-10-24.md)
+now specify Settings, mailbox, profile/rename, Charging, Store tabs, History's
+three detail tabs, save deletion and locked-card warning. Protection persists
+after restart; any S draw resets mileage. Use the updated status table in
+[evidence requests](IMPLEMENTATION-EVIDENCE-REQUESTS.md) before asking again for
+screens below; this older missing-screen paragraph is a historical checkpoint.
+
 The user has confirmed the principal navigation, balances, save-stat total,
 ending reward meaning and reveal details, including tap-to-stop trait-pack
 roulette, no roulette for combining, and the padlock's tap-to-protect/unprotect
@@ -685,8 +699,13 @@ mode. These answers are integrated above. The follow-up protection-mode image
 is archived and specified as MM-27; its active styling and expanded grid are
 now observed rather than inferred.
 
+The full remaining capture/rule checklist is now maintained in
+[Implementation evidence requests](IMPLEMENTATION-EVIDENCE-REQUESTS.md), E01-E40.
+The captured main-menu screens are now integrated; these are reference gaps, not
+assertions that his latest features are missing. Rank is intentionally omitted.
+
 Additional screens/interactions not supplied: Settings, mail, account info,
-seasonal event, Rank, Charging/Store/Notices, achievement reward claim/university
+seasonal event, Charging/Store/Notices, achievement reward claim/university
 detail, active/completed Daily Quest states, completed-run detail/delete dialog,
 new-save/delete confirmations, puzzle help/equip/complete/purchase/draw flows,
 other puzzle categories, Chances Info, Combine Rates, Royal/campaign pack details,

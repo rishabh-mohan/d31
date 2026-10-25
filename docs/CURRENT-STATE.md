@@ -1,99 +1,36 @@
-# Current review checkpoint — 2026-10-24
+# Current implementation checkpoint — 25 October 2026
 
-This checkpoint includes the newer work in the shared tree. Older milestone
-notes describe their state at the time; use this page and RETRY-YEAR.md for
-current coverage. Code and tests remain the source of truth.
+Read this checkpoint before dated historical notes. [TODO.md](../TODO.md) tracks per-item status; [the branch integration report](BRANCH-INTEGRATION-2026-10-25.md) records the original assignments and remaining blockers. Code/tests are the implementation source of truth; original-game references establish targets, not proof that a feature exists.
 
-## Included in this update
+## Integrated on main
 
-- Retry Year male/female protagonist selection, the corresponding shipped
-  English script, and restoring that script when continuing a save.
-- Calendar arithmetic across daylight-saving changes; November date-gated
-  events can match on a US-timezone phone.
-- Recovered friend-route/action gates, singing and mock-exam predicates,
-  promotion proficiency notes, and a persistent Promotion Exam Kit display.
-- Imported global character events, filtered to the selected character;
-  broader character parity remains incomplete.
-- Graduation Exam before the CSAT, applications, enrolment and ending scenes
-  in both campaigns. The admissions catalog is imported; scoring and admission
-  probabilities remain a fitted prototype model, not recovered formulas.
-- Working quiz question/answer macros and prize paths using 68 English school
-  exam questions. The dedicated Quizmaster bank is still unrecovered; this is
-  the shared-bank fallback, not a claim that the requested original was found.
-- Trait-gated dialogue is skipped when its condition fails unless it has an
-  authored alternate line. Fast-forward stops on the last line for the player
-  to close. The stamina outline paints over its fill. Raised button faces use
-  the painted face bounds so pressing does not expose a band above the face.
-- Raised event portraits, corrected El Niño/La Niña labels, imported NPC art,
-  and the dev panel's character/expression showcase.
+- Home and captured Settings/Mail Box/Profile/Charging/Store destinations are connected. Username and preferences persist; first rename is free, subsequent changes cost nine cookies. Real purchases, ads, invitations and mail delivery remain unavailable. Notices and the seasonal destination still lack references.
+- Cookies and refresh tokens share the account wallet in both generated packs. Starting balances are one-time grants; legacy saves migrate through the shared-wallet plumbing. Debug → State → Wallet edits these balances with direct entry or quick steps, saving account changes. Fresh stationery per run remains an intentional, separate policy.
+- All five original branch tips were already merged. Remaining recoverable drafts have now been completed on main. Original worktrees are retained as recovery copies; do not reapply their entire older files over current Home/wallet changes.
+- Evening scenes hold date, stamina reset and trait aging until they close; the following morning event is delivered. Exhaustion checks eligible events on each skipped action tick in both campaigns; dialogue pauses the fill. Lost slots grant no action rewards. The ordinary evening slot runs before rollover.
+- Walking Enthusiast uses a serialized once-per-tick movement guard (prototype anti-farming rule). Multitasker's authored STAT_1 pays three stat points to a deterministic random subject on Study and previews the bonus. Street Performer pays 600 Gold on scoped Karaoke singing. Earlier trait and item fixes remain; unspecified proc/discount rates are configurable reconstructions.
+- Day-menu Score Card displays the retained CSAT result. New History records store per-subject scores and open the same card. Legacy total-only records are not backfilled; current mock-exam callbacks do not generate per-subject score cards.
+- Stationery cards reserve an inset, clip inner fills and paint the outline last. Empty hub slots use the same border approach. Draw and combination results use rainbow/gold/blue/gray confetti, ignore touches and honor reduced motion. The original name-fit cache remains intact.
+- My Info/Home fades, full-page Achievements, full-width account headers and aspect-preserving image decoding are integrated. TODO 95 records the squished save portraits; the likely shared decoding cause is fixed, pending confirmation of those specific thumbnails during playtesting.
 
-The prior fixes remain: a 100 stamina cap, event-driven level-up scenes,
-unknown-speaker nameplates, tick-12 first dorm return followed by later roll
-calls, smooth stamina animation, and a provisional 5% stationery upgrade chance.
+The earlier Retry Year gender scripts, DST-safe dates, native friend/roll-call gates, proficiency kit, calendar, dialogue/portraits, CSAT/applications/endings and quiz fallback remain. See [the historical checkpoint](CURRENT-STATE-2026-10-24.md) and [Retry Year](RETRY-YEAR.md) for their evidence.
 
-## Remaining limits
+## Remaining work and evidence boundaries
 
-The overall event dispatcher/priority ordering, exact CSAT scoring and admission
-odds, dedicated Quizmaster bank, some crafting/item callbacks and the formal
-ending gallery/rewards are not fully recovered. Passing simulations establish
-that the implemented flows run, not complete parity with the original game.
+- A14 Practice Block insertion: E32 does not establish insertion, expiry or consumption; native sub_bec688 still contains an unresolved closure. Do not infer ID/quantity semantics from args [1].
+- I03 Hiking Gloves: the mountain Collecting scope and 20% text are known, but the extra item yield/selection is not. Native DO_GATHER establishes the GRASS_SW pulse only. See E27.
+- Unassigned parity backlog remains in TODO.md: hidden event dispatcher, exact scoring/admission odds, dedicated Quizmaster bank, missions, audio/haptics, crafting/character abilities, broader History/reference recreation and unrecovered collection rules.
+- Inventory XP must not trigger a level-up scene (A13 withdrawn). Elite and other campaign ports remain deferred. Book-completion item gacha (39) is reminder-only; Master of Notes' workbook is a separate reward source.
+- Passing tests establish implemented behavior, not complete parity or recovered probabilities. Keep screenshot observations, native findings and prototype rules distinct.
 
-See RETRY-YEAR.md for native addresses and distinctions between recovered rules
-and fitted values; RETRY-FOLLOWUP.md records the dorm/task-date evidence.
+## Verification and deployment
 
-## Deployment
+Final integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`. Full suite: **311 passing tests**; Flutter analysis: **no issues**. Four Nord-size branch renders passed; the expanded stationery grid was visually checked at 393×873. The original corner complaint and specific saved-character thumbnails still merit user device confirmation.
 
-Build and test the current tree, then install the APK with `adb install -r`.
-Update both editable packs, including new `admissions.json`, `quizzes.json`,
-`events/events_female.json`, and the existing events/items/rules/presentation
-files. Replacing only rules.json would leave old phone content active.
+The final profile APK was installed with data-preserving replacement on Nord N30 serial `7c2c1cc8` and cold-launched successfully. No fatal/Flutter application errors appeared in the sampled startup log; unrelated Android wakelock permission messages were present. Hardware rendering is required for normal play; never leave software rendering enabled after a temporary diagnostic.
 
-Keep existing saves and pack image overrides. Do not clear application data or
-delete the editable packs. The imported placeholder art is bundled in the APK;
-generated packs/art remain local-only and gitignored.
+Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385414826 bytes. Local SHA-256: `0a22f2cbf4eea2bbde09b2effd82fdac30acef7e687dd82452b13033a98e19d0`. This records the local APK used for installation, not a separately pulled device checksum.
 
-Validation: Flutter analysis reports no issues. The full Flutter suite passes
-all 214 tests, including 200 seeded complete runs. All 35 generated pack JSON
-files parse (17 in story 16, 18 in Retry Year). The old fixed switch count in
-the catalog test was updated from 225 to 235 after verifying the newly merged
-global character switches.
+Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Do not adb-push packs**: the app seeds/reseeds editable JSON when the APK's bundle stamp changes. Manual pushes create shell-owned files that can shadow future updates. Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
 
-Latest installation on Nord N30 (`7c2c1cc8`): **profile APK, hardware Skia**
-(Impeller disabled; software rendering is not enabled). Installed SHA-256
-matches the local artifact: `bb4421f40f525874ed9f5c167da934f422c2790054e91aef8dc04f497bfe383e`.
-APK size: 373907866 bytes. Both editable packs were updated in the
-preceding deployment; this follow-up also verifies the corrected Retry Year
-rules file. Existing saves and image overrides were retained.
-
-Retry Year's unverified studyWeight=9 override has been removed: unbuffed
-power-5 starter books again preview and grant +15 in both campaigns. The
-22-test campaign suite, including this new regression, passes; analysis is
-clean. The 214-test full-suite result above is the previous combined baseline.
-Recovered exam thresholds are unchanged; progression tuning remains open.
-
-The whole-game FPS regression came from leaving a screenshot session's software
-renderer enabled. Hardware rendering has been restored and a profile build
-installed. The user confirms the whole game is much smoother; see
-[PERFORMANCE-REGRESSION.md](PERFORMANCE-REGRESSION.md). The original stationery
-name-fit cache and image-provider caching remain intact.
-
-Installation report: build/nord-profile-deployment-verification.json.
-Previous editable packs: build/nord-packs-before-*.
-
-## Study efficiency follow-up (2026-10-24)
-
-The user confirmed efficiency must add one stat per unit. The trait reader
-previously chose the alternate scaled extraStat (Genius of the Century: 9)
-instead of storyStat (3). It now prefers nonzero storyStat and retains explicit
-extraStat when no story value is present. Setup effect labels use the same
-reader. Passive-item NORMAL_STAT units no longer receive the separate x3
-conversion; consumable stat grants are unchanged.
-
-Both campaigns now preview and grant +18 for a power-5 starter book with
-Genius of the Century, compared with +15 without it. All 114 selected
-engine/campaign/setup tests pass, including 200 seeded runs; analysis is clean.
-The updated profile APK and both editable items.json files are installed on
-the Nord and their SHA-256 hashes match local artifacts. Hardware Skia cold
-launch succeeded (993ms). Saves and existing accumulated stats were retained.
-Evidence: build/efficiency-tests.log, build/efficiency-analysis.log and
-build/efficiency-profile-build.log.
+Evidence logs: `build/integrated-final-tests.log`, `build/integrated-build.log`, `build/branch-render.log`; review images: `build/branch-review/`. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
