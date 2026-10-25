@@ -8,11 +8,11 @@ This is not a current total or an original-game parity percentage. Later entries
 and the audit below remain part of the backlog; this older summary can lag fixes.
 
 **Current integration:** recoverable work from all five interrupted branches is
-on main; 311 tests pass and analysis is clean. Read
+on main; 318 tests pass and analysis is clean. Read
 [CURRENT-STATE.md](docs/CURRENT-STATE.md) and
 [the per-branch completion report](docs/BRANCH-INTEGRATION-2026-10-25.md).
-A14 Practice Block insertion and I03 Hiking Gloves' extra yield remain
-specifically evidence-blocked. The older difficulty index is historical, not
+A14 and I03 have since been implemented using the user's clarified persistent-block
+and provisional scavenging rules; see docs/CLARIFIED-MECHANICS-2026-10-25.md. The older difficulty index is historical, not
 an authoritative current open-item list. Preserve original worktrees as recovery
 copies and do not overwrite newer main files with them.
 **Stationery starts fresh every run.** Missing cross-run stationery ownership
@@ -40,7 +40,7 @@ prototype tuning; the dedicated Quizmaster bank and general scheduler remain
 unrecovered. Recovered exam thresholds are unchanged by the book-gain fix, so
 Retry Year's exam progression balance needs separate verification.
 
-Latest completed combined review (2026-10-25): **311 tests passed**, analysis
+Latest completed combined review (2026-10-25): **318 tests passed**, analysis
 clean; the integrated profile APK is installed on the Nord. Current deployment,
 artifact hash and evidence: [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md).
 Historical 214/114-test checkpoints are retained in the archived state document.
@@ -263,7 +263,7 @@ work must be reviewed before asserting those baseline gaps still exist.
    - [x] A11: Story 16 evening rollover occurs before dialogue finishes, changing date, stamina and trait age under the scene. Deferred evening rollover currently applies only to Retry Year.
    - [x] A12: Scouter predicts loss for character 67 although sing-off resolution guarantees a win (event_text.dart versus conditions.dart). Share resolution rules.
    - A13 WITHDRAWN as a parity bug (user confirmation, evening 2026-10-24): inventory XP does NOT show the level-up event in the original. Do not add that scene on inventory close. Verify levels/EXP update and suppressed notifications do not leak into later unrelated scenes; event-granted XP is a separate rule.
-   - [ ] A14: ADD_BLOCK handler is empty (effects.dart). Story 16 nodes 48012/48022 announce Practice Block but only their IDOL switch changes. Implement authored block insertion/consumption.
+   - [x] A14: ADD_BLOCK handler is empty (effects.dart). Story 16 nodes 48012/48022 announce Practice Block but only their IDOL switch changes. Implement authored block insertion/consumption.
    - [x] A15: Scorecard menu always shows literal 'No ScoreCard yet!' (day_menu.dart); retain/display actual exam results and history.
 
 82. Implement missing compiled trait callbacks (follows 48/78).
@@ -292,7 +292,7 @@ work must be reviewed before asserting those baseline gaps still exist.
 83. Finish item/book behavior (follows 78/3).
    - [x] I01: Pet Rock 30207's parsed surviveExhaustion effect is unused by collapse handling.
    - [ ] I02: Recipe 80011 has no recipe/inspection interface; empty generated effects do not supply its intended function.
-   - [ ] I03: Hiking Gloves 90009's 20% extra-gather effect has no runtime implementation.
+   - [x] I03: Hiking Gloves 90009's 20% extra-gather effect has no runtime implementation.
    - [ ] I04: Recover book condition and extraDoneCount semantics. GameBook omits these original fields; verify replacement progress rules, repeat-completion rewards and same-rank variants.
    - [ ] I05: Replace fixed five-offer shop selection and estimated prices with original stock generation, eligibility, refresh timing, prices and limits. Expands 78; do not create a competing shop task.
 
@@ -448,3 +448,13 @@ Current report: [branch assignments, completed work and blockers](docs/BRANCH-IN
 - I03: OPEN, evidence-blocked — Hiking Gloves states 20% for 'more items' while Collecting at the mountain. Native DO_GATHER establishes the GRASS_SW pulse, but neither its extra yield nor reward-selection semantics are recovered (E27). Do not guess a double grant, reroll or Gold Mine effect.
 
 Previously integrated trait proc/discount defaults remain configurable reconstructions where original rates are unstated (Stubborn, I will not falter!, Energizer, Solitary Gourmet). Checked items mean the implementation exists, not that every original rate has been recovered.
+
+
+## User clarifications implemented — 2026-10-25
+
+Current evidence/rule record: [CLARIFIED-MECHANICS-2026-10-25.md](docs/CLARIFIED-MECHANICS-2026-10-25.md). This supersedes the A14/I03 blocker entries above.
+
+- A14 DONE — authored Practice Block grants remain available until a later event removes them. The two shipped ADD_BLOCK [1] calls enable IDOL_BLOCK; existing authored removal clears it. Use, day rollover and save/resume do not consume the unlock. Existing daily duplicate restrictions remain.
+- I03 DONE under the user's provisional choice — 20% chance of one extra copy of the exact herb scavenged. Ginseng Digger's ginseng outcome prevents the gloves bonus; ginseng takes priority if both seeded rolls would succeed. Both Retry Year gender scripts use the same overlay. The imported graph actually already had a gloves path (40%, another random herb); the earlier audit incorrectly called the mechanic absent from an empty item-effects list. This is a deliberate user-selected rule, not claimed recovered native parity.
+- I05 / 78 1R — Saturday-start restock and saved shop rerolls: one cookie before any purchase; the first reroll reduces offers by one, later rerolls keep that count. Purchase locks rerolls until Saturday. Hidden offers cannot be bought through the engine API; Home/preparation previews use the current offers. The original larger offer pool, selection weights and full price/eligibility rules remain open; current rerolls sample the configured prototype catalog.
+- T03/T13 evidence review — the user knows no exact rates or published help for Stubborn, I will not falter!, or Energizer. A read-only smaller-agent review of local pseudocode/catalogs did not recover attributable arithmetic. Keep 30%/70%/5% labeled provisional, with existing rules.traits.chances overrides; do not present them as original odds.

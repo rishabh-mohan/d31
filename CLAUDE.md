@@ -6,8 +6,9 @@ Read [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md), [TODO.md](TODO.md) and
 [docs/BRANCH-INTEGRATION-2026-10-25.md](docs/BRANCH-INTEGRATION-2026-10-25.md)
 before starting work. The five interrupted branches' recoverable work is now
 integrated on main; their original worktrees are recovery copies, not newer
-source to copy over main. A14 Practice Block insertion and I03 Hiking Gloves'
-extra yield remain evidence-blocked. Current validation is 311 passing tests,
+source to copy over main. A14/I03 are now implemented using the later user
+clarifications in docs/CLARIFIED-MECHANICS-2026-10-25.md, including the provisional
+20% exact-herb gloves override and persistent Practice Block availability. Current validation is 318 passing tests,
 clean analysis and a successfully installed/cold-started Nord profile build.
 The dated notes below remain useful evidence but may describe older behavior.
 
@@ -456,7 +457,7 @@ anything containing backticks, and always `assert s != o` after a replace.
 checkpoint. Main includes both campaigns' current exam/admission/ending flow,
 Home/account collections and captured dialogs, shared wallets, the integrated
 branch fixes, saved score cards and debug wallet entry. Current verification:
-311 tests passing and no analysis issues. The latest profile APK is installed
+318 tests passing and no analysis issues. The latest profile APK is installed
 on the Nord; its local hash and deployment evidence are in that checkpoint.
 
 The trait catalog loads 244 entries; structured effects and supported compiled
@@ -464,7 +465,7 @@ callbacks run through TraitEngine. This does not establish every catalog trait
 as complete. Current TODO checkboxes and explicit partial notes take precedence
 over older baseline audit descriptions. Preserve the stationery name-fit cache.
 
-Remaining limits include unrecovered event-dispatch/scoring/RNG rules, A14/I03,
+Remaining limits include unrecovered event-dispatch/scoring/RNG rules, shop offer pools,
 missions, audio/haptics, broader character/crafting support and service-backed
 account features. Elite and additional campaigns remain deferred.
 

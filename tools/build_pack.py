@@ -280,6 +280,23 @@ def build_events(out: Path):
             e["conditionSet"]["right"]["conditions"].append({
                 "type": "defaults", "target": f"EVENT_{required}",
                 "compareType": "equal", "value": 2, "targetType": "event"})
+        if STORY_ID == 20:
+            # User-selected prototype rule, 2026-10-25. The imported graph
+            # used 40% and a second random herb; keep this override explicit.
+            by_id = {n['id']: n for n in nodes}
+            required = {23001, 23002, 23004, 23007, 23008}
+            assert required <= by_id.keys(), 'Herb Collecting graph changed'
+            by_id[23001]['changer']['funcCode'] = 'SCAVENGE_ITEM'
+            for node_id, switch in [(23002, 'GATHER_DOUBLE'),
+                                    (23008, 'GATHER_GINSENG')]:
+                by_id[node_id]['conditionSet'] = {'conditions': [{
+                    'target': switch, 'targetType': 'eventSwitch',
+                    'compareType': 'equal', 'value': 1}]}
+            by_id[23004]['changer'] = {
+                'funcCode': 'DUPLICATE_SCAVENGED_ITEM', 'args': []}
+            # No ginseng after a successful glove duplicate (including the
+            # imported branch's unrelated trait-155 check).
+            by_id[23004]['nextNodeId'] = 23007
         return events, nodes
 
     events, nodes = script("events.json")

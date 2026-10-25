@@ -412,10 +412,14 @@ void main() {
       game.state.money = 2000;
       await tester.pumpWidget(MaterialApp(home: CommerceScreen(game: game)));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('buy-8')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('buy-8')));
       await tester.pumpAndSettle();
       expect(game.state.money, 500);
       expect(game.state.itemCount(8), 1);
+      await tester.ensureVisible(find.text('Confirm'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Confirm'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('menu-tab-stationery')));

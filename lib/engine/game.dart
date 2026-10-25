@@ -1525,11 +1525,62 @@ class Game {
     return (listed * traits.priceFactor(state, item)).round();
   }
 
+  /// Week boundaries follow Saturday, even for a pack starting another day.
+  int get shopWeek =>
+      (state.dayIndex + (pack.manifest.startDate.day.weekday + 1) % 7) ~/ 7;
+
+  void _ensureShopOffers() {
+    if (state.shopOfferWeek == shopWeek) return;
+    state.shopOfferWeek = shopWeek;
+    state.shopRerolls = 0;
+    state.shopOfferIds
+      ..clear()
+      ..addAll(pack.shop.keys);
+  }
+
+  List<Map<String, dynamic>> get shopOffers {
+    _ensureShopOffers();
+    return [for (final id in state.shopOfferIds) ?pack.shop[id]];
+  }
+
+  bool get shopPurchasedThisWeek => state.shopPurchases.entries.any(
+    (e) => e.key.startsWith('$shopWeek:') && e.value > 0,
+  );
+
+  String? get shopRefreshProblem {
+    _ensureShopOffers();
+    if (shopPurchasedThisWeek) {
+      return 'Refresh is unavailable after a purchase until Saturday.';
+    }
+    if (state.cookies < 1) return 'Not enough cookies.';
+    if (state.shopOfferIds.length < 2) return 'Not enough offers to refresh.';
+    return null;
+  }
+
+  /// One cookie each time. Only the first reroll removes an offer.
+  /// Selection still uses this prototype's configured offer pool.
+  String? refreshShop() {
+    final problem = shopRefreshProblem;
+    if (problem != null) return problem;
+    final count = state.shopOfferIds.length - (state.shopRerolls == 0 ? 1 : 0);
+    final pool = pack.shop.keys.toList()..shuffle(state.random);
+    final chosen = pool.take(count).toList();
+    state.cookies--;
+    state.shopOfferIds
+      ..clear()
+      ..addAll(chosen);
+    state.shopRerolls++;
+    return null;
+  }
+
   String? purchase(int offerId) {
+    _ensureShopOffers();
+    if (!state.shopOfferIds.contains(offerId)) {
+      return 'This offer is not in the current Store.';
+    }
     final offer = pack.shop[offerId];
     if (offer == null) return 'This item is unavailable.';
-    final week =
-        (state.dayIndex + 2) ~/ 7; // run begins Monday; restock Saturday.
+    final week = shopWeek;
     final key = '$week:$offerId';
     final price = priceOf(offerId);
     final limit = (offer['stock'] as num?)?.toInt() ?? 1;
@@ -1558,7 +1609,9 @@ class Game {
   int shopStock(int offerId) {
     final offer = pack.shop[offerId];
     if (offer == null) return 0;
-    final key = '${(state.dayIndex + 2) ~/ 7}:$offerId';
+    _ensureShopOffers();
+    if (!state.shopOfferIds.contains(offerId)) return 0;
+    final key = '$shopWeek:$offerId';
     return max(
       0,
       ((offer['stock'] as num?)?.toInt() ?? 1) -

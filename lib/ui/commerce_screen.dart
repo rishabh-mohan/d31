@@ -3,6 +3,7 @@ import 'press_feedback.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
+import '../engine/account_store.dart';
 import 'pack_image.dart';
 import 'theme.dart';
 import 'transitions.dart';
@@ -42,7 +43,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
   bool priceAscending = true;
   int priceOf(Map<String, dynamic> offer) =>
       game.priceOf((offer['id'] as num).toInt());
-  List<Map<String, dynamic>> get offers => game.pack.shop.values.toList()
+  List<Map<String, dynamic>> get offers => game.shopOffers.toList()
     ..sort(
       (a, b) => priceAscending
           ? priceOf(a).compareTo(priceOf(b))
@@ -263,6 +264,55 @@ class _CommerceScreenState extends State<CommerceScreen> {
               ),
             ),
           ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Cookies: ${game.state.cookies}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+            Flexible(
+              flex: 2,
+              child: OutlinedButton.icon(
+                key: const ValueKey('refresh-shop'),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Refresh · 1 Cookie'),
+                ),
+                onPressed: game.shopRefreshProblem == null
+                    ? () async {
+                        final problem = game.refreshShop();
+                        setState(() {});
+                        if (problem != null) {
+                          message(problem);
+                          return;
+                        }
+                        if (game.state.usesAccountWallet) {
+                          await AccountStore.save();
+                        }
+                      }
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+        child: Text(
+          game.shopPurchasedThisWeek
+              ? 'Refresh unlocks Saturday.'
+              : game.state.shopRerolls == 0
+              ? 'First refresh removes one offer. Refresh before buying.'
+              : 'Further refreshes keep the same number of offers.',
+          style: const TextStyle(fontSize: 11),
+          textAlign: TextAlign.center,
         ),
       ),
       Expanded(

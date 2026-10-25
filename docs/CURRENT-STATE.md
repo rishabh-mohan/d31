@@ -15,17 +15,28 @@ Read this checkpoint before dated historical notes. [TODO.md](../TODO.md) tracks
 
 The earlier Retry Year gender scripts, DST-safe dates, native friend/roll-call gates, proficiency kit, calendar, dialogue/portraits, CSAT/applications/endings and quiz fallback remain. See [the historical checkpoint](CURRENT-STATE-2026-10-24.md) and [Retry Year](RETRY-YEAR.md) for their evidence.
 
+## Latest clarified mechanics
+
+[The current rule/evidence record](CLARIFIED-MECHANICS-2026-10-25.md) supersedes
+older A14/I03 blocker notes. Practice Block availability persists until authored
+removal. Hiking Gloves may duplicate the exact scavenged herb at 20%, excluding
+a Ginseng Digger reward on that gather. Both gender scripts are regenerated.
+The in-run shop now exposes a saved, one-cookie Refresh action before purchases;
+its first reroll removes one offer, later rerolls keep the count, and Saturday
+restores the initial configured stock/count. The original offer pool is still
+provisional. Unknown trait proc rates remain provisional after local review.
+
 ## Remaining work and evidence boundaries
 
-- A14 Practice Block insertion: E32 does not establish insertion, expiry or consumption; native sub_bec688 still contains an unresolved closure. Do not infer ID/quantity semantics from args [1].
-- I03 Hiking Gloves: the mountain Collecting scope and 20% text are known, but the extra item yield/selection is not. Native DO_GATHER establishes the GRASS_SW pulse only. See E27.
+- A14/I03 are now implemented under [the user clarifications](CLARIFIED-MECHANICS-2026-10-25.md). The gloves rule is explicitly provisional and overrides the imported graph; native parity is not claimed.
+- The in-run shop now has Saturday-boundary restock and saved one-cookie pre-purchase rerolls. First reroll removes one offer; later rerolls retain that count. Its original offer pool/weights/full prices remain unrecovered.
 - Unassigned parity backlog remains in TODO.md: hidden event dispatcher, exact scoring/admission odds, dedicated Quizmaster bank, missions, audio/haptics, crafting/character abilities, broader History/reference recreation and unrecovered collection rules.
 - Inventory XP must not trigger a level-up scene (A13 withdrawn). Elite and other campaign ports remain deferred. Book-completion item gacha (39) is reminder-only; Master of Notes' workbook is a separate reward source.
 - Passing tests establish implemented behavior, not complete parity or recovered probabilities. Keep screenshot observations, native findings and prototype rules distinct.
 
 ## Verification and deployment
 
-Final integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`. Full suite: **311 passing tests**; Flutter analysis: **no issues**. Four Nord-size branch renders passed; the expanded stationery grid was visually checked at 393×873. The original corner complaint and specific saved-character thumbnails still merit user device confirmation.
+Earlier branch integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`. Later clarified mechanics are recorded in CLARIFIED-MECHANICS-2026-10-25.md. Full suite: **318 passing tests**; Flutter analysis: **no issues**. Five Nord-size branch/shop renders passed; the expanded stationery grid was visually checked at 393×873. The original corner complaint and specific saved-character thumbnails still merit user device confirmation.
 
 The final profile APK was installed with data-preserving replacement on Nord N30 serial `7c2c1cc8` and cold-launched successfully. No fatal/Flutter application errors appeared in the sampled startup log; unrelated Android wakelock permission messages were present. Hardware rendering is required for normal play; never leave software rendering enabled after a temporary diagnostic.
 
@@ -33,4 +44,4 @@ Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`
 
 Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Do not adb-push packs**: the app seeds/reseeds editable JSON when the APK's bundle stamp changes. Manual pushes create shell-owned files that can shadow future updates. Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
 
-Evidence logs: `build/integrated-final-tests.log`, `build/integrated-build.log`, `build/branch-render.log`; review images: `build/branch-review/`. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
+Latest validation logs: `build/clarified-final-tests.log`, `build/clarified-final-build.log`, `build/clarified-final-render.log`; earlier integration logs remain under build/; review images: `build/branch-review/`. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
