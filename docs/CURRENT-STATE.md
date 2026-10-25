@@ -19,8 +19,11 @@ limits: [HISTORY-DETAILS.md](HISTORY-DETAILS.md).
 
 Validation: 333 tests pass; the final UI adjustment also passed six focused
 tests and three rendered tabs at reference size, with layout checks at 320,
-390 and 430 logical pixels. Analysis is clean. Profile deployment is in progress;
-the artifact record below still describes the preceding modular build.
+390 and 430 logical pixels. Analysis is clean. The profile APK was installed
+with data preserved on Nord N30 `7c2c1cc8` and cold-launched successfully.
+Home, History and all three legacy-record detail tabs were visually checked on
+the awake phone; populated new snapshots were verified in rendered tests.
+Sampled app logs show no fatal/Flutter/pack-format errors. Source: `16a8f87`.
 
 ## Modular pack mechanics
 
@@ -38,9 +41,11 @@ covering 327 unique tests. Logs are listed in the authoring guide.
 Profile APK built and installed with data-preserving replacement on Nord N30
 `7c2c1cc8`; cold launch returned Status: ok and the app process remained alive.
 Sampled app logs contain no fatal, Flutter or pack-format errors. Hardware
-Impeller rendering initialized. Visual confirmation remains pending: the phone
-was asleep, so its screenshot was black. Automatic approval review rejected
-dismissing the lock screen; no unlock or security change was performed.
+Impeller rendering initialized. That initial deployment's visual check was
+limited by the sleeping phone; automatic approval review rejected lock-screen
+dismissal, and no unlock/security change was performed. The user subsequently
+reported checking the build; the later History update was checked on an already
+awake phone.
 TODO 39 includes shop refresh notification, reroll previews and their screenshots
 as reminder-only work alongside book-completion item gacha.
 
@@ -82,8 +87,8 @@ Earlier branch integration: `bc9e5a7`; Home/account/debug checkpoint: `77a0660`.
 
 The final profile APK was installed with data-preserving replacement on Nord N30 serial `7c2c1cc8` and cold-launched successfully. No fatal/Flutter application errors appeared in the sampled startup log; unrelated Android wakelock permission messages were present. Hardware rendering is required for normal play; never leave software rendering enabled after a temporary diagnostic.
 
-Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385546086 bytes. Local SHA-256: `cd8343b2b8c20354951e25b222130880e1dde1be415ad4dbe568a41602784060`. This is the local APK installed, not a separately pulled device checksum. Mechanics source commit: `fb231c9`. Both bundled mechanics files were verified inside the APK (22 KSS16 / 23 KSS20 pack callbacks). Data-preserving install and cold launch succeeded; on-device visual verification remains pending while the phone is asleep.
+Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385677158 bytes. Local SHA-256: `dee0ce3b0e884b139e7043f21c74d9d6836896361721d13fc3f9ca21ef0d7f12`. This is the local APK installed, not a separately pulled device checksum. Source commit: `16a8f87`. APK inspection verified all 80 corrected labels in the account and both badge catalogs, plus the configured two-cookie first-enrollment reward. Data-preserving installation, cold launch and legacy History tab checks succeeded.
 
 Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Do not adb-push packs**: the app seeds/reseeds editable JSON when the APK's bundle stamp changes. Manual pushes create shell-owned files that can shadow future updates. Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
 
-Latest validation logs: `build/modular-final-tests.log`, `build/modular-custom-tests.log`, `build/modular-gates-tests.log`, `build/modular-analysis-final.log`, `build/modular-profile-retry.log`, `build/modular-install.log`, `build/modular-launch.log`, `build/modular-startup-final.log`; earlier integration logs remain under build/; review images: `build/branch-review/`. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
+Latest validation logs: `build/history-full-tests.log`, `build/history-focused-final.log`, `build/history-render-final.log`, `build/history-analysis-final.log`, `build/history-profile-build.log`, `build/history-install.log`, `build/history-launch.log`, `build/history-startup.log`; rendered snapshots: `build/history-review/`; phone checks: `build/history-phone*.png`. Earlier logs remain under build/. Generated packs, reference captures and imported art remain local-only under existing ignore rules.
