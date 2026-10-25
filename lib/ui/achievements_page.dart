@@ -6,6 +6,9 @@
 /// Campaigns are the installed packs, with their endings from the account
 /// catalog; Other is the five achievements the capture shows that d30mode
 /// can track (Baby Steps needs the Tutorial, which is not ported).
+///
+/// A full page under the Home menu header, like Records and Puzzles (TODO
+/// 94); it used to be a sheet over Home.
 library;
 
 import 'package:flutter/material.dart';
@@ -14,6 +17,7 @@ import '../engine/account_catalog.dart';
 import '../engine/account_store.dart';
 import '../engine/pack.dart';
 import 'account_widgets.dart';
+import 'home_pages.dart';
 import 'home_screen.dart';
 import 'pack_image.dart';
 
@@ -32,16 +36,16 @@ enum _Filter {
   };
 }
 
-class AchievementsSheet extends StatefulWidget {
+class AchievementsPage extends StatefulWidget {
   /// Installed campaigns, carrying the Settings university set.
   final List<ContentPack> campaigns;
-  const AchievementsSheet({super.key, required this.campaigns});
+  const AchievementsPage({super.key, required this.campaigns});
 
   @override
-  State<AchievementsSheet> createState() => _AchievementsSheetState();
+  State<AchievementsPage> createState() => _AchievementsPageState();
 }
 
-class _AchievementsSheetState extends State<AchievementsSheet> {
+class _AchievementsPageState extends State<AchievementsPage> {
   int _tab = 0;
   _Filter _filter = _Filter.all;
   bool _filterOpen = false;
@@ -52,8 +56,9 @@ class _AchievementsSheetState extends State<AchievementsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return AccountSheet(
+    return MenuPage(
       title: 'Achievements',
+      wash: .8,
       body: (context, u) => Stack(
         children: [
           Column(

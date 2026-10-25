@@ -236,9 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
           DailyQuestPanel(catalog: campaigns.first.admissions),
         );
       case 'Achievements':
-        await pushOverlay<void>(
-          context,
-          AchievementsSheet(campaigns: campaigns),
+        // A full page like Records and Puzzles (TODO 94), not a sheet.
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AchievementsPage(campaigns: campaigns),
+          ),
         );
       case 'Traits':
         await pushOverlay<void>(context, ManageTraitsSheet(pack: pack));
