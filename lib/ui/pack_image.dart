@@ -66,6 +66,9 @@ class PackImages {
   }
 }
 
+/// The stand-in student drawn when a character's own portrait is not on disk.
+const genericPortrait = 'character/portrait.png';
+
 /// Draws pack art, falling back to a neutral block if the file is missing --
 /// a pack referencing art it does not ship should look wrong, not crash.
 class PackImage extends StatelessWidget {

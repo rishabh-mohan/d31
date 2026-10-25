@@ -13,10 +13,12 @@ import 'package:d30mode/engine/record_store.dart';
 
 void main() {
   late ContentPack pack;
+  late ContentPack retry;
   late Directory temp;
 
   setUpAll(() async {
     pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
+    retry = await ContentSource.loadFromDirectory(Directory('packs/kss20'));
   });
 
   setUp(() async {
@@ -53,6 +55,23 @@ void main() {
     expect(r.portrait, game.state.portrait);
     expect(r.stats['korean'], 300);
     expect(r.packId, 'kss16');
+  });
+
+  test('a Retry Year record keeps its own pack and character portrait', () async {
+    final game = Game.newRun(retry);
+    game.state.characterId = 50;
+    game.concludeRun();
+    await RecordStore.add(game.state, ending: game.outcome);
+
+    final r = (await RecordStore.list()).single;
+    expect(r.packId, 'kss20');
+    expect(r.portrait, retry.characters[50]!.portrait);
+    expect(r.portrait, isNot(pack.characters[1]!.portrait));
+
+    // A record written before packId existed still reads as the base game.
+    final legacy = RunRecord.fromJson(r.id, {...r.toJson()}..remove('packId'));
+    expect(legacy.packId, 'kss16');
+    expect(legacy.portrait, r.portrait);
   });
 
   test('records list newest first and delete one at a time', () async {

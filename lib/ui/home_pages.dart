@@ -354,6 +354,11 @@ class _SaveCard extends StatelessWidget {
                   path: save.portrait.isEmpty ? null : save.portrait,
                   fit: BoxFit.cover,
                   alignment: Alignment.topCenter,
+                  placeholder: const PackImage(
+                    path: genericPortrait,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                  ),
                 ),
               ),
             ),
@@ -541,6 +546,11 @@ class _RecordCard extends StatelessWidget {
                               : record.portrait,
                           fit: BoxFit.contain,
                           alignment: Alignment.bottomCenter,
+                          placeholder: const PackImage(
+                            path: genericPortrait,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.bottomCenter,
+                          ),
                         ),
                       ),
                       SizedBox(height: 10 * u),
