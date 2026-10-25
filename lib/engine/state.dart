@@ -394,6 +394,9 @@ class GameState {
     if (!stats.containsKey(subject)) return;
     final maxStat = pack.rules.number('stats', 'max', 999999);
     stats[subject] = (stats[subject]! + amount).clamp(0, maxStat);
+    // Every stat change funnels through here -- study, events, items,
+    // consumables -- so this is where the Weekly Goal notices it was met.
+    Goals.checkMet(this);
   }
 
   void addHp(num amount) {

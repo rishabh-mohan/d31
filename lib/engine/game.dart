@@ -924,6 +924,7 @@ class Game {
 
     effects.resetTransient();
     final parts = <String>[];
+    final goalMetBefore = state.weeklyGoal?.met ?? true;
     final exerciseBefore = state.exerciseLevel.level;
     final partTimeBefore = state.partTimeLevel.level;
 
@@ -945,7 +946,10 @@ class Game {
     // The action's own changer runs after the built-in payout, so content can
     // adjust it.
     effects.applyChanger(action.changer, state);
-    if (Goals.checkMet(state)) {
+    // Stat changes mark the goal met as they land; announce it when this
+    // action is what got it there.
+    Goals.checkMet(state);
+    if (!goalMetBefore && (state.weeklyGoal?.met ?? false)) {
       parts.add('Weekly goal met!');
     }
     if (action.blockDuplicated) state.usedActionKeysToday.add(_key(action));
