@@ -42,10 +42,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  testWidgets('Achievements: tabs, filter, regions and endings', (tester) async {
+  testWidgets('Achievements: tabs, filter, regions and endings', (
+    tester,
+  ) async {
     AccountStore.current.endings.add(200004);
     AccountStore.current.enrollments[2] = 1;
-    await pumpPhone(tester, AchievementsSheet(campaigns: [pack, retry]));
+    await pumpPhone(tester, AchievementsPage(campaigns: [pack, retry]));
+    // A full page with the Home menus' back chevron, not a sheet (TODO 94).
+    expect(find.byKey(const ValueKey('menu-back')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sheet-close')), findsNothing);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('menu-back'))).dy,
+      lessThan(60),
+    );
     expect(find.text('Korea'), findsOneWidget);
     expect(find.textContaining('# Enrollments 1'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('region-taiwan')));

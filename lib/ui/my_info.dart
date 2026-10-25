@@ -16,6 +16,7 @@ import 'university_badge.dart';
 class MyInfoPanel extends StatelessWidget {
   final Game game;
   const MyInfoPanel({super.key, required this.game});
+
   /// Fades in (TODO 79) rather than popping up.
   static Future<void> show(BuildContext context, Game game) =>
       showFadeDialog<void>(
