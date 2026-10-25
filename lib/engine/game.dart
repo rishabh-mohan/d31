@@ -334,7 +334,7 @@ class Game {
     return state.admittedDepartments;
   }
 
-  /// Enrols (or, with null, retakes the year) and turns the endings on.
+  /// Enrolls (or, with null, retakes the year) and turns the endings on.
   void enroll(int? departmentId) {
     if (departmentId != null &&
         state.admittedDepartments.contains(departmentId)) {
@@ -347,7 +347,7 @@ class Game {
     state.setSwitch('ENDING_CODE', 1);
   }
 
-  /// The next ending scene, once enrolment has turned the endings on.
+  /// The next ending scene, once enrollment has turned the endings on.
   EventRun? nextEndingEvent() {
     if (state.finished || state.switchValue('ENDING_CODE') != 1) return null;
     _processAutomaticEvents();

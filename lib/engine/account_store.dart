@@ -181,7 +181,7 @@ class Account implements SharedWallet {
   /// Ending codes ever reached. Their cookies were paid when first reached.
   final Set<int> endings;
 
-  /// Enrolments per university id, this account's own count.
+  /// Enrollments per university id, this account's own count.
   final Map<int, int> enrollments;
 
   /// Finished runs per pack id.
@@ -351,7 +351,7 @@ class Account implements SharedWallet {
 
   // ---- Runs -------------------------------------------------------------
 
-  /// A finished run's account effects: its ending, enrolment, clears and
+  /// A finished run's account effects: its ending, enrollment, clears and
   /// best levels, then any achievement it completed. Returns the cookies
   /// paid out.
   int recordRun(RunRecord record, AccountCatalog catalog) {

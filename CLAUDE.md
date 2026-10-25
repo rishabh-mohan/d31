@@ -46,7 +46,7 @@ Evening evidence update: read
 before implementing account/traits/History/missions. It specifies 30 new captures,
 three recordings and all 12 public trait-pack rate tables. User confirms:
 protection persists after restart; ANY S draw resets mileage; Master of Notes'
-workbook precedes completion gacha; first college enrolment unlocks its achievement
+workbook precedes completion gacha; first college enrollment unlocks its achievement
 and gives two cookies. Continuous-condition mission failure notifies, unmet
 end-of-day objectives expire silently. Inventory XP does NOT show a level-up
 event: audit A13 is withdrawn; do not add that notification. Keep level state

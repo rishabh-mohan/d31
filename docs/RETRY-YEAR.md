@@ -80,7 +80,7 @@ silently inflate ordinary book payouts.
 
 Exam day has no blocks. Starting it plays the Graduation Exam (74), whose last
 line is `START_SAT`; the host then sits the CSAT (`lib/ui/csat_screen.dart`):
-report card, up to three applications, results, enrolment. Enrolling raises
+report card, up to three applications, results, enrollment. Enrolling raises
 `ENDING_CODE`, and the endings play in turn until one runs `END_GAME`.
 
 - The catalog (`admissions.json`, built by `build_pack.py`) is the shipped
@@ -89,7 +89,7 @@ report card, up to three applications, results, enrolment. Enrolling raises
   54 need the Elite Student Recommendation (90019), which the promotion grants;
   the deluxe purchase Pharmacy also names is treated as owned.
 - `FUNC_GET_SUCCESS_LENGTH` counts acceptances, `FUNC_IS_ENTER_UNIV*` read the
-  enrolment. With none, "Third Try"/"Second Retake" (160) plays.
+  enrollment. With none, "Third Try"/"Second Retake" (160) plays.
 - The CSAT score is **not** recovered. Fitted: each subject's score is read
   off `rules.exam.curve` (`[stat, score]` points joined by straight lines),
   the CSAT is their average, graded on the real CSAT bands. Admission is
