@@ -340,6 +340,38 @@ class EffectEngine {
       }
       s.addItem(id, _int(a, 1) ?? 1);
     },
+    // User-selected prototype rule (2026-10-25): ginseng wins over a
+    // 20% gloves proc; gloves repeat the exact herb, never redraw the pool.
+    'SCAVENGE_ITEM': (s, a, e) {
+      s.setSwitch('GATHER_DOUBLE', 0);
+      s.setSwitch('GATHER_GINSENG', 0);
+      s.setSwitch('GATHER_ITEM', 0);
+      final pool = a
+          .whereType<num>()
+          .map((n) => n.toInt())
+          .where(s.pack.items.containsKey)
+          .toList();
+      if (pool.isEmpty) return;
+      final id = pool[s.random.nextInt(pool.length)];
+      s.addItem(id);
+      s.setSwitch('GATHER_ITEM', id);
+      if (s.pack.manifest.storyId != 20 || s.locationId != 20001) return;
+      final tick = s.date.asInt;
+      final digger = TraitEngine(pack: s.pack).holds(s, 200);
+      final ginseng = digger && Random(tick * 31 + 200 * 101).nextDouble() < .2;
+      if (ginseng) {
+        s.setSwitch('GATHER_GINSENG', 1);
+      } else if (s.itemCount(90009) > 0 &&
+          Random(tick * 31 + 90009 * 101).nextDouble() < .2) {
+        s.setSwitch('GATHER_DOUBLE', 1);
+      }
+    },
+    'DUPLICATE_SCAVENGED_ITEM': (s, a, e) {
+      final id = s.switchValue('GATHER_ITEM');
+      if (s.switchValue('GATHER_DOUBLE') != 1 || id <= 0) return;
+      s.addItem(id);
+      s.setSwitch('GATHER_DOUBLE', 0);
+    },
     'ACQUIRE_ITEM_RANDOM': (s, a, e) {
       final pool = a.whereType<num>().map((n) => n.toInt()).toList();
       if (pool.isEmpty) return;
@@ -458,7 +490,15 @@ class EffectEngine {
       final name = _str(a, 0);
       if (name != null) s.addSwitch(name, _num(a, 1).toInt());
     },
-    'ADD_BLOCK': (s, a, e) {},
+    'ADD_BLOCK': (s, a, e) {
+      // Both shipped [1] calls announce Idol Practice. Its existing gate
+      // persists in save data until a later scene clears IDOL_BLOCK.
+      if (s.pack.manifest.storyId == 16 && _int(a, 0) == 1) {
+        s.setSwitch('IDOL_BLOCK', 1);
+      } else {
+        e.unknownFuncCodes.add('ADD_BLOCK($a)');
+      }
+    },
 
     // --- authored task deadlines ---
     'ADD_TODO': (s, a, e) {

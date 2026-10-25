@@ -120,6 +120,9 @@ class GameState {
   final Map<int, int> bookReadCounts = {};
   final Map<String, int> bookChoices = {};
   final Map<String, int> shopPurchases = {};
+  int? shopOfferWeek;
+  final List<int> shopOfferIds = [];
+  int shopRerolls = 0;
   final Map<int, int> stationeryInventory = {};
   final Map<String, int> equippedStationery = {};
   String? stationeryDrawDay;
@@ -791,6 +794,9 @@ class GameState {
     'bookReadCounts': bookReadCounts.map((k, v) => MapEntry(k.toString(), v)),
     'bookChoices': bookChoices,
     'shopPurchases': shopPurchases,
+    'shopOfferWeek': shopOfferWeek,
+    'shopOfferIds': shopOfferIds,
+    'shopRerolls': shopRerolls,
     'stationeryInventory': stationeryInventory.map(
       (k, v) => MapEntry(k.toString(), v),
     ),
@@ -930,6 +936,13 @@ class GameState {
         (k, v) => entry.value[k.toString()] = (v as num).toInt(),
       );
     }
+    state.shopOfferWeek = (j['shopOfferWeek'] as num?)?.toInt();
+    state.shopOfferIds.addAll(
+      (j['shopOfferIds'] as List? ?? const []).whereType<num>().map(
+        (n) => n.toInt(),
+      ),
+    );
+    state.shopRerolls = (j['shopRerolls'] as num?)?.toInt() ?? 0;
     state.unlockedLocations.addAll(
       ((j['unlockedLocations'] as List?) ?? const []).whereType<num>().map(
         (n) => n.toInt(),

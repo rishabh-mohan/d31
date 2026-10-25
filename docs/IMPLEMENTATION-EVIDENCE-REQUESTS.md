@@ -2,10 +2,28 @@
 
 Updated 2026-10-25 (E33 recording). Companion to [TODO 81-90](../TODO.md) and
 [Original-game functions](ORIGINAL-GAME-FUNCTIONS.md). This is an evidence
-collection checklist, not a claim that every listed feature is absent. Claude
-is currently implementing Home/account/History/save integration; review his
-work before implementing overlapping tasks. Requested captures should show
+collection checklist, not a claim that every listed feature is absent.
+Home/account/History/save integration is complete for the documented prototype
+scope; review CURRENT-STATE.md before implementing overlapping tasks. Requested captures should show
 the ORIGINAL game, not d30mode, unless explicitly reproducing a d30mode bug.
+
+## Later user clarifications (2026-10-25)
+
+A14: granted Practice Blocks remain available until a later event removes them;
+the user cites the soccer coach removing its block after sufficient skill.
+No new capture is needed to implement this persistent-availability rule.
+
+I03: the user explicitly chose a provisional 20% exact-herb duplicate with no
+simultaneous Ginseng Digger ginseng. The imported graph instead used 40% and
+another random herb; preserve the distinction. Do not ask the user to re-prove
+the chosen prototype rule. See CLARIFIED-MECHANICS-2026-10-25.md.
+
+I05: shop offers restock at the start of Saturday. Before buying anything,
+refresh costs one cookie. First refresh removes one offer; later refreshes
+keep the reduced count. Original offer pool/weights/prices remain unresolved.
+
+The user knows no exact T03/T13 odds or published link. Local pseudocode review
+has not recovered them; avoid repeatedly requesting the same unknown rates.
 
 ## Already supplied: do not resend
 
@@ -142,7 +160,7 @@ not more screenshots; collect only unresolved original behavior below.
 | E29 / T04-T06,U05 | Admissions odds/eligibility before/after Bows, Blood Type A and Realistic separately; trait/help text | Multiplier versus percentage points versus score; stacking and caps. Exact hidden formula needs code/help, not acceptance streaks |
 | E30 / A01,A12,T14-T16 | Retry Year Weird Cookie flow for character 66, ingredients and resulting gains; character 67 Scouter/practice; Singer practice, Street Performer singing, Exam Dreams sleep | Costs, counters, gain amounts, guaranteed/proc behavior and update timing; show campaign/date/tick/active effects |
 | E31 / F08,34,48 | Other character-special action menus, especially medicine/mechanical parts/crafting; requirements, success/failure and reward | Character ID/name, trigger/cooldown, costs/pools/limits, item/counter changes; description alone may not expose compiled behavior |
-| E32 / A13,A14 | Inventory XP causing level-up, return-to-game event; granted Practice Block and next hand | Whether multiple levels queue separately; when added block enters hand, expires or is consumed |
+| E32 / A13,A14 | A13 withdrawn: inventory XP must not show a level-up event. A14 persistent availability confirmed by user and implemented. | Only new block-ID mappings or exceptions beyond the known persistent grant/removal rule remain relevant. |
 
 ## Exams, events, audio and later scope
 

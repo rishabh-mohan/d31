@@ -160,3 +160,21 @@ does not establish that every storyline, ending or special callback works.
 legacy story-16 saves. Generated packs/art remain local-only and gitignored.
 
 See [CURRENT-STATE.md](CURRENT-STATE.md) for the combined review and deployment checklist.
+
+
+## Scavenging clarification — 2026-10-25
+
+Herb Collecting event 23 already contained Hiking Gloves logic. Its imported
+23002 branch uses 40% and 23004 draws another item from the herb pool; Ginseng
+Digger 200 is checked on the gloves-failure branch. A separate trait-155 branch
+could also lead to ginseng after the gloves path. Empty item effects therefore
+did not establish that the passive was absent; the earlier I03 audit was wrong.
+
+The user selected a provisional replacement: a 20% chance to repeat the exact
+herb, with no gloves bonus when Ginseng Digger awards ginseng. Ginseng is checked
+first. build_pack.py explicitly overlays both gender scripts: SCAVENGE_ITEM
+stores the base item and mutually exclusive decision; DUPLICATE_SCAVENGED_ITEM
+awards that same item once. GATHER_ITEM/GATHER_DOUBLE/GATHER_GINSENG are saved
+switches, so the selection is not rerolled between dialogue beats. The old
+post-gloves trait-155 ginseng branch is bypassed for this event. This is a user
+choice, not a claim that the imported 40% version was recovered as 20%.

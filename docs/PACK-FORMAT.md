@@ -421,8 +421,11 @@ scenes. `colleges.json` holds the recovered university/department catalog
 edit it to change a pack's colleges. `colleges_us.json` is an optional overlay,
 `{"universities": [{"id", "name", "colorCode"}]}`, that renames listed
 universities in the catalog and in `badges.json` when Settings selects US
-universities; departments, cutoffs and ids stay the same, and a run keeps the
-set it started with. `rules.exam` holds the explicitly fitted scoring/admission
+universities. Optional `departments` adds set-specific majors using the same
+department schema as `colleges.json`; existing departments, cutoffs and IDs stay
+the same. The US set adds Ball State's Teaching Physics (ID 118022, cutoff 52.5)
+in both campaigns. `tools/us_colleges.py` owns this addition for pack rebuilds.
+A run keeps the set it started with. `rules.exam` holds the fitted scoring/admission
 model. See
 [RETRY-YEAR.md](RETRY-YEAR.md) for recovered mechanics and remaining gaps.
 
@@ -497,3 +500,19 @@ This catalog is independent of gameplay data. Event nodes retain `standingId`,
 The builder always writes a valid `image` for each location, preferring originals
 and using explicitly documented fallbacks where original files are unavailable.
 See `TODO-FOLLOWUP.md` for regeneration and deployment.
+
+
+### Clarified shop and scavenging persistence (2026-10-25)
+
+Run saves now keep shopOfferWeek, shopOfferIds and shopRerolls alongside
+shopPurchases. The shop-week boundary is Saturday, based on the campaign start
+weekday. A new period restores the configured offer IDs and zero rerolls.
+Purchase records from that period prevent refresh; legacy saves derive the
+same lock from their existing shopPurchases. Offers omitted by a reroll cannot
+be purchased by ID. Refresh uses account cookies when shared-wallet rules apply.
+
+Retry Year event switches GATHER_ITEM, GATHER_DOUBLE and GATHER_GINSENG retain
+one scavenging decision during dialogue. The duplicate callback clears its flag
+after awarding one copy, preventing repeated application. build_pack.py applies
+the user's provisional override to both male and female scripts. These switches
+are saved through the ordinary switch map; no native probability parity is implied.

@@ -6,6 +6,7 @@ Read these project documents before changing behavior:
 2. `TODO.md` — task IDs, checked implementations, partial work and evidence blockers.
 3. `CLAUDE.md` — durable operational notes, user scope decisions and paid-for traps.
 4. `docs/BRANCH-INTEGRATION-2026-10-25.md` — original interrupted assignments and their outcomes.
+5. `docs/CLARIFIED-MECHANICS-2026-10-25.md` — later user choices for scavenging, persistent blocks and shop refresh.
 
 Use the relevant reference before a feature change: `docs/MAIN-MENU-REFERENCE.md`
 and `docs/ORIGINAL-GAME-FOLLOWUP-2026-10-24.md` for Home/account; `docs/STATIONERY.md`
@@ -21,8 +22,9 @@ Do not infer completion from a screenshot, branch merge or passing unrelated tes
 
 All original branch tips are merged. Their retained worktrees contain older
 recovery drafts; do not copy whole older files over main. Keep unrelated pending
-research/code edits intact. A14 Practice Block insertion and I03 Hiking Gloves'
-extra yield remain evidence-blocked; consult the current report before guessing.
+research/code edits intact. A14/I03 are implemented under later user clarifications,
+including a provisional gloves override; older blocker notes are superseded.
+Original shop offer weights and several trait proc rates remain unrecovered.
 
 Use hardware-rendered profile builds for normal phone play/performance checks.
 Run appropriate Flutter analysis/tests, build the APK, then install with `adb install -r`

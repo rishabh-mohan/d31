@@ -72,3 +72,19 @@ boundary. They are concrete future implementation defaults, not claims about KSS
 
 Validation for proposed rules should include seeded RNG, preview/act agreement,
 save/load continuation, no duplicate start rewards, and malformed config rejection.
+
+
+## Clarified callbacks — 2026-10-25
+
+See [the rule/evidence record](CLARIFIED-MECHANICS-2026-10-25.md).
+ADD_BLOCK [1] now enables the persistent IDOL_BLOCK gate for the two authored
+story-16 Practice grants; source removal scenes clear it. Unknown mappings
+remain visible in unsupported callbacks rather than becoming extra turns.
+Retry Year Herb Collecting uses the explicitly overlaid SCAVENGE_ITEM and
+DUPLICATE_SCAVENGED_ITEM callbacks for the user's provisional 20% exact-copy
+rule and exclusive Ginseng Digger result. Item effectList emptiness alone does
+not prove a graph-driven passive is absent.
+
+Stubborn/I will not falter!/Energizer rates remain configurable 30%/70%/5%
+prototype defaults: the latest local pseudocode/catalog review did not recover
+attributable original arithmetic, and the user has no published odds source.

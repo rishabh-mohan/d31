@@ -1,12 +1,16 @@
 # Interrupted branch completion and integration — 25 October 2026
 
+Later update: A14 and I03 were implemented after user clarification. See
+[the current mechanics record](CLARIFIED-MECHANICS-2026-10-25.md). The blocker
+reasoning below is retained as historical context and is superseded by that record.
+
 The original assignment messages were recovered from Claude's saved subagent records for session 789ebf7b-e342-409a-b59b-a31c5364ae75. This report lists the assigned scope, rather than treating every open TODO as work assigned to these branches. All five original branch tips were already ancestors of main; unfinished work existed only in worktree edits. Completion was performed on main, preserving those original worktrees as recovery copies.
 
 | Original branch | Assigned items | Current result |
 | --- | --- | --- |
 | todo/a-engine | A01/A03/A04/A06/A07/A12, L01/L02/L04 | Committed work already merged. Regression suite verifies the integrated fixes; no pending tracked source draft was found. |
-| todo/b-flow | A02/A05/A08/A09/A11/A14, 92 | A02/A05/A08/A09 already merged, generated items rebuilt. A11 draft completed and integrated; exhaustion tick event checks (92) implemented and tested in both campaigns. A14 remains evidence-blocked. |
-| todo/c-traits | T02/T03/T07/T08/T09/T10/T11/T13/T16, I01/I03 | Prior committed effects preserved. Walking Enthusiast draft completed, including saved once-per-tick movement guard. Multitasker and Street Performer wired into resolution and tested. I03 remains evidence-blocked. |
+| todo/b-flow | A02/A05/A08/A09/A11/A14, 92 | A02/A05/A08/A09 already merged, generated items rebuilt. A11 draft completed and integrated; exhaustion tick event checks (92) implemented and tested in both campaigns. A14 was subsequently completed under the user-confirmed persistent unlock rule. |
+| todo/c-traits | T02/T03/T07/T08/T09/T10/T11/T13/T16, I01/I03 | Prior committed effects preserved. Walking Enthusiast draft completed, including saved once-per-tick movement guard. Multitasker and Street Performer wired into resolution and tested. I03 was subsequently completed under the user-selected provisional gloves rule. |
 | todo/d-ui | 79/91/94/93, F04/A15/45 | Earlier fades/Achievements/header work preserved; aspect-preserving decoding fixes distorted art. Empty stationery-slot helper completed. Shared real-card border now paints last. Draw and combination tier confetti implemented; retained CSAT score cards appear in day menu and new History records. |
 | todo/e-account | M01/M04 | Captured Home dialogs integrated in 77a0660 and earlier tested on Nord. Account wallet sharing, persistence/migration and debug editing integrated. Broader service-backed account features remain outside the captured local-screen assignment. |
 
@@ -21,13 +25,13 @@ The original assignment messages were recovered from Claude's saved subagent rec
 - **45:** CommerceScreen uses StationeryCard directly. Its reserved two-pixel inset and inner rounded clip remain; a final foreground outline now protects the edge after all fills/art paint. The formerly incomplete empty hub slots now use inset/clip construction too. Real-asset grid renders at 393x873 show intact corners; device-specific appearance still merits user playtesting.
 - **A15:** The existing CSAT snapshot already contains subject scores and grades. The menu now displays it rather than always displaying the empty message. New RunRecords retain the snapshot and History exposes its card; legacy records retain their existing overall score and do not acquire invented subjects. Current mock-exam callbacks only evaluate thresholds and do not produce per-subject score cards.
 
-## Exact remaining blockers
+## Historical blockers — superseded after user clarification
 
 **A14 / ADD_BLOCK:** [Evidence request E32](IMPLEMENTATION-EVIDENCE-REQUESTS.md) explicitly asks when an added Practice Block enters the hand, expires and is consumed. Story-16 nodes 48012/48022 pass `[1]` and separately increment IDOL. Native `sub_bec688` in the local Korean recovery calls an unresolved closure; it does not establish whether 1 is a block identifier or quantity. Existing IDOL bookkeeping is retained; no speculative extra turn or permanent unlock was added.
 
 **I03 / Hiking Gloves:** The item identifies a 20% chance of more items while Collecting and a mountain location. Native `sub_bdc0d0` establishes the GRASS_SW pulse; the extra-yield amount/selection is absent from the recovered body. [E27](IMPLEMENTATION-EVIDENCE-REQUESTS.md) still requests the outcome. No unsupported double reward, reroll, or Gold Mine interpretation was added.
 
-These are the only assigned gameplay implementations left open. Unassigned parity backlog items, unrecovered rates, account services and missing reference destinations remain visible in TODO.md.
+These were the only assigned gameplay implementations left open; both are now implemented as specified in the later clarification record. Unassigned parity backlog items, unrecovered rates, account services and missing reference destinations remain visible in TODO.md.
 
 ## Verification
 

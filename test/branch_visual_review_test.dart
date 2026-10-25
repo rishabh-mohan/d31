@@ -56,6 +56,7 @@ void main() {
     final result = game.takeCsat();
     final screens = <String, Widget>{
       'stationery-grid': CommerceScreen(game: game, stationery: true),
+      'shop-refresh': CommerceScreen(game: game),
       'day-menu': Scaffold(
         body: DayMenu(game: game, onStart: () {}),
       ),

@@ -572,7 +572,7 @@ class _DayMenuState extends State<DayMenu> {
                                 style: TextStyle(fontSize: 23),
                               ),
                               const SizedBox(height: 6),
-                              for (final offer in game.pack.shop.values.take(4))
+                              for (final offer in game.shopOffers.take(4))
                                 Expanded(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
