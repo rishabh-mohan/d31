@@ -349,6 +349,13 @@ flutter build apk --debug
 Notify the user before pushing a new APK so they can connect the phone and
 enable USB debugging. Build/test first, then check the device and install.
 
+**Do not adb-push pack files.** The app seeds its editable pack copy
+(`/sdcard/Android/data/dev.d30mode.d30mode/files/packs/<id>`) from the APK and
+re-seeds it whenever the bundled pack changes (a `.bundle-stamp` beside it).
+Files pushed by adb belong to `shell`, the app cannot overwrite them, and an
+old copy then shadows every update. Reinstalling the APK is enough; to force a
+reseed, `rm -rf` that packs folder (saves live elsewhere).
+
 **Use PowerShell for adb, never Git Bash.** MSYS2 rewrites `/sdcard/...` into
 a Windows path and `adb push` then reports success while nothing lands.
 
@@ -789,7 +796,7 @@ pointing at code symbols the AST never created. Usable, not pristine.
   were streamed into the local cache with presentation_assets.py --story 20
   --fetch-opening. 34 additional files recovered; 142 source images remain
   unavailable. Rendered Mum/placement test/Reflection Room before deployment.
-  Deploy Retry's pack.json, rules.json and presentation.json with the APK.
+  The APK carries the packs; see Device below rather than pushing files.
 
 - Shared `PressFeedback` wraps menu/card/icon/Material controls throughout the
   app, preserving the child's click/focus semantics. It eases 3px down with a
