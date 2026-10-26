@@ -24,12 +24,14 @@ pixel art). `tools/import_wallpapers.py` bundles them from
 `build_account_catalog.py` now reads the 1.29.3 catalog there, which adds
 event puzzles 1013–1015, and flags each puzzle that has bundled art. The
 rest (wallpaper1–6, 1003, 1010–1013) are not owned on that account, so they
-still fill the screen from their square thumbnails. The equip interaction
-itself is the project's own; E19 (how the original shows equipped versus
-owned) is still uncaptured.
+still fill the screen from their square thumbnails. Event Limited lists
+only puzzles with full-screen art (1014, 1015) until the others are
+captured (user decision 2026-10-25); Amnesia's wallpaper1–6 stay listed on
+the thumbnail fallback. The equip interaction itself is the project's own;
+E19 (how the original shows equipped versus owned) is still uncaptured.
 
 Validation: 405 tests pass and analysis is clean. The profile APK
-(SHA-256 `469e75b5…`, matched on the device) is installed with data
+(SHA-256 `7c12f1ad…`, matched on the device) is installed with data
 preserved on Nord N30 `7c2c1cc8`.
 
 ## School names and History recreation

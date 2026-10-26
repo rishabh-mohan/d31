@@ -165,10 +165,13 @@ void main() {
       ),
     );
     await settle(tester);
+    // Only event puzzles with captured full-screen art are listed.
+    expect(find.byKey(const ValueKey('puzzle-wallpaper1010')), findsNothing);
+    expect(find.byKey(const ValueKey('puzzle-wallpaper1014')), findsOneWidget);
     expect(AccountStore.current.background, 'wallpaper0');
-    await tester.tap(find.byKey(const ValueKey('puzzle-use-wallpaper1010')));
+    await tester.tap(find.byKey(const ValueKey('puzzle-use-wallpaper1014')));
     await settle(tester);
-    expect(AccountStore.current.background, 'wallpaper1010');
+    expect(AccountStore.current.background, 'wallpaper1014');
   });
 
   testWidgets('Manage Traits: buy, open, results, collection and combine', (
