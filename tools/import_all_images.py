@@ -34,6 +34,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import keep_asset_dirs
 from presentation_assets import BASE, CACHE, ROOT, SOURCE
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -161,6 +162,9 @@ def main() -> int:
 
     directories = sorted({Path(r).parent.as_posix() for r in files})
     update_pubspec(directories)
+    # A fresh clone has none of this art; give each new declared directory a
+    # tracked .gitkeep so the build still finds it.
+    keep_asset_dirs.main()
 
     unavailable = {p: o for p, o in outcomes.items() if o not in ("fetched", "cached")}
     REPORT.parent.mkdir(exist_ok=True)
