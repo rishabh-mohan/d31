@@ -25,11 +25,16 @@ class PackMechanics {
     'acceptanceFactor',
     'acceptancePoints',
     'callback',
+    'hpCost',
+    'priceOverride',
+    'blockItemUse',
+    'blockNegativeTrait',
   };
   static const operations = {
     'setSwitch',
     'addSwitch',
     'addMoney',
+    'addHp',
     'addStat',
     'grantItem',
     'removeTrait',
@@ -42,6 +47,7 @@ class PackMechanics {
     'disableBlock',
     'shiftCalendar',
     'setField',
+    'note',
   };
   factory PackMechanics.parse(Map<String, dynamic> raw) {
     if (raw.isNotEmpty && raw['version'] != 1) {
@@ -120,6 +126,7 @@ class PackMechanics {
         'randomInt',
         'roll',
         'dateAfter',
+        'concat',
       };
       if (e.length != 1 || !names.contains(e.keys.single)) {
         throw FormatException('Unknown or ambiguous expression: ${e.keys}');
@@ -171,7 +178,7 @@ class PackMechanics {
           (key == 'if' && (v is! List || v.length != 3)) ||
           ({'lookup', 'rule'}.contains(key) &&
               (v is! List || v.length < 2 || v.length > 3)) ||
-          ({'all', 'any'}.contains(key) && v is! List)) {
+          ({'all', 'any', 'concat'}.contains(key) && v is! List)) {
         throw FormatException('Invalid operands for $key');
       }
       if (key == 'roll' || key == 'dateAfter') {
@@ -201,6 +208,7 @@ class PackMechanics {
         'setSwitch': ['name', 'value'],
         'addSwitch': ['name', 'value'],
         'addMoney': ['value'],
+        'addHp': ['value'],
         'addStat': ['subject', 'value'],
         'grantItem': ['id'],
         'removeTrait': ['id'],
@@ -213,6 +221,7 @@ class PackMechanics {
         'disableBlock': ['id'],
         'shiftCalendar': ['monthSwitch', 'daySwitch', 'days'],
         'setField': ['name', 'value'],
+        'note': ['text'],
       };
       for (final step in list) {
         if (step is! Map || !operations.contains(step['op'])) {
@@ -314,6 +323,18 @@ class PackMechanics {
               );
             }
             steps(a['steps']);
+          }
+          if (a['type'] == 'hpCost' && a['value'] is! num) {
+            throw const FormatException('hpCost ability needs a numeric value');
+          }
+          if (a['type'] == 'priceOverride' &&
+              (a['maxPrice'] is! num || a['price'] is! num)) {
+            throw const FormatException(
+              'priceOverride ability needs numeric maxPrice and price',
+            );
+          }
+          if (a['type'] == 'blockItemUse' && a['itemTag'] is! String) {
+            throw const FormatException('blockItemUse ability needs itemTag');
           }
           if (a['chance'] != null &&
               (a['chance'] is! num || a['chance'] < 0 || a['chance'] > 1)) {
@@ -453,6 +474,9 @@ class MechanicRuntime {
       };
     }
     if (e.containsKey('round')) return n(e['round']).round();
+    if (e.containsKey('concat')) {
+      return list(e['concat']).map((x) => '${at(x) ?? ''}').join();
+    }
     if (e.containsKey('lookup')) {
       final xs = list(e['lookup']);
       final table = at(xs[0]);
@@ -531,10 +555,23 @@ class MechanicRuntime {
     return enabled && condition(b['when']);
   }
 
+  /// A subject key, or a position in the manifest's `subjects` order (the
+  /// way event content addresses subjects). Anything else passes through,
+  /// so `all` / `random` keep their GameState meaning.
+  String subjectKey(dynamic v) {
+    final keys = state.pack.manifest.subjects;
+    if (v is num) {
+      final i = v.toInt();
+      return i >= 0 && i < keys.length ? keys[i] : '';
+    }
+    return '$v';
+  }
+
   void execute(
     List<dynamic> steps, {
     required void Function(String, List<dynamic>) call,
     required void Function(String) pulse,
+    void Function(String)? report,
   }) {
     for (final raw in steps) {
       if (++_steps > 1000) {
@@ -555,8 +592,16 @@ class MechanicRuntime {
           state.addSwitch('${v('name')}', n('value').toInt());
         case 'addMoney':
           state.addMoney(n('value'));
+        case 'addHp':
+          state.addHp(n('value'));
         case 'addStat':
-          state.addStat('${v('subject')}', n('value'));
+          final subject = subjectKey(v('subject'));
+          if (subject.isNotEmpty) state.addStat(subject, n('value'));
+        case 'note':
+          final text = '${v('text') ?? ''}';
+          if (text.isEmpty) break;
+          state.note(text, 'effect');
+          report?.call(text);
         case 'grantItem':
           state.addItem(
             n('id').toInt(),
@@ -587,6 +632,7 @@ class MechanicRuntime {
             (condition(s['when']) ? s['then'] : s['else']) as List? ?? const [],
             call: call,
             pulse: pulse,
+            report: report,
           );
         case 'call':
           call('${v('name')}', [
