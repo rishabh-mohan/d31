@@ -86,6 +86,8 @@ insert another copy of the action.
 | `priceFactor`, `itemHpFactor` | `factor`, optional `itemTag`, `factorRule` |
 | `moveHp` | `value`, optional `chance`, `oncePerTick` (default true) |
 | `studyRandomStat` | `value`, optional `chance`; deterministic subject per tick |
+| `acceptanceFactor` | `factor`; multiplies the final acceptance chance |
+| `acceptancePoints` | `points` (optional `pointsRule` name under `rules.traits`); adds percentage points to the final acceptance chance |
 | `callback` | `callback` name, `steps`, optional `chance` |
 
 All abilities can have a read-only `when` expression. `traitAbilities` and

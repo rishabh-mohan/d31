@@ -906,6 +906,32 @@
     ]
   },
   "traitAbilities": {
+    "47": [
+      {
+        "type": "acceptanceFactor",
+        "factor": 1.08
+      }
+    ],
+    "74": [
+      {
+        "type": "acceptancePoints",
+        "points": 3
+      }
+    ],
+    "89": [
+      {
+        "type": "acceptancePoints",
+        "points": 1
+      }
+    ],
+    "40": [
+      {
+        "type": "acceptancePoints",
+        "points": 1,
+        "pointsRule": "mbtiRealisticAcceptancePoints",
+        "provisional": true
+      }
+    ],
     "69": [
       {
         "type": "staminaFree",

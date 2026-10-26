@@ -700,8 +700,15 @@ class GameState {
       for (final e in trait.effects) {
         switch (e['type']) {
           case 'firstPlusStat':
-            final subject = e['subjectType'] as String? ?? 'all';
-            addStat(subject, (e['stat'] as num?) ?? 0);
+            final amount = (e['stat'] as num?) ?? 0;
+            switch (e['plusStatType']) {
+              case 'tamgoos':
+                // The two elective slots, as study efficiency reads them.
+                addStat('elective1', amount);
+                addStat('elective2', amount);
+              default:
+                addStat(e['subjectType'] as String? ?? 'all', amount);
+            }
           case 'firstPlusMoney':
             addMoney((e['money'] as num?) ?? 0);
           case 'firstExerciseLevel':
