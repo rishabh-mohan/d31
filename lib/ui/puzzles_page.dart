@@ -178,9 +178,13 @@ class _PuzzleCollectionPageState extends State<PuzzleCollectionPage> {
   @override
   Widget build(BuildContext context) {
     final account = AccountStore.current;
+    // Event Limited lists only puzzles with full-screen art; the rest wait
+    // until their art is captured (TODO 102, user decision 2026-10-25).
     final puzzles = [
       for (final p in AccountStore.catalog.puzzles)
-        if (p.storyId == widget.storyId) p,
+        if (p.storyId == widget.storyId &&
+            (p.storyId != 0 || p.fullImage != null))
+          p,
     ];
     return MenuPage(
       title: widget.title,
