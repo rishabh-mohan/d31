@@ -35,6 +35,7 @@ import 'commerce_screen.dart';
 import 'my_info.dart';
 import 'location_picker.dart';
 import 'pack_image.dart';
+import 'pack_menus.dart';
 import 'portrait.dart';
 import 'stamina_bar.dart';
 import 'theme.dart';
@@ -192,6 +193,8 @@ class _GameScreenState extends State<GameScreen> {
   Map<String, num> _dayStartStats = {};
 
   Future<void> _runOutcome(ActionOutcome outcome) async {
+    await _showReceipts(outcome);
+    if (!mounted) return;
     for (final event in outcome.beforeEvents) {
       // These level-up runs were already constructed by act(), so draining
       // another pending level here would duplicate a later entry in this list.
@@ -258,6 +261,8 @@ class _GameScreenState extends State<GameScreen> {
         state.dayEndPending = false;
       } else {
         outcome = game.finishPendingDay();
+        await _showReceipts(outcome);
+        if (!mounted) return;
         // The new morning's own event, begun by the deferred rollover.
         final morning = outcome.event;
         if (morning != null && mounted) {
@@ -305,6 +310,30 @@ class _GameScreenState extends State<GameScreen> {
       _exhaustionPresentation = false;
       setState(() {});
       await _autoSave();
+    }
+  }
+
+  /// What pack abilities handed over during the block, over the action that
+  /// earned it: Master of Notes' Weird Workbook appears in the standard
+  /// acquisition popup, Use then Confirm (F21), ahead of anything else.
+  Future<void> _showReceipts(ActionOutcome outcome) async {
+    for (final entry in outcome.acquiredItems.entries) {
+      final item = game.pack.items[entry.key];
+      if (item == null || !mounted) continue;
+      for (var n = 0; n < entry.value && mounted; n++) {
+        await showItemAcquired(
+          context,
+          item,
+          onUse: () {
+            game.useItem(item.id);
+            setState(() {});
+            return game.takeItemReports();
+          },
+        );
+      }
+    }
+    if (outcome.reports.isNotEmpty && mounted) {
+      await showReportLines(context, outcome.reports);
     }
   }
 

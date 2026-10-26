@@ -89,6 +89,10 @@ insert another copy of the action.
 | `acceptanceFactor` | `factor`; multiplies the final acceptance chance |
 | `acceptancePoints` | `points` (optional `pointsRule` name under `rules.traits`); adds percentage points to the final acceptance chance |
 | `callback` | `callback` name, `steps`, optional `chance` |
+| `hpCost` | `value` added to block stamina cost, optional `actionType`, `chance` |
+| `priceOverride` | `maxPrice`, `price`: fixed Store price for listings at or below `maxPrice` |
+| `blockItemUse` | `itemTag`: items carrying that detail tag cannot be used |
+| `blockNegativeTrait` | Turns away the next obtained `bad` trait; used up unless `consume:false` |
 
 All abilities can have a read-only `when` expression. `traitAbilities` and
 `characterAbilities` use the same shape. Held traits respect enablement,
@@ -111,7 +115,7 @@ tag. Subject indexes follow the manifest's `subjects` order.
 | Operation | Required parameters |
 |---|---|
 | `setSwitch`, `addSwitch` | `name`, `value` |
-| `addMoney` | `value` |
+| `addMoney`, `addHp` | `value` |
 | `addStat` | `subject`, `value` |
 | `grantItem` | `id`, optional `count` |
 | `grantTrait`, `removeTrait` | `id` |
@@ -122,6 +126,14 @@ tag. Subject indexes follow the manifest's `subjects` order.
 | `enableBlock`, `disableBlock` | `id` |
 | `shiftCalendar` | `monthSwitch`, `daySwitch`, `days` |
 | `setField` | `name:"movementLocked"`, `value` |
+| `note` | `text`: a log line and an on-screen report after the block |
+
+`hooks` binds engine moments to callback names: `exerciseLevelUp`,
+`actionCompleted` (`[actionType]`), `bookCompleted` (`[bookId]`), `sleep`,
+`dayStarted`, `arriveAtSchool`, `exhausted` and `traitAcquired` (`[id, type]`).
+Trait/character `callback` abilities attach to the bound callback. An ability's
+`when` is evaluated without callback arguments; test arguments inside an `if`
+step. `addStat` accepts a subject key or index; `concat` joins values to text.
 
 Named callback definitions can override an imported callback name for that
 pack. Unknown generic callback names are reported in the debug diagnostics.

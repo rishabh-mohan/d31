@@ -102,6 +102,15 @@ class ActionOutcome {
 
   /// The action met this week's goal and its reward was paid on the spot.
   final bool goalMet;
+
+  /// Items a pack hook handed over while this resolved (Master of Notes'
+  /// Weird Workbook on finishing a book), by ID and count. The host shows
+  /// each in the acquisition popup before anything else (F21).
+  final Map<int, int> acquiredItems;
+
+  /// Short notices from pack abilities ("Bully: +200 Gold."), in order.
+  final List<String> reports;
+
   ActionOutcome(
     this.summary, {
     this.event,
@@ -110,7 +119,24 @@ class ActionOutcome {
     this.runEnded = false,
     this.exhausted = false,
     this.goalMet = false,
+    this.acquiredItems = const {},
+    this.reports = const [],
   });
+
+  ActionOutcome _withReceipts(Map<int, int> items, List<String> notes) =>
+      items.isEmpty && notes.isEmpty
+      ? this
+      : ActionOutcome(
+          summary,
+          event: event,
+          beforeEvents: beforeEvents,
+          dayEnded: dayEnded,
+          runEnded: runEnded,
+          exhausted: exhausted,
+          goalMet: goalMet,
+          acquiredItems: {...acquiredItems, ...items},
+          reports: [...reports, ...notes],
+        );
 }
 
 class Game {
@@ -702,9 +728,31 @@ class Game {
 
   void invalidateHand() => _handValid = false;
 
-  void runHook(String name) {
-    final callback = pack.mechanics.section('hooks')[name];
-    if (callback is String) effects.applyChanger({'funcCode': callback}, state);
+  /// Runs the pack callback bound to engine moment [name] (see
+  /// `EffectEngine.runHook`). Items it hands over are kept for the next
+  /// outcome's receipts.
+  void runHook(String name, [List<dynamic> args = const []]) {
+    if (pack.mechanics.section('hooks')[name] is! String) return;
+    final before = Map<int, int>.of(state.inventory);
+    effects.runHook(state, name, args);
+    for (final entry in state.inventory.entries) {
+      final gained = entry.value - (before[entry.key] ?? 0);
+      if (gained > 0) {
+        _hookItems.update(entry.key, (n) => n + gained, ifAbsent: () => gained);
+      }
+    }
+  }
+
+  final Map<int, int> _hookItems = {};
+
+  /// Attaches what hooks handed over and what abilities reported since the
+  /// last outcome, then forgets them.
+  ActionOutcome _receipts(ActionOutcome outcome) {
+    final items = Map<int, int>.of(_hookItems);
+    _hookItems.clear();
+    final notes = List<String>.of(effects.reports);
+    effects.reports.clear();
+    return outcome._withReceipts(items, notes);
   }
 
   int get blocksPerTick => pack.rules.number('day', 'blocksPerTick', 4).toInt();
@@ -934,6 +982,12 @@ class Game {
     LocationAction action, {
     GameBook? book,
     bool deferExhaustion = false,
+  }) => _receipts(_act(action, book: book, deferExhaustion: deferExhaustion));
+
+  ActionOutcome _act(
+    LocationAction action, {
+    GameBook? book,
+    bool deferExhaustion = false,
   }) {
     if (state.finished) return ActionOutcome('The run is over.');
     if (openingPending || state.dayEndPending) {
@@ -966,6 +1020,8 @@ class Game {
     // The action's own changer runs after the built-in payout, so content can
     // adjust it.
     effects.applyChanger(action.changer, state);
+    // Pack abilities that fire on any completed block (Bully).
+    runHook('actionCompleted', [action.actionType]);
     final goalMet = settleWeeklyGoal();
     if (goalMet) parts.add('Weekly goal met!');
     if (action.blockDuplicated) state.usedActionKeysToday.add(_key(action));
@@ -995,6 +1051,7 @@ class Game {
     } else if (wouldCollapse) {
       state.addStat('all', pack.rules.exhaustedPenaltyStat);
       parts.add('You collapse from exhaustion.');
+      runHook('exhausted');
       _releasePulses();
       if (deferExhaustion) {
         state.exhaustionPending = true;
@@ -1151,11 +1208,22 @@ class Game {
     state.studyExp += pack.rules.studyExp;
     Goals.recordStudyBlock(state);
     _spendHp(action);
+    var finished = '';
     if (book != null) {
-      state.bookReadCounts[book.id] = (state.bookReadCounts[book.id] ?? 0) + 1;
+      final before = readCount(book);
+      state.bookReadCounts[book.id] = before + 1;
+      // The moment a book is read through (not later re-reads of it). The
+      // separate completion item gacha is not implemented (TODO 39).
+      if (book.doneCount > 0 &&
+          before < book.doneCount &&
+          before + 1 >= book.doneCount) {
+        finished = ' Finished ${book.name}.';
+        runHook('bookCompleted', [book.id]);
+      }
     }
     return 'Studied ${_pretty(subject)}: +$amount.'
-        '${bonuses.map((b) => ' ${b.source}: ${_pretty(b.subject)} +${b.value}.').join()}';
+        '${bonuses.map((b) => ' ${b.source}: ${_pretty(b.subject)} +${b.value}.').join()}'
+        '$finished';
   }
 
   String _partTimeJob(LocationAction action) {
@@ -1202,6 +1270,7 @@ class Game {
         if (e['trigger'] == 'onSleep') effects.applyItemEffect(e, state);
       }
     }
+    runHook('sleep');
     return 'Slept. +${recovery.round()} stamina.';
   }
 
@@ -1335,7 +1404,7 @@ class Game {
   ActionOutcome finishPendingDay() {
     if (!state.dayEndPending) return ActionOutcome('No day is pending.');
     state.dayEndPending = false;
-    return _rollToNextDay(null);
+    return _receipts(_rollToNextDay(null));
   }
 
   ActionOutcome _rollToNextDay(EventRun? eveningEvent) {
@@ -1347,7 +1416,8 @@ class Game {
     final lockSwitch = pack.mechanics.section('bindings')['movementLockSwitch'];
     final confined = lockSwitch is String && state.switchValue(lockSwitch) == 1;
     state.movementLocked = confined;
-    if (!confined && !state.date.isWeekend) state.locationId = schoolLocationId;
+    final toSchool = !confined && !state.date.isWeekend;
+    if (toSchool) state.locationId = schoolLocationId;
     state.usedActionKeysToday.clear();
     state.eventsFiredToday = 0;
     // Temporary traits age overnight: Flu lasts 4 days, Fever Time 2.
@@ -1355,6 +1425,12 @@ class Game {
       state.note('${gone.name} wore off.', 'effect');
     }
     invalidateHand();
+    if (!isExamDay) {
+      // Pack abilities keyed to the morning: day counters first, then the
+      // walk in to school (Professional Latecomer).
+      runHook('dayStarted');
+      if (toSchool) runHook('arriveAtSchool');
+    }
 
     if (isExamDay) {
       // The last, partial goal week ends here; there is no Monday after it.
@@ -1481,7 +1557,7 @@ class Game {
       state.exhaustionPending = false;
       return ActionOutcome('', runEnded: state.finished);
     }
-    return _endDay();
+    return _receipts(_endDay());
   }
 
   /// One representative per subject/rank for this run, retained across saves.
@@ -1511,7 +1587,10 @@ class Game {
     if (offer == null) return 0;
     final listed = offer['price'] as num;
     final item = pack.items[(offer['itemId'] as num?)?.toInt()];
-    return (listed * traits.priceFactor(state, item)).round();
+    final price = (listed * traits.priceFactor(state, item)).round();
+    // Scrooge: a cheap enough item goes for a fixed price instead.
+    final fixed = traits.priceOverride(state, listed);
+    return fixed == null ? price : min(price, fixed.round());
   }
 
   /// Week boundaries follow Saturday, even for a pack starting another day.
@@ -1765,6 +1844,11 @@ class Game {
     // Consumables with a supported effect, and kept checking tools; an item
     // with nothing to apply is refused rather than used up for nothing.
     if (!item.canUse) return false;
+    final blocker = TraitEngine(pack: state.pack).itemUseBlockedBy(state, item);
+    if (blocker != null) {
+      effects.reports.add('$blocker: you cannot use ${item.name}.');
+      return false;
+    }
     // Developer doubles the stamina a coffee restores.
     final hpFactor = TraitEngine(pack: state.pack).itemHpFactor(state, item);
     if (hpFactor == 1) {
