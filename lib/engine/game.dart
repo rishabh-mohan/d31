@@ -266,9 +266,6 @@ class Game {
     var standard = curve.isNotEmpty && scores.isNotEmpty
         ? scores.values.reduce((a, b) => a + b) / scores.length
         : Admissions.standardScoreFor(state.totalStat, mean: mean, sd: sd);
-    // "University acceptance rate +1%" items move the score by the points
-    // that are worth around the middle of the curve.
-    standard += state.passiveSum('acceptanceRate', valueKey: 'percent') * 0.25;
     // The Graduation Exam's announced Score and Top % (fitted; see
     // GraduationExam). Scores recorded at the exam cards are kept as taken.
     final examScores = <String, int>{
@@ -322,13 +319,27 @@ class Game {
 
   /// The chance (0-1) this run's score gets into [department]. The model
   /// behind [displayedRate]; the roll uses the rounded displayed rate.
-  double admissionChance(Department department) => Admissions.acceptanceChance(
-    takeCsat().standardScore,
-    department.deviation,
-    spread: pack.rules
-        .number('exam', 'admissionSpread', Admissions.defaultSpread)
-        .toDouble(),
-  );
+  double admissionChance(Department department) {
+    final base = Admissions.acceptanceChance(
+      takeCsat().standardScore,
+      department.deviation,
+      spread: pack.rules
+          .number('exam', 'admissionSpread', Admissions.defaultSpread)
+          .toDouble(),
+    );
+    return modifiedAcceptance(base);
+  }
+
+  /// Applies acceptance modifiers to the final chance (0-1): trait
+  /// multipliers first, then trait and held-item percentage points, then a
+  /// clamp to 0..1. Order is a prototype choice (no recovered arithmetic).
+  double modifiedAcceptance(double base) {
+    final factor = traits.acceptanceFactor(state);
+    final points =
+        traits.acceptancePoints(state) +
+        state.passiveSum('acceptanceRate', valueKey: 'percent');
+    return (base * factor + points / 100).clamp(0.0, 1.0).toDouble();
+  }
 
   /// Sends the applications and decides each one. Returns the departments
   /// that accepted. Headless/legacy entry: it fills the draft with [departmentIds]

@@ -22,6 +22,8 @@ class PackMechanics {
     'itemHpFactor',
     'moveHp',
     'studyRandomStat',
+    'acceptanceFactor',
+    'acceptancePoints',
     'callback',
   };
   static const operations = {

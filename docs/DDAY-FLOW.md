@@ -131,6 +131,19 @@ roll uses the same integer (`nextInt(100) < rate`: 0 never accepts, 100 always
 does). **RECOVERED**: 23/20/35 -> 40.04 and 23/9/10 -> 63.063; the formatter
 drops trailing zeros (it is not fixed at two decimals).
 
+**Acceptance modifiers (user decision 2026-10-25, PROTOTYPE).** `admissionChance`
+is the fitted curve probability, then `Game.modifiedAcceptance`: multiply by the
+product of held `acceptanceFactor` trait abilities, add held `acceptancePoints`
+trait abilities and held-item `acceptanceRate` percents as percentage points,
+clamp to 0..100. `displayedRate` rounds that final value, so cards, the tray,
+the Apply? modal, the roll and stored `applicationRates` all use one number. The
+CSAT standard score is no longer shifted by items. Pack data: KSS traits 47
+(x1.08), 74 (+3), 89 (+1), 40 (+1, provisional) in `content/kss/mechanics.json`;
+items 3004/3007/3011 (+1/+0.1/+2). Multiply-then-add order is a prototype choice:
+the native pseudocode only holds the description string, no arithmetic. Because
+the roll and display use whole percents, Light's +0.1 only matters when it
+crosses a rounding boundary.
+
 ## Draft candidates
 
 ```dart

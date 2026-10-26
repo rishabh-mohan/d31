@@ -294,6 +294,33 @@ class TraitEngine {
     return result;
   }
 
+  /// Product of held `acceptanceFactor` abilities (pack-owned multipliers on
+  /// the final acceptance chance). Deterministic: no proc roll.
+  num acceptanceFactor(GameState state) {
+    num result = 1;
+    for (final a in abilities(state, 'acceptanceFactor')) {
+      result *= a.data['factor'] as num? ?? 1;
+    }
+    return result;
+  }
+
+  /// Sum of held `acceptancePoints` abilities, in percentage points of the
+  /// final acceptance chance. `pointsRule` names a `rules.traits` override.
+  num acceptancePoints(GameState state) {
+    num total = 0;
+    for (final a in abilities(state, 'acceptancePoints')) {
+      final fallback = a.data['points'] as num? ?? 0;
+      total += a.data['pointsRule'] is String
+          ? pack.rules.number(
+              'traits',
+              a.data['pointsRule'] as String,
+              fallback,
+            )
+          : fallback;
+    }
+    return total;
+  }
+
   num priceFactor(GameState state, GameItem? item) =>
       _abilityFactor(state, 'priceFactor', item);
   num itemHpFactor(GameState state, GameItem item) =>
