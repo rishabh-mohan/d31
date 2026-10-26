@@ -92,6 +92,12 @@ class _SetupScreenState extends State<SetupScreen> {
                               campaign.manifest.id,
                               () => RunSetup(campaign),
                             );
+                            // Ownership is account-wide: every campaign's
+                            // draft offers the same owned badges/traits.
+                            draft.useOwnership(
+                              widget.draft.ownership,
+                              campaign,
+                            );
                             first.text = draft.firstName;
                             last.text = draft.lastName;
                             draft.difficulty = 'standard';
@@ -189,6 +195,7 @@ class _SetupScreenState extends State<SetupScreen> {
           selected: draft.badges,
           onToggle: (id) => toggle(draft.badges, id, 7),
           describe: effectLabel,
+          ownership: draft.ownership,
         );
       case 3:
         return SetupTraitList(

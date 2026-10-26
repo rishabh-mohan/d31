@@ -43,6 +43,8 @@ catalog's `rewards`. Existing saved enrollment counts prevent repeat payment
 after restart. No retroactive award is invented for previously counted schools.
 Counts already supply earned achievement ownership; the current unlock-all setup
 prototype is preserved. An optional ownership-gated setup remains future work.
+Superseded 2026-10-25: setup now offers only enrolled schools' badges and owned
+traits (`setupRequiresOwnership`, see START-GAME-INITIALIZATION.md).
 
 Validation logs: `build/history-focused-final.log`, `build/history-render-final.log`,
 `build/history-full-tests.log`, `build/history-analysis-final.log`. Renders:

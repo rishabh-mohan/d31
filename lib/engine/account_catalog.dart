@@ -301,12 +301,17 @@ class AccountCatalog {
   final List<CatalogUniversity> universities;
   final int firstUniversityEnrollmentCookies;
 
+  /// Setup offers only account-owned badges and traits (account-rules.json
+  /// `setupRequiresOwnership`, default on; see SetupOwnership.fromAccount).
+  final bool setupRequiresOwnership;
+
   const AccountCatalog({
     this.endings = const {},
     this.puzzles = const [],
     this.stories = const {},
     this.universities = const [],
     this.firstUniversityEnrollmentCookies = 0,
+    this.setupRequiresOwnership = true,
   });
 
   static const empty = AccountCatalog();
@@ -317,6 +322,8 @@ class AccountCatalog {
             ?.toInt()
             .clamp(0, 1000000) ??
         0,
+    setupRequiresOwnership:
+        (j['rewards'] as Map?)?['setupRequiresOwnership'] as bool? ?? true,
     endings: {
       for (final e in (j['endings'] as List? ?? const []).cast<Map>())
         (e['code'] as num).toInt(): EndingInfo(
