@@ -39,10 +39,11 @@ app documents `packs`, and Android app external-storage `packs`. A unique pack
 ID loads without a bundled counterpart. This is separate from updating bundled
 KSS content: normal phone deployment still uses APK bundle-stamp reseeding.
 
-KSS identities and aliases now live in `content/kss/mechanics.json`.
-`tools/export_pack_mechanics.py` exports that data and reflection-room rules;
-`tools/build_pack.py` calls it for both campaigns. Generated pack folders are
-ignored, so preserve changes in the tracked content/generator files.
+KSS identities and aliases live in `content/kss/mechanics.json` in the
+local-only `../d30mode-kss` folder (moved out of this repo on 2026-10-26).
+Its `tools/export_pack_mechanics.py` exports that data and reflection-room
+rules; its `tools/build_pack.py` calls it for both campaigns. Generated pack
+folders are ignored, so make changes in those source files.
 
 ## Authoring reference
 

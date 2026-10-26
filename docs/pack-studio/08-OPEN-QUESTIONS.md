@@ -13,7 +13,7 @@ recommendation; none is decided yet.
    *Recommendation:* Windows desktop first.
 3. **Who edits what:** is Pack Studio for new campaigns only, or also for
    editing the generated KSS packs? Generated packs are rebuilt by
-   `tools/build_pack.py`, which would overwrite editor changes.
+   `../d30mode-kss/tools/build_pack.py`, which would overwrite editor changes.
    *Recommendation:* new packs only; KSS packs are opened read-only as reference.
 4. **Name.** "Pack Studio" is a placeholder.
 
