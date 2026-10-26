@@ -3,9 +3,8 @@
 /// The original's Records button opens History (MM-09): one card per
 /// completed run with its portrait, name, campaign and ending, each with a
 /// trash corner. A run is recorded the moment it ends and its save is removed,
-/// so it shows in History and no longer in Select Game. New records retain
-/// the complete CSAT score card; legacy records with only a total still open
-/// without inventing missing subject scores.
+/// so it shows in History and no longer in Select Game. Each record keeps
+/// the complete CSAT score card and a display snapshot of the run.
 ///
 /// A record file is `record_<id>.json` holding one [RunRecord].
 library;
@@ -31,7 +30,6 @@ class RunRecord {
   final String ending;
   final DateTime finishedAt;
   final Map<String, num> stats;
-  final double? csatStandardScore;
   final CsatResult? scoreCard;
 
   /// "University — Department", when the run enrolled anywhere.
@@ -47,8 +45,7 @@ class RunRecord {
   final int partTimeLevel;
 
   /// Display-only snapshot: no live pack lookup or reward recalculation.
-  /// Older records intentionally leave this absent.
-  final Map<String, dynamic>? details;
+  final Map<String, dynamic> details;
 
   /// The player's own Student ID photo (absolute path), when one was added.
   final String? studentPhoto;
@@ -62,7 +59,6 @@ class RunRecord {
     required this.ending,
     required this.finishedAt,
     required this.stats,
-    this.csatStandardScore,
     this.scoreCard,
     this.enrolled,
     this.enrolledDepartmentId,
@@ -70,7 +66,7 @@ class RunRecord {
     this.endingCode,
     this.exerciseLevel = 0,
     this.partTimeLevel = 0,
-    this.details,
+    this.details = const {},
     this.studentPhoto,
   });
 
@@ -92,7 +88,6 @@ class RunRecord {
       ending: ending,
       finishedAt: DateTime.now(),
       stats: Map<String, num>.from(state.stats),
-      csatStandardScore: state.csat?.standardScore,
       scoreCard: state.csat,
       enrolled: department == null
           ? null
@@ -119,7 +114,6 @@ class RunRecord {
     'ending': ending,
     'finishedAt': finishedAt.toIso8601String(),
     'stats': stats,
-    'csatStandardScore': ?csatStandardScore,
     'scoreCard': ?scoreCard?.toJson(),
     'enrolled': ?enrolled,
     'enrolledDepartmentId': ?enrolledDepartmentId,
@@ -127,7 +121,7 @@ class RunRecord {
     'endingCode': ?endingCode,
     'exerciseLevel': exerciseLevel,
     'partTimeLevel': partTimeLevel,
-    'details': ?details,
+    'details': details,
     'studentPhoto': ?studentPhoto,
   };
 
@@ -135,7 +129,7 @@ class RunRecord {
     id: id,
     name: j['name'] as String? ?? '',
     portrait: j['portrait'] as String? ?? '',
-    packId: j['packId'] as String? ?? 'kss16',
+    packId: j['packId'] as String,
     modeTitle: j['modeTitle'] as String? ?? '',
     ending: j['ending'] as String? ?? '',
     finishedAt:
@@ -146,14 +140,13 @@ class RunRecord {
     scoreCard: CsatResult.fromJson(
       (j['scoreCard'] as Map?)?.cast<String, dynamic>(),
     ),
-    csatStandardScore: (j['csatStandardScore'] as num?)?.toDouble(),
     enrolled: j['enrolled'] as String?,
     enrolledDepartmentId: (j['enrolledDepartmentId'] as num?)?.toInt(),
     enrolledUniversityId: (j['enrolledUniversityId'] as num?)?.toInt(),
     endingCode: (j['endingCode'] as num?)?.toInt(),
     exerciseLevel: (j['exerciseLevel'] as num?)?.toInt() ?? 0,
     partTimeLevel: (j['partTimeLevel'] as num?)?.toInt() ?? 0,
-    details: (j['details'] as Map?)?.cast<String, dynamic>(),
+    details: (j['details'] as Map).cast<String, dynamic>(),
     studentPhoto: j['studentPhoto'] as String?,
   );
 

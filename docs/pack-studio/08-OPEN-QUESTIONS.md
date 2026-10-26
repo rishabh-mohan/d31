@@ -41,8 +41,8 @@ recommendation; none is decided yet.
     *Recommendation:* yes, start at 1; the game warns on a newer version.
 12. **Node IDs.** Keep the `eventId*1000+n` convention as a hard rule or a
     default? It caps an event at 1000 nodes. *Recommendation:* default.
-13. **boxId.** Drop it from new packs entirely (the editor writes only
-    `nextNodeId`)? *Recommendation:* yes; preserve it on imported data.
+13. ~~**boxId.**~~ Resolved 2026-10-26: the engine no longer reads `boxId` or
+    `nextBoxId`; new packs omit them.
 14. **Item art path.** Items draw from the fixed `items/<id>.png` and ignore
     `imgPath`. Make the engine honor `imgPath` when present?
 15. **Switch declarations.** Make undeclared switches a validation error for

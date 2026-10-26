@@ -168,7 +168,6 @@ class GameState {
   bool exhaustionPending = false;
 
   /// Once-per-tick movement and exhaustion checks survive save/resume.
-  int? walkRolledAt;
   final Map<String, int> abilityUses = {};
   final Map<String, bool> blockOverrides = {};
   int? exhaustionCheckedAt;
@@ -218,13 +217,6 @@ class GameState {
 
   SharedWallet? _wallet;
 
-  /// Currencies a save recorded as already drawn from the account. One a
-  /// save does not list held a run-only balance (a legacy save).
-  final Set<String> _savedShared = {};
-
-  /// A new run's counters are only the rules' `initial`, not a balance.
-  bool _freshRun = false;
-
   static const walletCurrencies = ['cookies', 'refresh'];
 
   /// Whether the rules route [currency] through the account.
@@ -238,38 +230,30 @@ class GameState {
       _wallet != null && walletCurrencies.any(sharesWallet);
 
   /// Routes the shared currencies through [wallet]. The first time a
-  /// currency is shared, the account is granted that currency's old
-  /// per-run `initial` once. A legacy save's leftover run balance moves
-  /// onto the account when it is resumed; a new run's starting counter is
-  /// dropped, since the grant replaces it.
+  /// currency is shared, the account is granted that currency's per-run
+  /// `initial` once; the run itself then holds no balance of it.
   void attachWallet(SharedWallet wallet) {
     if (_wallet != null) return;
     for (final c in walletCurrencies) {
       if (!sharesWallet(c)) continue;
-      var add = 0;
-      if (wallet.walletGrants.add(c)) {
-        add += pack.rules.number(c, 'initial', 0).toInt();
-      }
-      if (!_freshRun && !_savedShared.contains(c)) {
-        add += c == 'cookies' ? _cookies : _rerolls;
-      }
+      final grant = wallet.walletGrants.add(c)
+          ? pack.rules.number(c, 'initial', 0).toInt()
+          : 0;
       if (c == 'cookies') {
-        wallet.cookies += add;
+        wallet.cookies += grant;
         _cookies = 0;
       } else {
-        wallet.refreshTokens += add;
+        wallet.refreshTokens += grant;
         _rerolls = 0;
       }
-      _savedShared.add(c);
     }
-    _freshRun = false;
     _wallet = wallet;
   }
 
   /// The career storylines (rank-A event sets) this run plays. The original
   /// keeps one selected A set per story (`eventset_selected_a_<story>`);
-  /// the others' events never fire. Null means every set (old saves, packs
-  /// without career sets).
+  /// the others' events never fire. Null means every set (packs without
+  /// career sets).
   Set<int>? careerSets;
 
   /// Picks this run's careers by the sets' own weights:
@@ -419,7 +403,6 @@ class GameState {
     state.chooseCareerSets();
     state._rerolls = r.number('refresh', 'initial', 0).toInt();
     state._cookies = r.number('cookies', 'initial', 0).toInt();
-    state._freshRun = true;
     state.applyStartingTraitEffects();
     state.weeklyGoal = Goals.issue(state);
     state.note('Day 1. ${pack.manifest.name} begins.', 'system');
@@ -676,9 +659,7 @@ class GameState {
   bool get isDayBeforeExam {
     final tomorrow = GameDate.addDays(date.day, 1);
     for (final day in pack.manifest.specialDays) {
-      final code =
-          ((day['gameDate'] as Map?)?['dateCode'] ?? day['dateCode'])
-              as String?;
+      final code = (day['gameDate'] as Map?)?['dateCode'] as String?;
       final when = GameDate.tryParse(code);
       if (when == null) continue;
       if (when.day.year == tomorrow.year &&
@@ -858,7 +839,6 @@ class GameState {
     'eventsFiredToday': eventsFiredToday,
     'usedActionKeysToday': usedActionKeysToday.toList(),
     'movementLocked': movementLocked,
-    'walkRolledAt': walkRolledAt,
     'abilityUses': abilityUses,
     'blockOverrides': blockOverrides,
     'exhaustionCheckedAt': exhaustionCheckedAt,
@@ -866,10 +846,6 @@ class GameState {
     // A balance held by the account is not the run's to save.
     'rerolls': _shares('refresh') ? 0 : _rerolls,
     'cookies': _shares('cookies') ? 0 : _cookies,
-    'sharedWallet': [
-      for (final c in walletCurrencies)
-        if (_savedShared.contains(c) && sharesWallet(c)) c,
-    ],
     'weeklyGoal': weeklyGoal?.toJson(),
     'announcedGoalWeek': announcedGoalWeek,
     'saveSlot': saveSlot,
@@ -950,9 +926,7 @@ class GameState {
 
     intMap('eventCounts', state.eventCounts);
     intMap('eventStates', state.eventStates);
-    state.openingComplete =
-        j['openingComplete'] as bool? ??
-        (state.dayIndex > 0 || state.eventStates[3] == 2);
+    state.openingComplete = j['openingComplete'] as bool? ?? false;
     state.dayEndPending = j['dayEndPending'] == true;
     (j['taskDeadlines'] as Map? ?? const {}).forEach((key, value) {
       final id = int.tryParse('$key');
@@ -963,15 +937,7 @@ class GameState {
       final id = int.tryParse('$key');
       if (id != null) state.taskTitles[id] = '$value';
     });
-    if (!j.containsKey('taskDeadlines')) state._seedInitialTasks();
     intMap('traitDaysLeft', state.traitDaysLeft);
-    if (state.eventStates.isEmpty) {
-      // A save written before event progress was tracked: anything that had
-      // fired is treated as finished, which is what its count meant.
-      state.eventCounts.forEach((id, count) {
-        if (count > 0) state.eventStates[id] = 2;
-      });
-    }
     intMap('inventory', state.inventory);
     intMap('itemUseCounts', state.itemUseCounts);
     intMap('bookReadCounts', state.bookReadCounts);
@@ -1019,7 +985,6 @@ class GameState {
       ((j['usedActionKeysToday'] as List?) ?? const []).whereType<String>(),
     );
     state.movementLocked = j['movementLocked'] as bool? ?? false;
-    state.walkRolledAt = (j['walkRolledAt'] as num?)?.toInt();
     (j['abilityUses'] as Map? ?? const {}).forEach(
       (k, v) => state.abilityUses['$k'] = (v as num).toInt(),
     );
@@ -1030,21 +995,6 @@ class GameState {
     state.exhaustionPending = j['exhaustionPending'] as bool? ?? false;
     state._rerolls = (j['rerolls'] as num?)?.toInt() ?? 0;
     state._cookies = (j['cookies'] as num?)?.toInt() ?? 0;
-    state._savedShared.addAll(
-      (j['sharedWallet'] as List? ?? const []).whereType<String>(),
-    );
-    // Shared when saved, per-run now (the rules switch was turned off): the
-    // run starts that counter again from the rules' initial, not from zero.
-    for (final c in [...state._savedShared]) {
-      if (state.sharesWallet(c)) continue;
-      state._savedShared.remove(c);
-      final initial = pack.rules.number(c, 'initial', 0).toInt();
-      if (c == 'cookies') {
-        state._cookies = initial;
-      } else {
-        state._rerolls = initial;
-      }
-    }
     state.weeklyGoal = WeeklyGoal.fromJson(
       (j['weeklyGoal'] as Map?)?.cast<String, dynamic>(),
     );
@@ -1091,22 +1041,12 @@ class GameState {
         (n) => n.toInt(),
       ),
     );
-    // Saves from before the flow had stages: infer them from what exists, so
-    // a run resumed mid-exam lands where it stood and nothing is skipped
-    // backwards.
-    final sat = state.csat != null;
-    final committed =
-        j['applicationsCommitted'] as bool? ?? state.applications.isNotEmpty;
-    state.applicationsCommitted = committed;
-    state.scoreAnnounced = j['scoreAnnounced'] as bool? ?? (sat || committed);
-    state.resultsReviewed = j['resultsReviewed'] as bool? ?? committed;
-    state.finalDecided =
-        j['finalDecided'] as bool? ?? (state.switches['ENDING_CODE'] == 1);
+    state.applicationsCommitted = j['applicationsCommitted'] as bool? ?? false;
+    state.scoreAnnounced = j['scoreAnnounced'] as bool? ?? false;
+    state.resultsReviewed = j['resultsReviewed'] as bool? ?? false;
+    state.finalDecided = j['finalDecided'] as bool? ?? false;
     state.resultsRevealed = (j['resultsRevealed'] as num?)?.toInt() ?? 0;
     state.studentPhotoPath = j['studentPhotoPath'] as String?;
-    if (!j.containsKey('examCardsDone') && (sat || state.finalDecided)) {
-      state.examCardsDone.addAll(pack.manifest.subjects);
-    }
     return state;
   }
 }

@@ -76,7 +76,7 @@ without establishing every early-release branch.
 
 `test/retry_year_test.dart` checks every opening beat, the mother and placement
 test lines, no time/refresh cost, confinement and action gating, saved opening
-continuation, legacy START recovery, first evening release, delayed rollover,
+continuation, first evening release, delayed rollover,
 next-morning chained introductions, hidden event resets and portrait files.
 A widget regression checks that the opening appears before any action tap.
 Local rendered review files cover Mum, Headmaster Kim and Reflection Room play.

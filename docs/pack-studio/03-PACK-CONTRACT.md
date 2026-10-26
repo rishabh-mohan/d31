@@ -16,7 +16,7 @@ but needn't edit it.
   `locations.json`, `events/events.json`; optional `mechanics.json`,
   `presentation.json`, `items.json`, `traits.json`, `books.json`,
   `levels.json`, `commerce.json`, `characters.json`, `badges.json`,
-  `colleges.json` (legacy `admissions.json`), `colleges_<set>.json` overlays,
+  `colleges.json`, `colleges_<set>.json` overlays,
   `quizzes.json`, `events/switches.json`, `events/sets.json`,
   `events/system.json`, `events/events_female.json`. Art from `images/**`.
   Anything else is ignored.
@@ -81,7 +81,6 @@ are open-ended (mechanics `{"rule":[section,key,fallback]}` can read any key).
 | `events.randomEventChancePerTick`, `maxEventsPerDay` | 0.12, 3 |
 | `events.rankWeights`, `priorityOrder` | `{}` (1 each), `[veryHigh, high, middle, low]` |
 | `events.openingEventIds` | `[]` (missing ID → `StateError` at run start) |
-| `events.openingContinuationSwitches` | none (eventId → switch) |
 | `events.careersPerRun` | 1 (0 = off; rank-A sets) |
 | `events.scheduledBypassDailyCap`, `checkAtDayStart`, `chainScheduledEvents`, `executeFakeEvents`, `deferEveningRollover` | false |
 | `school.lessonsEnabled`, `lessonsOnFirstDay`, `classTicks`, `locationId` | false, true, 6, start location |
@@ -91,7 +90,7 @@ are open-ended (mechanics `{"rule":[section,key,fallback]}` can read any key).
 | `traits.enabled`, `traits.chances` | true, none (keys: trait ID, or `-<characterId>`) |
 | `traits.<name>` | free overrides named by abilities' `factorRule`/`pointsRule` |
 | `setup.genderSelection`, `setup.genderPairs` | false, `[]` (`{forMale, forFemale}`) |
-| `exam.enabled`, `curve`, `meanTotal`/`sdTotal`, `applications`, `admissionSpread`, `subjectLabels`, `gradExam` | true, built-in, 2600/1300, 3, 2.0, none, none |
+| `exam.enabled`, `curve`, `applications`, `admissionSpread`, `subjectLabels`, `gradExam` | true, built-in, 3, 2.0, none, none |
 | `tasks.enabled`, `tasks.initial` | false, `[]` (`{id, title, date.dateCode}`) |
 
 Inert in kss16: `_note`, `day.ticksPerDay`, `hp.exhaustedForcedSleep`,

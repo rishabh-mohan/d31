@@ -34,10 +34,6 @@ class WeeklyGoal {
   /// "effect begins the week after obtaining" (A08).
   final int rewardValue;
 
-  /// False only for goals loaded from saves written before [rewardValue]
-  /// was snapshotted; those still take the modifiers at payout.
-  final bool rewardFinal;
-
   /// Snapshot of the target stat when the goal was issued, so progress can be
   /// shown as a fraction of the week's work rather than of the whole run.
   final num startValue;
@@ -59,7 +55,6 @@ class WeeklyGoal {
     required this.startValue,
     this.met = false,
     this.paid = false,
-    this.rewardFinal = true,
   });
 
   double progressFrom(num current) {
@@ -77,7 +72,6 @@ class WeeklyGoal {
     'startValue': startValue,
     'met': met,
     'paid': paid,
-    'rewardFinal': rewardFinal,
   };
 
   static WeeklyGoal? fromJson(Map<String, dynamic>? j) {
@@ -91,7 +85,6 @@ class WeeklyGoal {
       startValue: (j['startValue'] as num?) ?? 0,
       met: j['met'] as bool? ?? false,
       paid: j['paid'] as bool? ?? false,
-      rewardFinal: j['rewardFinal'] as bool? ?? false,
     );
   }
 }
@@ -153,17 +146,12 @@ class Goals {
     return true;
   }
 
-  /// What a met goal pays.
-  static int rewardAmount(WeeklyGoal goal, GameState state) => goal.rewardFinal
-      ? goal.rewardValue
-      : _withModifiers(state, goal.rewardValue).round();
-
   /// Pays a met goal's reward, once.
   static void payReward(GameState state) {
     final goal = state.weeklyGoal;
     if (goal == null || !goal.met || goal.paid) return;
     goal.paid = true;
-    final amount = rewardAmount(goal, state);
+    final amount = goal.rewardValue;
     state.addStat(goal.rewardSubject, amount);
     state.note('Weekly goal met: ${goal.rewardSubject} +$amount.', 'effect');
   }
@@ -186,7 +174,7 @@ class Goals {
     final old = state.weeklyGoal;
     if (old == null) return;
     if (old.met) {
-      // Saves from before mid-day payment hold met-but-unpaid goals.
+      // A met goal the host never settled mid-day is paid here.
       payReward(state);
     } else if (!old.paid) {
       state.note('Weekly goal failed.', 'system');

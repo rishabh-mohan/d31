@@ -28,8 +28,9 @@ New records capture a compact, detached `details` snapshot: money, study EXP and
 next threshold, exercise/work progress, trait display data, equipped stationery
 data and application outcomes/college display data. No entire content pack is
 embedded. JSON round-trip retains the snapshot, independent of later catalog
-edits or live-run changes. Older records keep their summary/total score and
-explicitly identify unavailable detailed fields; they are not backfilled.
+edits or live-run changes. Every record carries the snapshot; a record file
+without one (or without `packId`) fails to parse and is skipped (no
+backwards compatibility, 2026-10-26).
 
 Limits: photo upload/sharing remains F05; the source student-number generation
 rule is unknown and no fabricated number is shown. Acceptance-rate percentages

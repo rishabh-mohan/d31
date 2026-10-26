@@ -609,8 +609,6 @@ def build_admissions(out: Path):
         out_depts.append(row)
     write(out, "colleges.json", {"universities": list(keep.values()),
                                  "departments": out_depts})
-    # The catalog's name before TODO 41; the loader prefers colleges.json.
-    (out / "admissions.json").unlink(missing_ok=True)
     print(f"    {len(keep)} universities, {len(out_depts)} departments")
 
     us_colleges.check(unis)
@@ -801,8 +799,7 @@ def build_rules(out: Path):
             "max": 999999,
         },
         "hp": {"initial": 100, "max": 100, "min": 0,
-               "exhaustedPenaltyStat": -5,
-               "exhaustedForcedSleep": True},
+               "exhaustedPenaltyStat": -5},
         "money": {"initial": 0, "min": 0},
         # Refresh Tickets redeal the block hand; cookies are the soft currency
         # shown in the top bar. Both are account-level in the original.
@@ -813,7 +810,6 @@ def build_rules(out: Path):
         "refresh": {"initial": 50, "shared": True},
         "cookies": {"initial": 20, "shared": True},
         "day": {
-            "ticksPerDay": 15,
             # How many action blocks are dealt per tick. Compiled in the
             # original; spec says 4-6.
             "blocksPerTick": 4,
@@ -848,7 +844,6 @@ def build_rules(out: Path):
             # shows it as "+15", so one point of book power is worth 3.
             "studyWeight": 3.0,
             "expPerStudy": 25,
-            "hpCostMultiplier": 1.0,
             "comboBonusPercent": 0.05,
             "comboMaxStacks": 5,
         },
@@ -856,12 +851,9 @@ def build_rules(out: Path):
             # money = baseMoney * levelWeight * locationWeight
             "baseMoney": 500,
             "expPerShift": 60,
-            "hpCostMultiplier": 1.0,
         },
         "exercise": {
             "expPerSession": 80,
-            "hpCostMultiplier": 1.0,
-            "hpMaxPerLevel": 0,
         },
         # Provisional balance, NOT recovered original percentages. AOTopsy's
         # combination/draw calls are unresolved; see docs/STATIONERY.md.
@@ -979,7 +971,6 @@ def build_rules(out: Path):
             # 1's SHOW_ENDING raises START; 169 unlocks 2; 3 is the first-day
             # reflection conversation. All occur before spending a block.
             'openingEventIds': [1, 169, 2, 3],
-            'openingContinuationSwitches': {'1': 'START'},
             'scheduledBypassDailyCap': True,
             'checkAtDayStart': True,
             'chainScheduledEvents': True,

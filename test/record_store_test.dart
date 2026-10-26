@@ -57,22 +57,20 @@ void main() {
     expect(r.packId, 'kss16');
   });
 
-  test('a Retry Year record keeps its own pack and character portrait', () async {
-    final game = Game.newRun(retry);
-    game.state.characterId = 50;
-    game.concludeRun();
-    await RecordStore.add(game.state, ending: game.outcome);
+  test(
+    'a Retry Year record keeps its own pack and character portrait',
+    () async {
+      final game = Game.newRun(retry);
+      game.state.characterId = 50;
+      game.concludeRun();
+      await RecordStore.add(game.state, ending: game.outcome);
 
-    final r = (await RecordStore.list()).single;
-    expect(r.packId, 'kss20');
-    expect(r.portrait, retry.characters[50]!.portrait);
-    expect(r.portrait, isNot(pack.characters[1]!.portrait));
-
-    // A record written before packId existed still reads as the base game.
-    final legacy = RunRecord.fromJson(r.id, {...r.toJson()}..remove('packId'));
-    expect(legacy.packId, 'kss16');
-    expect(legacy.portrait, r.portrait);
-  });
+      final r = (await RecordStore.list()).single;
+      expect(r.packId, 'kss20');
+      expect(r.portrait, retry.characters[50]!.portrait);
+      expect(r.portrait, isNot(pack.characters[1]!.portrait));
+    },
+  );
 
   test('records list newest first and delete one at a time', () async {
     for (final name in ['First', 'Second']) {

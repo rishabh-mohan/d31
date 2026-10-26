@@ -22,7 +22,7 @@ for untranslated prose. No new machine translation was used.
 - Campaign selection scrolls beneath the fixed setup header. Standard 31-Day
   Mode stays first; the unimplemented Elite/support-pack controls are hidden.
 - Save summaries include the pack ID. Continue loads that campaign; reads with
-  a different pack are refused. Existing story-16 saves remain compatible.
+  a different pack are refused.
 - The opening now plays at tick zero in the recovered order: rejection,
   mother, academy/placement test, then Suin in the Reflection Room. Confinement,
   its first evening release, and the next morning's class introductions work.
@@ -83,7 +83,7 @@ line is `START_SAT`; the host then sits the CSAT (`lib/ui/csat_screen.dart`):
 report card, up to three applications, results, enrollment. Enrolling raises
 `ENDING_CODE`, and the endings play in turn until one runs `END_GAME`.
 
-- The catalog (`admissions.json`, built by `build_pack.py`) is the shipped
+- The catalog (`colleges.json`, built by `build_pack.py`) is the shipped
   university and department lists: regular universities plus this story's
   own two, Elite Retry (54) and Standard Retry (55). Medicine and Pharmacy at
   54 need the Elite Student Recommendation (90019), which the promotion grants;
@@ -156,8 +156,7 @@ All six authored layers are verified present; no replacement portrait is used.
 files and event roots, story-scoped traits, setup selection on a narrow phone,
 and a seeded full calendar run that terminates without hanging. That smoke run
 does not establish that every storyline, ending or special callback works.
-`test/save_store_test.dart` checks campaign identity, wrong-pack rejection and
-legacy story-16 saves. Generated packs/art remain local-only and gitignored.
+`test/save_store_test.dart` checks campaign identity and wrong-pack rejection. Generated packs/art remain local-only and gitignored.
 
 See [CURRENT-STATE.md](CURRENT-STATE.md) for the combined review and deployment checklist.
 

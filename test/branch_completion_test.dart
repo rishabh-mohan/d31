@@ -1,4 +1,5 @@
 import 'support/kss_ids.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -171,7 +172,10 @@ void main() {
     for (final g in [withTrait, plain]) {
       g.state.date = GameDate(DateTime(2023, 10, 18), 7);
     }
-    final subject = withTrait.traits.studyBonuses(withTrait.state).first.subject;
+    final subject = withTrait.traits
+        .studyBonuses(withTrait.state)
+        .first
+        .subject;
     final action = LocationAction.fromJson({
       'locationActionType': 'study',
       'hpWeight': 1,
@@ -228,8 +232,8 @@ void main() {
       expect(find.text('Graduation Exam Score Card'), findsOneWidget);
       expect(find.text('Top %'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      final legacy = record.toJson()..remove('scoreCard');
-      expect(RunRecord.fromJson(42, legacy).scoreCard, isNull);
+      final noCsat = record.toJson()..remove('scoreCard');
+      expect(RunRecord.fromJson(42, noCsat).scoreCard, isNull);
     },
   );
   testWidgets('92 exhausted tick progression pauses for player dialogue', (

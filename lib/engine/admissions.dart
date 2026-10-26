@@ -1,6 +1,6 @@
 /// The CSAT, university applications and enrollment.
 ///
-/// The catalog is recovered: `admissions.json` is the global university and
+/// The catalog is recovered: `colleges.json` is the global university and
 /// department lists, each department carrying its admission cutoff
 /// (`deviation`, a CSAT standard score from 25.3 to 80.85). The scoring is
 /// **not** recovered -- it is compiled in the original -- so a run's standard
@@ -13,15 +13,6 @@ library;
 
 import 'dart:convert';
 import 'dart:math';
-
-/// The pack's catalog file: `colleges.json`, or `admissions.json`, the name
-/// packs built before TODO 41 used.
-String? collegesFile(Map<String, String> files) =>
-    files.containsKey('colleges.json')
-    ? 'colleges.json'
-    : files.containsKey('admissions.json')
-    ? 'admissions.json'
-    : null;
 
 /// Lays a university set over a pack's files. [overlay] is a
 /// `colleges_<set>.json`: `{"universities": [{"id", "name", "colorCode"?,
@@ -53,8 +44,8 @@ Map<String, String> overlayColleges(Map<String, String> files, String overlay) {
   }
 
   final out = Map<String, String>.of(files);
-  final catalog = collegesFile(files);
-  if (catalog != null) {
+  const catalog = 'colleges.json';
+  if (files.containsKey(catalog)) {
     final data = jsonDecode(
       rewrite(files[catalog]!, 'universities', 'id'),
     ) as Map<String, dynamic>;
@@ -85,12 +76,11 @@ enum UniversityCategory {
   taiwan,
   retake;
 
-  static UniversityCategory parse(Object? v, {required bool storyOnly}) {
+  static UniversityCategory parse(Object? v) {
     for (final c in values) {
       if (c.name == v) return c;
     }
-    // Catalogs built before categories existed: story-only meant Special.
-    return storyOnly ? special : korea;
+    return korea;
   }
 }
 
@@ -115,8 +105,7 @@ class University {
   String get crestPath => crest ?? 'kss/images/university/$id.png';
 
   /// Outside the regular Korean set: story-restricted, Special, Global,
-  /// Taiwan or the Retry Academy. (The name is older than the categories;
-  /// "regular" code and tests still ask `!storyOnly`.)
+  /// Taiwan or the Retry Academy.
   final bool storyOnly;
 
   /// The stories allowed to apply, when the original restricts it (a Retry
@@ -144,10 +133,7 @@ class University {
 
   factory University.fromJson(Map<String, dynamic> j) {
     final restricted = j['storyOnly'] == true;
-    final category = UniversityCategory.parse(
-      j['category'],
-      storyOnly: restricted,
-    );
+    final category = UniversityCategory.parse(j['category']);
     return University(
       id: (j['id'] as num).toInt(),
       name: j['name'] as String? ?? 'University ${j['id']}',
@@ -277,11 +263,10 @@ class CsatResult {
   final Map<String, double> subjectScores;
   final Map<String, int> grades;
 
-  /// The announced per-subject Score (0-100). Empty in records written before
-  /// the announcement existed.
+  /// The announced per-subject Score (0-100).
   final Map<String, int> examScores;
 
-  /// The announced per-subject Top %, one decimal. Empty in old records.
+  /// The announced per-subject Top %, one decimal.
   final Map<String, double> topPercents;
 
   const CsatResult({
@@ -475,14 +460,6 @@ class Admissions {
     }
     return curve.last[1].toDouble();
   }
-
-  /// Fitted, not recovered: `50 + 10 * (total - mean) / sd`. The older
-  /// curve, used by packs whose rules still name meanTotal/sdTotal.
-  static double standardScoreFor(
-    num total, {
-    required num mean,
-    required num sd,
-  }) => 50 + 10 * (total - mean) / (sd <= 0 ? 1 : sd);
 
   /// The chance a department accepts this score. Even at the cutoff it is a
   /// coin flip; `spread` points either side makes it about 73% / 27%.

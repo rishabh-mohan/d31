@@ -87,9 +87,9 @@ void main() {
         1,
         jsonDecode(jsonEncode(record.toJson())),
       );
-      expect(restored.details!['money'], 321);
-      expect((restored.details!['traits'] as List).single['id'], 69);
-      expect(restored.details!['applications'], isEmpty);
+      expect(restored.details['money'], 321);
+      expect((restored.details['traits'] as List).single['id'], 69);
+      expect(restored.details['applications'], isEmpty);
     },
   );
 
@@ -189,28 +189,4 @@ void main() {
       expect(find.byType(RecordDetails), findsNothing);
     });
   }
-
-  testWidgets(
-    'legacy History stays readable without fabricating missing scores',
-    (tester) async {
-      final old = RunRecord.fromJson(1, {
-        'name': 'Old run',
-        'stats': {'math': 100},
-        'csatStandardScore': 52.0,
-        'enrolled': 'Known school — Major',
-      });
-      await tester.pumpWidget(MaterialApp(home: RecordDetails(record: old)));
-      expect(
-        find.textContaining('older record did not retain traits'),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const ValueKey('record-tab-2')));
-      await tester.pump();
-      expect(
-        find.textContaining('did not retain subject scores'),
-        findsOneWidget,
-      );
-      expect(find.text('Graduation Exam Score Card'), findsNothing);
-    },
-  );
 }

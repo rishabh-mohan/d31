@@ -34,7 +34,7 @@ class RecordDetails extends StatefulWidget {
 class _RecordDetailsState extends State<RecordDetails> {
   int tab = 1;
   RunRecord get record => widget.record;
-  Map<String, dynamic> get details => record.details ?? const {};
+  Map<String, dynamic> get details => record.details;
   static const titles = ['Application Results', 'Info', 'Score Card'];
   static const labels = ['University Apps', 'Info', 'Score Card'];
   static const icons = [Icons.school, Icons.account_box, Icons.bar_chart];
@@ -227,8 +227,10 @@ class _RecordDetailsState extends State<RecordDetails> {
                     ),
                   if (details['money'] != null)
                     Text('${_number(details['money'])} Gold'),
-                  if (record.csatStandardScore case final score?)
-                    Text('Deviation : ${score.toStringAsFixed(1)}'),
+                  if (record.scoreCard case final card?)
+                    Text(
+                      'Deviation : ${card.standardScore.toStringAsFixed(1)}',
+                    ),
                   Text(
                     'Exercise Level ${record.exerciseLevel}${_progress('exerciseProgress')}',
                   ),
@@ -279,22 +281,17 @@ class _RecordDetailsState extends State<RecordDetails> {
           padding: EdgeInsets.symmetric(vertical: 10 * u),
           child: const Divider(color: HomeColors.ink, thickness: 1.5),
         ),
-        if (record.details == null)
-          const Text(
-            'This older record did not retain traits, stationery or EXP.',
+        SizedBox(
+          height: 200 * u,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _traits(u)),
+              const VerticalDivider(color: HomeColors.ink),
+              Expanded(child: _stationery(u)),
+            ],
           ),
-        if (record.details != null)
-          SizedBox(
-            height: 200 * u,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _traits(u)),
-                const VerticalDivider(color: HomeColors.ink),
-                Expanded(child: _stationery(u)),
-              ],
-            ),
-          ),
+        ),
       ],
     ),
   );
@@ -378,10 +375,8 @@ class _RecordDetailsState extends State<RecordDetails> {
       ? Center(
           child: Padding(
             padding: EdgeInsets.all(24 * u),
-            child: Text(
-              record.csatStandardScore == null
-                  ? 'No score card was retained for this run.'
-                  : 'Standard score: ${record.csatStandardScore!.toStringAsFixed(1)}\nThis older record did not retain subject scores.',
+            child: const Text(
+              'This run did not sit the CSAT.',
               textAlign: TextAlign.center,
             ),
           ),
@@ -468,10 +463,8 @@ class _RecordDetailsState extends State<RecordDetails> {
         if (rows.isEmpty)
           Padding(
             padding: EdgeInsets.all(20 * u),
-            child: Text(
-              record.details == null
-                  ? 'Individual application results were not retained in this older record.'
-                  : 'No university applications in this run.',
+            child: const Text(
+              'No university applications in this run.',
               textAlign: TextAlign.center,
             ),
           ),

@@ -108,8 +108,8 @@ void main() {
           game.state.addHp(-1);
           expect(game.state.hp, 99);
         }
-        final legacy = game.state.toJson()..['hp'] = 104;
-        final loaded = GameState.fromJson(pack, legacy);
+        final over = game.state.toJson()..['hp'] = 104;
+        final loaded = GameState.fromJson(pack, over);
         expect(loaded.hp, 100);
         loaded.addHp(-10);
         expect(loaded.hp, 90);
@@ -257,8 +257,12 @@ void main() {
     'second missed roll call confines until the authored next-day evening',
     () {
       final game = ready(retry);
-      for (final id in retry.events.keys) { game.state.eventStates[id] = 2; }
-      for (final id in [4, 11, 12]) { game.state.eventStates[id] = 0; }
+      for (final id in retry.events.keys) {
+        game.state.eventStates[id] = 2;
+      }
+      for (final id in [4, 11, 12]) {
+        game.state.eventStates[id] = 0;
+      }
       game.state.date = GameDate.parse('DATE_2024101612');
       game.state.eventStates[10] = 2;
       game.state.setSwitch('BAD_COUNT', 1);

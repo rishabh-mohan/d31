@@ -48,21 +48,6 @@ void main() {
     }
   }
 
-  test('old first-day saves recover the missing START continuation and initial tasks', () {
-    final initial = Game.newRun(retry);
-    finish(initial.beginOpeningEvent()!);
-    final legacy = initial.state.toJson()
-      ..remove('openingComplete')
-      ..remove('taskDeadlines')
-      ..remove('taskTitles');
-    (legacy['switches'] as Map).remove('START');
-    final game = Game(pack: retry, state: GameState.fromJson(retry, legacy));
-    expect(game.state.taskDeadlines.containsKey(10000), isTrue);
-    expect(game.beginOpeningEvent()!.event.id, 169);
-    expect(game.state.switchValue('START'), 1);
-    expect(game.state.eventCounts[1], 1);
-  });
-
   test('opening plays rejection, mother, placement test and reflection before any tick', () {
     final game = RunSetup(retry).commit(retry);
     final date = game.state.date;

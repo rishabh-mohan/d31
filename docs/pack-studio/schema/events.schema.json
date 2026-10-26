@@ -48,7 +48,6 @@
       "properties": {
         "text": { "type": "string" },
         "nextNodeId": { "type": ["integer", "null"] },
-        "nextBoxId": { "type": ["integer", "null"], "description": "Discouraged: resolved pack-wide." },
         "conditionSet": { "$ref": "common.schema.json#/$defs/conditionSet" }
       }
     },
