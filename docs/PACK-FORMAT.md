@@ -365,6 +365,19 @@ Effect shapes:
 | `exerciseEfficiency`, `partTimeEarnings` | `value` or `percent`, `scope` | passive |
 | `sleepEfficiency`, `hpCost` | `value`, `scope` | passive |
 | `goalReward`, `acceptanceRate`, `surviveExhaustion` | `percent` / `chance` | not yet read by the loop |
+| `switchAdd` | `switch`, `value` | on use |
+| `report` | `switch`, `label`, `suffix`, or `text` (a read-only mechanics expression) | on use: a message |
+| `ui` | `action` (`predictedGrades`, `checkAbilities`, `recipes`) plus view data (`progress` rows; `recipes`, `fee`, `where`) | on use: opens that view |
+| `preventEvent` | `label`, `events`, `handledBy: "eventGraph"` | held; the listed events' graphs branch on the item |
+
+`keepItem: true` on an effect makes the item a checking tool: using it does
+not spend it, and a `normal` item with one gets a Check button. An item is
+offered for use only when it has at least one on-use effect (and a `ui`
+action this build knows); one with nothing to apply cannot be used up for
+nothing. The generator also writes `graphEvents` (events whose conditions
+test the item) and, for hand-authored entries (`OVERLAYS` in
+`tools/item_effects.py`), `effectNote` with the evidence. Neither is read by
+the engine.
 
 `subject` may be a subject name, or `all`, `random`, `chosen`, `elective1`,
 `elective2`, `lesson`.
