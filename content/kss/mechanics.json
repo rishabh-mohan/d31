@@ -11,7 +11,14 @@
     }
   },
   "hooks": {
-    "exerciseLevelUp": "REMOVE_TRAIT_FROM_EXERCISE"
+    "exerciseLevelUp": "REMOVE_TRAIT_FROM_EXERCISE",
+    "actionCompleted": "ON_ACTION_COMPLETED",
+    "bookCompleted": "ON_BOOK_COMPLETED",
+    "sleep": "ON_SLEEP",
+    "dayStarted": "ON_DAY_STARTED",
+    "arriveAtSchool": "ON_ARRIVE_AT_SCHOOL",
+    "exhausted": "ON_EXHAUSTED",
+    "traitAcquired": "ON_TRAIT_ACQUIRED"
   },
   "switchGuards": {
     "TRAIT_EVENT_7": {
@@ -460,6 +467,13 @@
     }
   },
   "callbacks": {
+    "ON_ACTION_COMPLETED": [],
+    "ON_BOOK_COMPLETED": [],
+    "ON_SLEEP": [],
+    "ON_DAY_STARTED": [],
+    "ON_ARRIVE_AT_SCHOOL": [],
+    "ON_EXHAUSTED": [],
+    "ON_TRAIT_ACQUIRED": [],
     "IDOL_ACTION": [
       {
         "op": "addSwitch",
@@ -974,6 +988,183 @@
           {
             "op": "addMoney",
             "value": 600
+          }
+        ]
+      }
+    ],
+    "8": [
+      {
+        "type": "callback",
+        "callback": "ON_BOOK_COMPLETED",
+        "steps": [
+          {"op": "grantItem", "id": 8}
+        ]
+      }
+    ],
+    "44": [
+      {
+        "type": "callback",
+        "callback": "ON_ACTION_COMPLETED",
+        "chance": 0.1,
+        "steps": [
+          {"op": "addMoney", "value": 200},
+          {"op": "note", "text": "Bully: +200 Gold."}
+        ]
+      }
+    ],
+    "201": [
+      {
+        "type": "callback",
+        "callback": "DO_KARAOKE",
+        "steps": [
+          {
+            "op": "addSwitch",
+            "name": "SING_COUNT",
+            "value": {"rule": ["karaoke", "talentedSingerBonus", 1]}
+          }
+        ]
+      }
+    ],
+    "206": [
+      {
+        "type": "callback",
+        "callback": "ON_SLEEP",
+        "steps": [
+          {
+            "op": "setSwitch",
+            "name": "EXAM_DREAMS_SUBJECT",
+            "value": {"randomInt": [0, {"sub": [{"field": "subjectCount"}, 1]}]}
+          },
+          {
+            "op": "addStat",
+            "subject": {"switch": "EXAM_DREAMS_SUBJECT"},
+            "value": {"rule": ["traits", "examDreamsStat", 45]}
+          },
+          {
+            "op": "note",
+            "text": {
+              "concat": [
+                "Exam Dreams: ",
+                {"subjectName": {"switch": "EXAM_DREAMS_SUBJECT"}},
+                " +",
+                {"rule": ["traits", "examDreamsStat", 45]},
+                "."
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "9": [
+      {
+        "type": "callback",
+        "callback": "ON_ARRIVE_AT_SCHOOL",
+        "chance": 0.3,
+        "steps": [
+          {"op": "addHp", "value": {"mul": [{"rule": ["traits", "latecomerStamina", 10]}, -1]}},
+          {
+            "op": "note",
+            "text": {"concat": ["Professional Latecomer: -", {"rule": ["traits", "latecomerStamina", 10]}, " stamina."]}
+          }
+        ]
+      },
+      {
+        "type": "callback",
+        "callback": "ON_DAY_STARTED",
+        "steps": [
+          {"op": "addSwitch", "name": "LATECOMER_CLEAN_DAYS", "value": 1},
+          {
+            "op": "if",
+            "when": {"gte": [{"switch": "LATECOMER_CLEAN_DAYS"}, 5]},
+            "then": [
+              {"op": "setSwitch", "name": "LATECOMER_CLEAN_DAYS", "value": 0},
+              {"op": "removeTrait", "id": 9},
+              {"op": "note", "text": "Professional Latecomer wore off: five days without fainting."}
+            ]
+          }
+        ]
+      },
+      {
+        "type": "callback",
+        "callback": "ON_EXHAUSTED",
+        "steps": [
+          {"op": "setSwitch", "name": "LATECOMER_CLEAN_DAYS", "value": 0}
+        ]
+      }
+    ],
+    "48": [
+      {"type": "blockNegativeTrait"}
+    ],
+    "53": [
+      {"type": "priceOverride", "maxPrice": 3000, "price": 100}
+    ],
+    "54": [
+      {
+        "type": "callback",
+        "callback": "ON_TRAIT_ACQUIRED",
+        "steps": [
+          {
+            "op": "if",
+            "when": {"eq": [{"arg": 1}, "good"]},
+            "then": [
+              {"op": "addMoney", "value": {"rule": ["traits", "stocksManagerMoney", 1000]}},
+              {"op": "removeTrait", "id": 54},
+              {"op": "note", "text": {"concat": ["Stocks Manager: +", {"rule": ["traits", "stocksManagerMoney", 1000]}, " Gold."]}}
+            ]
+          },
+          {
+            "op": "if",
+            "when": {"eq": [{"arg": 1}, "bad"]},
+            "then": [
+              {"op": "addMoney", "value": {"mul": [{"rule": ["traits", "stocksManagerMoney", 1000]}, -1]}},
+              {"op": "removeTrait", "id": 54},
+              {"op": "note", "text": {"concat": ["Stocks Manager: -", {"rule": ["traits", "stocksManagerMoney", 1000]}, " Gold."]}}
+            ]
+          }
+        ]
+      }
+    ],
+    "70": [
+      {"type": "blockItemUse", "itemTag": "milk"}
+    ],
+    "100": [
+      {"type": "hpCost", "value": 5}
+    ],
+    "102": [
+      {"type": "hpCost", "value": 100}
+    ],
+    "160004": [
+      {
+        "type": "callback",
+        "callback": "ON_DAY_STARTED",
+        "steps": [{"op": "setSwitch", "name": "SON_NIM_LOVE", "value": 1}]
+      },
+      {
+        "type": "callback",
+        "callback": "ON_TRAIT_ACQUIRED",
+        "steps": [
+          {
+            "op": "if",
+            "when": {"eq": [{"arg": 0}, 160004]},
+            "then": [{"op": "setSwitch", "name": "SON_NIM_LOVE", "value": 1}]
+          }
+        ]
+      }
+    ],
+    "160005": [
+      {
+        "type": "callback",
+        "callback": "ON_DAY_STARTED",
+        "steps": [{"op": "setSwitch", "name": "SON_NIM_COURSE", "value": 1}]
+      },
+      {
+        "type": "callback",
+        "callback": "ON_TRAIT_ACQUIRED",
+        "steps": [
+          {
+            "op": "if",
+            "when": {"eq": [{"arg": 0}, 160005]},
+            "then": [{"op": "setSwitch", "name": "SON_NIM_COURSE", "value": 1}]
           }
         ]
       }
