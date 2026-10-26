@@ -231,7 +231,9 @@ class Game {
   /// `rules.exam.curve`: `[stat, score]` points for one subject's score.
   /// A pack that names neither a curve nor the older meanTotal/sdTotal gets
   /// the calibrated default.
-  List<List<num>> get examCurve {
+  List<List<num>> get examCurve => examCurveOf(pack);
+
+  static List<List<num>> examCurveOf(ContentPack pack) {
     final exam = pack.rules.section('exam');
     final curve = [
       for (final p in exam['curve'] as List? ?? const [])
@@ -242,12 +244,15 @@ class Game {
     return exam.containsKey('meanTotal') ? const [] : Admissions.defaultCurve;
   }
 
-  /// Sits the CSAT once; later calls return the same result.
-  CsatResult takeCsat() {
-    final existing = state.csat;
-    if (existing != null) return existing;
+  /// The CSAT standard scores the current stats earn: per subject and the
+  /// overall score. Pure arithmetic over [state] (no draws, no writes), so
+  /// [takeCsat] and the Mock Exam Paper's forecast always agree.
+  static ({Map<String, double> subjects, double standard}) csatScoresOf(
+    GameState state,
+  ) {
+    final pack = state.pack;
     final subjects = pack.manifest.subjects;
-    final curve = examCurve;
+    final curve = examCurveOf(pack);
     final mean = pack.rules.number('exam', 'meanTotal', 2600);
     final sd = pack.rules.number('exam', 'sdTotal', 1300);
     // Each subject is scored on its own stat and the CSAT is their average,
@@ -263,9 +268,34 @@ class Game {
     final scores = <String, double>{
       for (final s in subjects) s: scoreOf(state.stats[s] ?? 0),
     };
-    var standard = curve.isNotEmpty && scores.isNotEmpty
+    final standard = curve.isNotEmpty && scores.isNotEmpty
         ? scores.values.reduce((a, b) => a + b) / scores.length
         : Admissions.standardScoreFor(state.totalStat, mean: mean, sd: sd);
+    return (subjects: scores, standard: standard);
+  }
+
+  /// What the CSAT would give if it were sat now: standard scores and grades
+  /// from the current stats. Nothing is recorded; [takeCsat] is unaffected.
+  static CsatResult forecastCsat(GameState state) {
+    final scores = csatScoresOf(state);
+    return CsatResult(
+      standardScore: scores.standard,
+      subjectScores: scores.subjects,
+      grades: {
+        for (final e in scores.subjects.entries)
+          e.key: Admissions.gradeFor(e.value),
+      },
+    );
+  }
+
+  /// Sits the CSAT once; later calls return the same result.
+  CsatResult takeCsat() {
+    final existing = state.csat;
+    if (existing != null) return existing;
+    final subjects = pack.manifest.subjects;
+    final computed = csatScoresOf(state);
+    final scores = computed.subjects;
+    final standard = computed.standard;
     // The Graduation Exam's announced Score and Top % (fitted; see
     // GraduationExam). Scores recorded at the exam cards are kept as taken.
     final examScores = <String, int>{
@@ -1732,7 +1762,9 @@ class Game {
   static bool useItemWith(GameState state, EffectEngine effects, int itemId) {
     final item = state.pack.items[itemId];
     if (item == null || state.itemCount(itemId) <= 0) return false;
-    if (!item.isConsumable) return false;
+    // Consumables with a supported effect, and kept checking tools; an item
+    // with nothing to apply is refused rather than used up for nothing.
+    if (!item.canUse) return false;
     // Developer doubles the stamina a coffee restores.
     final hpFactor = TraitEngine(pack: state.pack).itemHpFactor(state, item);
     if (hpFactor == 1) {
@@ -1762,6 +1794,9 @@ class Game {
     effects.reports.clear();
     return out;
   }
+
+  /// The last item use's reports and requested views, emptied on read.
+  ItemUseOutcome takeItemOutcome() => ItemUseOutcome.drain(effects, state);
 
   // --- outcome ------------------------------------------------------------
 
@@ -1797,4 +1832,31 @@ class ScheduledEntry {
   final GameEvent? event;
 
   const ScheduledEntry({required this.date, required this.name, this.event});
+}
+
+/// What using an item asked the UI to show: report lines (the Promotion Exam
+/// Kit, the Scouter) and `ui` views (predicted grades, abilities, recipes).
+class ItemUseOutcome {
+  final List<String> reports;
+  final List<Map<String, dynamic>> views;
+  final GameState state;
+  const ItemUseOutcome({
+    required this.reports,
+    required this.views,
+    required this.state,
+  });
+
+  /// Takes both queues off [effects], leaving them empty.
+  factory ItemUseOutcome.drain(EffectEngine effects, GameState state) {
+    final out = ItemUseOutcome(
+      reports: List.of(effects.reports),
+      views: List.of(effects.views),
+      state: state,
+    );
+    effects.reports.clear();
+    effects.views.clear();
+    return out;
+  }
+
+  bool get isEmpty => reports.isEmpty && views.isEmpty;
 }

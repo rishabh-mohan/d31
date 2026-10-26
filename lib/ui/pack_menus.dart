@@ -4,24 +4,29 @@ import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
 import '../engine/pack.dart';
+import 'item_views.dart';
 import 'pack_image.dart';
 import 'theme.dart';
 
 /// Shows whatever the item just used asked to tell the player — the
-/// Promotion Exam Kit's reading, for one.
+/// Promotion Exam Kit's reading, the Mock Exam Paper's predicted grades.
 Future<void> showItemReports(BuildContext context, Game game) =>
-    showReportLines(context, game.takeItemReports());
+    showItemOutcome(context, game.takeItemOutcome());
+
+/// "Use" for a consumable, "Check" for a kept tool that is not one.
+String useLabel(GameItem item) => item.isConsumable ? 'Use' : 'Check';
 
 /// The acquisition popup from the reference: large artwork, "Got a X!", the
 /// description and the effect on separate lines, then a narrow Use (for a
-/// consumable) above a wider Confirm. Shared by the store and by events that
-/// hand over an item. [onUse] applies the item and returns what it reported.
+/// usable item) above a wider Confirm. Shared by the store and by events
+/// that hand over an item. [onUse] applies the item and returns what it
+/// asked to show.
 Future<void> showItemAcquired(
   BuildContext context,
   GameItem item, {
-  List<String> Function()? onUse,
+  ItemUseOutcome Function()? onUse,
 }) async {
-  List<String>? reports;
+  ItemUseOutcome? outcome;
   await showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
@@ -70,20 +75,19 @@ Future<void> showItemAcquired(
                 style: const TextStyle(fontSize: 15, color: D30Colors.ink),
               ),
               const SizedBox(height: 20),
-              if (item.isConsumable && onUse != null)
+              if (item.canUse && onUse != null)
                 SizedBox(
                   width: 120,
                   child: D30RaisedButton(
                     depth: 3,
                     onPressed: () {
-                      reports = onUse();
+                      outcome = onUse();
                       Navigator.pop(context);
                     },
-                    child: const Text('Use'),
+                    child: Text(useLabel(item)),
                   ),
                 ),
-              if (item.isConsumable && onUse != null)
-                const SizedBox(height: 10),
+              if (item.canUse && onUse != null) const SizedBox(height: 10),
               SizedBox(
                 width: 200,
                 child: D30RaisedButton(
@@ -98,8 +102,8 @@ Future<void> showItemAcquired(
       ),
     ),
   );
-  if (reports != null && context.mounted) {
-    await showReportLines(context, reports!);
+  if (outcome != null && context.mounted) {
+    await showItemOutcome(context, outcome!);
   }
 }
 
@@ -500,13 +504,16 @@ class _BagsMenuState extends State<BagsMenu> {
                           Text(item.effectText, textAlign: TextAlign.center),
                           // Item buttons are flat: no lower face or press
                           // motion (TODO 77).
-                          if (item.isConsumable)
+                          // Only an item with something to apply or show
+                          // gets Use/Check; nothing is used up for nothing.
+                          if (item.canUse)
                             TextButton(
+                              key: ValueKey('use-item-${item.id}'),
                               onPressed: () {
                                 setState(() => game.useItem(item.id));
                                 showItemReports(context, game);
                               },
-                              child: const Text('Use'),
+                              child: Text(useLabel(item)),
                             ),
                         ],
                       ),
