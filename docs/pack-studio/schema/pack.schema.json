@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d30mode/pack.schema.json",
+  "title": "d30mode pack.json",
+  "description": "Pack manifest. See docs/pack-studio/03-PACK-CONTRACT.md section 1. Unknown keys are allowed and preserved.",
+  "type": "object",
+  "required": ["id", "name", "calendar", "subjects"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "description": "Must equal the pack folder name." },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "storyId": { "type": ["integer", "null"] },
+    "calendar": {
+      "type": "object",
+      "required": ["startDate", "endDate"],
+      "properties": {
+        "startDate": { "$ref": "#/$defs/dateCode" },
+        "endDate": { "$ref": "#/$defs/dateCode" },
+        "ticksPerDay": { "type": "integer", "minimum": 1, "default": 15 }
+      }
+    },
+    "start": {
+      "type": "object",
+      "properties": {
+        "locationId": { "type": "integer", "default": 1000 },
+        "firstName": { "type": "string", "default": "Player" },
+        "lastName": { "type": "string", "default": "" }
+      }
+    },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Order is load-bearing: changers address subjects by index; positions 3 and 4 are the electives."
+    },
+    "specialDays": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dateCode": { "$ref": "#/$defs/dateCode" },
+          "gameDate": { "type": "object", "properties": { "dateCode": { "$ref": "#/$defs/dateCode" } } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dateCode": { "type": "string", "pattern": "^DATE_\\d{10}$", "description": "DATE_YYYYMMDDTT; TT is the tick." }
+  }
+}

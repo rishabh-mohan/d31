@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d30mode/locations.schema.json",
+  "title": "d30mode locations.json",
+  "description": "See docs/pack-studio/03-PACK-CONTRACT.md section 3. Unknown keys are allowed and preserved.",
+  "type": "object",
+  "required": ["locations"],
+  "properties": {
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "type": { "type": "string", "description": "'sleep' adds the sleep bonus; also matched by trait/item scopes." },
+          "isDefaultLocked": { "type": "boolean" },
+          "image": { "type": ["string", "null"], "description": "Backdrop path under images/." },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locationActionType": { "type": "string", "description": "study, partTimeJob, exercise, sleep run built-ins; anything else spends stamina and runs the changer." },
+                "text": { "type": ["string", "null"] },
+                "weight": { "type": "number", "default": 1 },
+                "hpWeight": { "type": "number", "default": 0 },
+                "changer": { "$ref": "common.schema.json#/$defs/changer" },
+                "conditionFuncCode": { "type": ["string", "null"], "description": "Mechanics predicate or declared switch." },
+                "conditionSet": { "$ref": "common.schema.json#/$defs/conditionSet" },
+                "blockDuplicated": { "type": "boolean" },
+                "duplicatedKey": { "type": ["string", "null"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
