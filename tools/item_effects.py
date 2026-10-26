@@ -24,6 +24,9 @@ import re
 STAT_TOKEN = r"(?:CONSUME_STAT_|NORMAL_STAT_)?"
 NUM = r"([\d,]+(?:\.\d+)?)"
 
+# Item prose that names a condition differently from the trait it cures.
+CURE_TRAIT_ALIASES = {"lactose intolerance": "Lactose Intolerant"}
+
 SUBJECTS = {
     "korean": "korean",
     "english": "english",
@@ -404,7 +407,12 @@ def _rule_meta(t: str, ctx: dict) -> list:
         out.append({"type": "acceptanceRate", "percent": _n(m.group(1))})
     m = re.search(r"cures\s+([A-Za-z ]+)", t, re.I)
     if m:
-        out.append({"type": "cureTrait", "trait": m.group(1).strip()})
+        name = m.group(1).strip()
+        # The engine matches cureTrait by trait name. Lactase Pills' prose
+        # names the condition ("Cures Lactose Intolerance"); the trait is
+        # "Lactose Intolerant" (70), so without this alias the cure did nothing.
+        name = CURE_TRAIT_ALIASES.get(name.lower(), name)
+        out.append({"type": "cureTrait", "trait": name})
     if re.search(r"remove\s+all\s+negative\s+traits", t, re.I):
         out.append({"type": "removeTraits", "traitType": "bad"})
     m = re.search(rf"get\s+{NUM}\s+(coffees?)\b", t, re.I)
