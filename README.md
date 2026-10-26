@@ -1,152 +1,158 @@
 # d30mode
 
-A data-driven rebuild of Korean Student Simulator's **31-Day Mode** (story 16)
-in Flutter — the same engine KSS uses. The point is modifiability: the engine
-holds no content, so everything the game is made of lives in an editable
-content pack, and changing the pack changes the game.
+A data-driven game engine, written in Flutter, that recreates the
+**31-Day Mode** of *Korean Student Simulator* (KSS) and is built to be
+modded. The engine holds no content: the calendar, places, actions, events,
+items, traits, characters, colleges and every tuning number come from a
+**content pack** of JSON files. Change the pack and you change the game.
 
-Personal use / dev-pitch prototype. See **Scope** at the bottom.
+> **Unofficial fan project.** d30mode is not affiliated with, endorsed by, or
+> connected to the developers or publishers of Korean Student Simulator. The
+> engine code in this repository is original. **No game data, text, art or
+> audio from KSS is included**, and none should be committed or distributed.
 
-## What works now
+## Status
 
-A playable 31-day loop driven entirely by pack data:
+Playable prototype, under active development.
 
-- **Calendar** — 2023-10-16 → 2023-11-16 (수능 exam day), 15 action ticks a day
-- **11 locations** with their real action lists, weights and stamina costs;
-  locking and unlocking as content dictates
-- **The block loop** — each tick deals a weighted hand of action blocks from
-  the current location; Refresh Tickets redeal it. Study / part-time /
-  exercise / sleep, with 54 books, study combos, and the original'"'"'s study,
-  exercise and part-time level tables
-- **The event engine** — 321 events over 10,755 nodes: text, inline choices,
-  `ifElse` branching, `elseText`, 226 event switches, and the full recursive
-  condition language (37 `FUNC_` predicates, 55 effect verbs)
-- **177 items** with structured effects, consumable and passive
-- **244 traits** driving their own `effectList`
-- **A gameplay screen** laid out to the reference UI: date + D-count top bar,
-  location banner, tick dots, portrait with level box, goal strips, subject
-  chips, stamina bar, and the action-block grid — drawn with placeholder art
-  lifted from KSS by `tools/copy_assets.py`
-- **A dev panel** that edits stats, stamina, money, exp, the clock, switches,
-  items, traits and locations live; searches and fires any of the 321 events;
-  edits `rules.json` in place; reloads the pack from disk; and lists any verb
-  the pack used that the engine lacks
+What works:
 
-Verified by `flutter test`: 327 tests (2026-10-25), including 200 seeded full runs that all
-reach exam day, and a static check that the engine implements every verb the
-pack uses.
+- **The day loop.** A calendar measured in action ticks. Each tick deals a
+  weighted hand of action blocks for your location: study, part-time work,
+  exercise, sleep and pack-defined special actions. Stamina, money, levels,
+  study books and combos, weekly goals and refresh tickets.
+- **The event engine.** Node-graph events with dialogue, choices, branching,
+  layered character portraits and backgrounds. A recursive condition
+  language covers switches, dates, locations, items, traits and computed
+  predicates, and changers carry around 60 effect verbs. Events can be
+  scheduled, random, character-specific or story-set gated.
+- **Run setup.** Pick a mode, a character, up to seven university badges and
+  five traits, and enter a name. Badges and traits come from what your account
+  has earned.
+- **Items, traits and badges** with structured effects. Trait and character
+  abilities and special blocks are defined in pack data (`mechanics.json`),
+  not hard-coded.
+- **Exam day.** The final exam, the CSAT, university applications with
+  acceptance odds, results, enrollment and endings.
+- **Account layer.** History of past runs with score cards, achievements,
+  trait packs and combining, puzzles and backgrounds, saves in three slots,
+  and settings.
+- **A developer panel** to edit the live run (stats, clock, switches, items,
+  traits, locations), fire any event, tune `rules.json` in place, reload the
+  pack from disk, and list any effect or condition the engine didn't
+  recognize.
 
-Not built yet — audio, recovered exam/admission formulas (the current scoring is
-fitted), the original event-set dispatcher and the rest of TODO.md. Current
-state: [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md).
+Not done yet: audio, some original rules that couldn't be recovered (exam
+scoring and admission odds are fitted approximations, and some trait rates
+are configurable stand-ins), sudden missions, and parts of the original
+event dispatcher. [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) is the
+detailed checkpoint.
 
-## Run it
+## Content packs
 
-Flutter SDK lives at `C:\Users\stewc\flutter`; add `flutter\bin` to `PATH`.
+A pack is a folder:
+
+```
+my-pack/
+  pack.json           manifest: name, calendar, subjects, start location
+  rules.json          every tuning number (all optional, with defaults)
+  locations.json      places and the actions available at each
+  events/events.json  events and their node graphs
+  characters.json     playable characters (at least one with "isDefault": true)
+  items.json, traits.json, books.json, levels.json, mechanics.json, ...
+  images/             the pack's own art, at the paths its JSON uses
+```
+
+- **[examples/packs/workshop](examples/packs/workshop/)** is a small,
+  self-contained pack made for this project. It has custom subjects, a
+  location, a crafting block, a trait and a character. Start new packs from
+  it.
+- **[docs/PACK-FORMAT.md](docs/PACK-FORMAT.md)** describes every file.
+- **[docs/MODULAR-PACKS.md](docs/MODULAR-PACKS.md)** covers `mechanics.json`:
+  predicates, callbacks, abilities, persistent blocks and hooks.
+- **[docs/pack-studio/](docs/pack-studio/README.md)** is a field-level
+  contract with the engine, event-authoring and art guides, validation rules
+  and starter JSON Schemas. It is groundwork for a planned companion pack
+  editor.
+
+Installed packs are discovered from a `packs/` folder: next to the app on
+desktop, or the app's external files folder on Android. The folder name is
+the pack ID. Edit the JSON, then use the developer panel's **Pack → Reload
+from disk** and start a new run.
+
+## Building
+
+Requirements: the [Flutter SDK](https://docs.flutter.dev/get-started/install)
+(Dart 3.13 or later), plus the Android SDK for Android builds.
 
 ```bash
 flutter pub get
-flutter test                      # 327 tests, ~90 s (the 200-run sweep is most of it)
-
-flutter run -d windows            # desktop, fastest iteration
-flutter run -d <serial>           # the Nord N30 over adb
+flutter analyze
+flutter test
+flutter run -d windows        # desktop, the fastest loop
+flutter build apk --profile   # Android
 ```
 
-Or build and install by hand:
+**A fresh clone doesn't build yet.** `pubspec.yaml` bundles two packs
+(`packs/kss16`, `packs/kss20`) and placeholder art (`assets/images/`). These
+are generated locally from reference data that is not in the repository, and
+are gitignored. Making a clean clone build and run with only the Workshop
+pack is open work. Until then, a self-built pack has to be placed at those
+paths, or the bundled pack list in `pubspec.yaml` and the default pack ID in
+`lib/engine/content_source.dart` have to be changed.
 
-```bash
-flutter build apk --debug
-adb -s <serial> install -r build/app/outputs/flutter-apk/app-debug.apk
-```
+The `tools/` scripts (Python 3.12) generate those packs from locally held
+reference data. They are kept for transparency, and they need inputs this
+repository does not provide.
 
-> Use **PowerShell** for `adb`, not Git Bash. MSYS2 rewrites `/sdcard/...`
-> into a Windows path and `adb push` then reports success while nothing lands.
-
-## Change the game
-
-Everything is JSON in `packs/kss16/`. The app copies it to a writable
-directory on first run and loads that copy, so edits need no rebuild:
-
-- **desktop** — `packs/kss16/` in this repo, loaded directly
-- **Android** — `/sdcard/Android/data/dev.d30mode.d30mode/files/packs/kss16/`
-
-Edit, then open the dev panel (slider icon) → **Pack** → **Reload from disk**,
-and start a new run. The **Rules** tab edits `rules.json` from inside the app
-and writes it back, which is the quickest way to tune.
-
-`rules.json` holds every number the loop multiplies — stat gains, stamina
-costs, pay, sleep recovery, event frequency. Those numbers are **this
-project's model, not KSS's**: the original's formulas are compiled into
-`libapp.so` and exist in no JSON. They are fitted to what *is* observable
-(action weights, `hpWeight`, book power, level-table weights), and they are
-meant to be retuned.
-
-[docs/PACK-FORMAT.md](docs/PACK-FORMAT.md) documents every file, every effect
-verb, every condition target, and how to add new ones.
-
-## Rebuild the pack
-
-`packs/kss16` is generated from the KSS reference data in this workspace:
-
-```bash
-python tools/build_pack.py
-```
-
-- `tools/build_pack.py` — assembles the pack from
-  `korstu4CLAUDE/.../campaign-localized-v2/story-16` (97.3% English) and the
-  English build's global catalogs
-- `tools/item_effects.py` — parses item effects out of `effectText`, because
-  the original keeps them compiled rather than in data
-- `tools/copy_assets.py` — copies placeholder art out of the KSS trees into
-  `assets/images/` (gitignored, local use only)
-
-Re-running overwrites the pack, so copy a tuned `rules.json` aside first.
-
-## UI reference atlas
-
-For a broader evidence-based description of the **original game's functions**,
-read [docs/ORIGINAL-GAME-FUNCTIONS.md](docs/ORIGINAL-GAME-FUNCTIONS.md).
-It covers account systems, runs, progression, events, exams and campaigns, with
-version boundaries, internet sources and an extracted native-function index.
-Regenerate its source audit with `python tools/audit_original_game.py`.
-
-[docs/UI-REFERENCE.md](docs/UI-REFERENCE.md) indexes all 33 reference screenshots.
-Each has a descriptive image filename and a detailed Markdown specification,
-including visible state, approximate geometry, controls, fine-tuning checklist,
-uncertainties and code entry points. Original filename/hash provenance is retained.
-
-## Layout
+## Repository layout
 
 ```
-lib/engine/
-  pack.dart            models + the pack loader
-  content_source.dart  where a pack is read from, and the editable copy
-  game_date.dart       the DATE_YYYYMMDDTT calendar
-  state.dart           everything about a run in progress
-  conditions.dart      the condition language + the FUNC_ registry
-  effects.dart         the funcCode registry + item effects
-  event_engine.dart    node-graph runner + event selection
-  game.dart            the day loop
-lib/ui/                title, game screen, event player, inventory, dev panel
-                       theme.dart, pack_image.dart
-packs/kss16/           the content
-tools/                 the pack builder
-docs/PACK-FORMAT.md    the modding contract
-test/engine_test.dart  87 tests incl. 200 seeded full runs
-test/widget_test.dart  14 panel-render tests
+lib/engine/        the engine, almost entirely plain Dart
+  pack.dart          pack models and loader
+  pack_mechanics.dart  mechanics.json validator and runtime
+  game.dart          the day loop
+  event_engine.dart  event graph runner and event selection
+  conditions.dart    condition language and FUNC_ predicates
+  effects.dart       effect verbs and item effects
+  traits.dart        trait, badge and character effects
+  admissions.dart, dday.dart   exam, applications and admissions
+  state.dart         a run in progress
+  content_source.dart, save_store.dart, account_store.dart   storage
+lib/ui/            Flutter screens: home, setup, gameplay, events, menus, dev panel
+examples/packs/    standalone example packs
+content/kss/       tracked inputs to the pack generator
+tools/             pack generators and audit scripts
+test/              engine, pack and widget tests, including seeded full-run simulations
+docs/              format docs, design notes, research and reference specs
 ```
 
-## Scope
+## Tests
 
-The engine and all of its code are original. The content pack is built from
-KSS's own data and is for **local use only** — it is not redistributable, and
-nothing in `packs/` should ship anywhere. To make this shareable or pitchable,
-author a second pack with your own content in the same format and point the
-app at it; the engine does not care which pack it loads.
+`flutter test` runs about 490 tests. They include 200 seeded complete runs
+that must all reach the end of the calendar. Static checks confirm the engine
+implements every effect verb and condition the bundled packs use, and pack
+tests check the Workshop example and the `mechanics.json` validator. Several
+tests read the generated packs, so they need those packs present.
 
-[docs/D30-MODE-SPEC.md](docs/D30-MODE-SPEC.md) is the full rebuild spec for the
-original mode, including the list of where this implementation still diverges
-from it (§13).
+## Documentation
 
-Background, the reverse-engineering that informed the schema, and the
-boundaries of this work are in [RE-BRIEF.md](RE-BRIEF.md).
+| | |
+|---|---|
+| [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) | What is implemented and verified right now |
+| [docs/PACK-FORMAT.md](docs/PACK-FORMAT.md), [docs/MODULAR-PACKS.md](docs/MODULAR-PACKS.md) | Content pack format |
+| [docs/pack-studio/](docs/pack-studio/README.md) | Engine contract and pack-editor groundwork |
+| [docs/EFFECTS-REFERENCE.md](docs/EFFECTS-REFERENCE.md) | How item, trait and event effects are applied, including provisional values |
+| [docs/EVENT-PRESENTATION.md](docs/EVENT-PRESENTATION.md) | Dialogue tokens, markup and portraits |
+| [docs/D30-MODE-SPEC.md](docs/D30-MODE-SPEC.md) | Design spec for the recreated mode |
+| [docs/ORIGINAL-GAME-FUNCTIONS.md](docs/ORIGINAL-GAME-FUNCTIONS.md) | Research notes on the original game's systems |
+
+Research notes keep three kinds of evidence apart: what was observed in the
+original, what was recovered from its data, and what this project chose as a
+stand-in. Values the project chose are labeled provisional.
+
+## License
+
+No license has been chosen yet, so all rights are reserved by default. If you
+want to use or contribute to the engine code, open an issue first. Korean
+Student Simulator and its content belong to their respective owners.
