@@ -101,9 +101,8 @@ pack is open work. Until then, a self-built pack has to be placed at those
 paths, or the bundled pack list in `pubspec.yaml` and the default pack ID in
 `lib/engine/content_source.dart` have to be changed.
 
-The `tools/` scripts (Python 3.12) generate those packs from locally held
-reference data. They are kept for transparency, and they need inputs this
-repository does not provide.
+The generators that build those packs from locally held reference data are
+not part of this repository.
 
 ## Repository layout
 
@@ -121,8 +120,7 @@ lib/engine/        the engine, almost entirely plain Dart
   content_source.dart, save_store.dart, account_store.dart   storage
 lib/ui/            Flutter screens: home, setup, gameplay, events, menus, dev panel
 examples/packs/    standalone example packs
-content/kss/       tracked inputs to the pack generator
-tools/             pack generators and audit scripts
+tools/             build helpers (asset-directory placeholders, app icon)
 test/              engine, pack and widget tests, including seeded full-run simulations
 docs/              format docs, design notes, research and reference specs
 ```

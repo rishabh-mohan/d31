@@ -55,8 +55,6 @@ void main() {
         }).setupRequiresOwnership,
         isFalse,
       );
-      final rules = File('content/kss/account-rules.json').readAsStringSync();
-      expect(rules, contains('"setupRequiresOwnership": true'));
     });
 
     test('gating on: only enrolled schools and held traits, with counts', () {

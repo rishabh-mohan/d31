@@ -55,10 +55,12 @@ bundled** restores the whole directory from the copy inside the app.
 
 ## Rebuilding the pack from source
 
-`packs/kss16` is generated, not hand-written:
+`packs/kss16` is generated, not hand-written, by the local-only KSS pipeline
+in the sibling workspace folder `../d30mode-kss` (moved out of this repo on
+2026-10-26; see its README):
 
 ```bash
-python tools/build_pack.py          # writes packs/kss16
+python -I ../d30mode-kss/tools/build_pack.py --story 16   # writes packs/kss16
 ```
 
 It reads the Korean Student Simulator reference data already extracted in this

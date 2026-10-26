@@ -6,7 +6,7 @@ d30mode is fully data-driven: a pack directory of JSON (plus optional art)
 defines the calendar, locations, actions, events, items, traits, characters,
 colleges and every tuning number. Today the only ways to make a pack are the
 Python generators that convert Korean Student Simulator data
-(`tools/build_pack.py`) or editing JSON by hand. Hand-editing event graphs is
+(the local-only `../d30mode-kss/tools/build_pack.py`) or editing JSON by hand. Hand-editing event graphs is
 the hard part: a single event is dozens of linked node records, conditions are
 a recursive and/or tree, and a typo in a node ID or switch name fails silently
 at runtime.
