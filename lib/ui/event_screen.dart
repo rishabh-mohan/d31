@@ -159,9 +159,7 @@ class _EventScreenState extends State<EventScreen> {
           item,
           onUse: () {
             Game.useItemWith(run.state, run.effects, item.id);
-            final reports = List<String>.of(run.effects.reports);
-            run.effects.reports.clear();
-            return reports;
+            return ItemUseOutcome.drain(run.effects, run.state);
           },
         );
       }

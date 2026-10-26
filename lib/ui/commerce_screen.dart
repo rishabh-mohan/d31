@@ -86,7 +86,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
       onUse: () {
         game.useItem(item.id);
         setState(() {});
-        return game.takeItemReports();
+        return game.takeItemOutcome();
       },
     );
   }
