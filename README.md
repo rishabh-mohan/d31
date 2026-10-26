@@ -145,7 +145,6 @@ tests read the generated packs, so they need those packs present.
 | [docs/EFFECTS-REFERENCE.md](docs/EFFECTS-REFERENCE.md) | How item, trait and event effects are applied, including provisional values |
 | [docs/EVENT-PRESENTATION.md](docs/EVENT-PRESENTATION.md) | Dialogue tokens, markup and portraits |
 | [docs/D30-MODE-SPEC.md](docs/D30-MODE-SPEC.md) | Design spec for the recreated mode |
-| [docs/ORIGINAL-GAME-FUNCTIONS.md](docs/ORIGINAL-GAME-FUNCTIONS.md) | Research notes on the original game's systems |
 
 Research notes keep three kinds of evidence apart: what was observed in the
 original, what was recovered from its data, and what this project chose as a
@@ -153,6 +152,7 @@ stand-in. Values the project chose are labeled provisional.
 
 ## License
 
-No license has been chosen yet, so all rights are reserved by default. If you
-want to use or contribute to the engine code, open an issue first. Korean
-Student Simulator and its content belong to their respective owners.
+The engine code and project-authored content (including the Workshop example
+pack) are released under the [MIT License](LICENSE). The license covers this
+repository's own work only. Korean Student Simulator and its content belong to
+their respective owners and are not licensed here.
