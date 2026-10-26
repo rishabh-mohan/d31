@@ -327,7 +327,7 @@ class _GameScreenState extends State<GameScreen> {
           onUse: () {
             game.useItem(item.id);
             setState(() {});
-            return game.takeItemReports();
+            return game.takeItemOutcome();
           },
         );
       }
