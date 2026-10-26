@@ -91,3 +91,15 @@ app.*.map.json
 /*BRIEF*.md
 /TODO.md
 /TODO-DONE.md
+
+# Original-game reference material: local only, never published.
+# Screenshot captures and their specs, original-game research and the
+# native function index (2026-10-26).
+/screenshots/
+/docs/ui-reference/
+/docs/UI-REFERENCE.md
+/docs/MAIN-MENU-REFERENCE.md
+/docs/ORIGINAL-GAME-*.md
+/docs/original-game-*.json
+/docs/D-DAY-COMPARISON-*.md
+/docs/D-DAY-APPLICATIONS-REFERENCE-*.md
