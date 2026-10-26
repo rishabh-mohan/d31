@@ -32,6 +32,15 @@ guide are tracked; do not publish the generated catalog.
 - `percentPlusMoney`, `percentPlusExp` and `percentPlusReward` are factors:
   1.2 means 20% more. Character and badge structured effects use the same reader.
   Work-EXP factors now apply to work blocks as well as workout-EXP factors to workouts.
+- Acceptance modifiers act on each application's final chance, not the CSAT
+  score: trait `acceptanceFactor` (multiplier) and `acceptancePoints` abilities
+  (pack `traitAbilities`) plus held-item `acceptanceRate` percents (points).
+  Order: multiply, add points, clamp 0..100; the displayed rate and the roll
+  share the result (see DDAY-FLOW.md). Trait 47 x1.08, 74 +3, 89 +1; 40 MBTI S.
+  Realistic is a provisional +1 (`rules.traits.mbtiRealisticAcceptancePoints`
+  overrides; the real value is unrecovered).
+- `firstPlusStat` honors `plusStatType` (`all`, `detail`, `tamgoos` = the two
+  elective subjects); `tamgoos` previously granted every subject.
 - Event effects: `lib/engine/effects.dart` is the dispatch authority. Conditions
   use `conditions.dart`; branch/box ordering uses `event_engine.dart`. Event state
   is 0 unseen / 1 running / 2 completed. Generated entries explicitly flag empty
