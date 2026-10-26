@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -160,6 +161,43 @@ def write(out: Path, name: str, data, note: str | None = None):
 # field, so it is visible and hand-editable rather than silently dropped.
 # --------------------------------------------------------------------------
 
+# Condition functions whose args are item IDs.
+ITEM_CONDITION_FUNCS = {
+    "FUNC_ITEM_COUNT", "FUNC_ITEM_HAVE", "FUNC_ITEM_USE_COUNT",
+    "FUNC_EXIST_ITEM_LIST", "FUNC_ITEM_HAVE_LIST",
+}
+
+
+def graph_item_gates() -> dict[int, list[int]]:
+    """Item id -> sorted ids of events (in the graphs this pack ships) whose
+    event, node or option conditions test that item."""
+    gates: dict[int, set[int]] = {}
+
+    def visit(obj, event_id):
+        if isinstance(obj, dict):
+            if obj.get("target") in ITEM_CONDITION_FUNCS:
+                for a in obj.get("args") or []:
+                    if isinstance(a, int):
+                        gates.setdefault(a, set()).add(event_id)
+            for v in obj.values():
+                visit(v, event_id)
+        elif isinstance(obj, list):
+            for v in obj:
+                visit(v, event_id)
+
+    for name in ("events.json", "events_female.json"):
+        path = ENGLISH / f"event/{name}"
+        if not path.exists():
+            continue
+        src = load(path)
+        for e in src["events"]:
+            visit(e.get("conditionSet"), e["id"])
+        for n in src["nodes"]:
+            visit({k: v for k, v in n.items()
+                   if k in ("conditionSet", "options")}, n["id"] // 1000)
+    return {k: sorted(v) for k, v in gates.items()}
+
+
 def build_items(out: Path):
     story_consume = load(CAMPAIGN / "item/story_consume_items.json")["items"]
     story_normal = load(CAMPAIGN / "item/story_normal_items.json")["items"]
@@ -168,6 +206,7 @@ def build_items(out: Path):
 
     items = []
     unparsed = 0
+    item_gates = graph_item_gates()
     for src, kind, scope in (
         (global_consume, "consume", "global"),
         (global_normal, "normal", "global"),
@@ -188,6 +227,10 @@ def build_items(out: Path):
                 lambda m: str(int(m.group(2)) * (3 if m.group(1) == "CONSUME_STAT_" else 1)),
                 source)
             effects, raw, flavour = item_effects.parse(granted_text)
+            authored = item_effects.overlay(STORY_ID, it["id"])
+            if authored:
+                effects = copy.deepcopy(authored["effects"])
+                raw, flavour = None, False
             if raw:
                 unparsed += 1
             entry = {
@@ -204,6 +247,17 @@ def build_items(out: Path):
                 entry["unparsed"] = raw
             if flavour:
                 entry["flavour"] = True
+            if authored:
+                entry["effectNote"] = authored["note"]
+            gates = item_gates.get(it["id"])
+            if gates:
+                # Events whose conditions read this item. An empty effect
+                # list next to this is graph-driven behavior, not a gap.
+                entry["graphEvents"] = gates
+                for e in effects:
+                    if e["type"] == "preventEvent":
+                        e["events"] = gates
+                        e["handledBy"] = "eventGraph"
             if it.get("maxCount"):
                 entry["maxCount"] = it["maxCount"]
             if it.get("detailTypes"):
