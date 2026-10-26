@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d30mode/common.schema.json",
+  "title": "Shared d30mode pack definitions",
+  "description": "Condition sets and changers, shared by events and locations. See docs/pack-studio/04-EVENT-AUTHORING.md sections 4-5.",
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "required": ["target"],
+      "properties": {
+        "type": { "type": "string", "description": "Inert (defaults/func)." },
+        "target": { "type": "string" },
+        "targetType": { "enum": ["event", "eventSwitch", "date", "location", "func"] },
+        "compareType": {
+          "enum": ["equal", "notEqual", "bigger", "greater", "equalOrBigger", "greaterEqual", "smaller", "less", "equalOrSmaller", "lessEqual", null]
+        },
+        "value": { "type": ["number", "null"] },
+        "args": { "type": ["array", "null"] }
+      }
+    },
+    "conditionSet": {
+      "description": "Classic and/or tree, or (when none of conditions/operator/left/right is present) a mechanics expression.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "anyOf": [
+            { "required": ["conditions"] },
+            { "required": ["operator"] },
+            { "required": ["left"] },
+            { "required": ["right"] }
+          ],
+          "properties": {
+            "operator": { "enum": ["and", "or", null] },
+            "left": { "$ref": "#/$defs/conditionSet" },
+            "right": { "$ref": "#/$defs/conditionSet" },
+            "conditions": { "type": ["array", "null"], "items": { "$ref": "#/$defs/condition" } }
+          }
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "not": {
+            "anyOf": [
+              { "required": ["conditions"] },
+              { "required": ["operator"] },
+              { "required": ["left"] },
+              { "required": ["right"] }
+            ]
+          },
+          "description": "Mechanics expression, e.g. {\"eq\":[{\"field\":\"characterId\"},70]}."
+        }
+      ]
+    },
+    "switchChange": {
+      "type": "object",
+      "required": ["target"],
+      "properties": {
+        "type": { "enum": ["set", "add", "sub"], "description": "'sub' appears in Retry Year source data, but as of 2026-10-26 the engine treats anything other than 'add' as 'set' (effects.dart applyChanger), so 'sub' currently assigns. Editors should emit only set/add until that is fixed." },
+        "target": { "type": "string" },
+        "value": { "type": "integer" },
+        "conditionSet": { "$ref": "#/$defs/conditionSet" }
+      }
+    },
+    "changer": {
+      "type": ["object", "null"],
+      "properties": {
+        "funcCode": { "type": ["string", "null"], "description": "Built-in verb or mechanics.callbacks name." },
+        "args": { "type": ["array", "null"] },
+        "changes": { "type": ["array", "null"], "items": { "$ref": "#/$defs/switchChange" } }
+      }
+    }
+  }
+}
