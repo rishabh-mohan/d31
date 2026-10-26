@@ -17,7 +17,7 @@ These are what d30mode already asserts for its packs (`test/engine_test.dart`,
 |---|---|
 | Every event's `rootNodeId` exists in `nodes` | engine_test ~L65 |
 | Every `option` node has non-empty `options`; every option has non-empty `text` | ~L77 |
-| Every option has `nextNodeId` in `nodes` (or a `nextBoxId` with nodes) | ~L101 |
+| Every option has a `nextNodeId` that exists in `nodes` | ~L101 |
 | Every changer `funcCode` (nodes, `actionChanger`, location actions) is a built-in verb or a `mechanics.callbacks` name | ~L119 |
 | Every `targetType: func` target (events, nodes, options, `changes`) is a built-in `FUNC_` or a `mechanics.predicates` name | ~L119 |
 | Every item has `effects`, or is `flavour`, or has empty `effectText` | ~L188 |
@@ -67,7 +67,6 @@ Graph:
 - `ifElse` node with a changer (runs only on the true branch).
 - Cycles (allowed; capped at 2000 nodes per run).
 - Event without the `EVENT_<id> equal 0` once-only gate.
-- Options relying on `nextBoxId` (pack-wide box lookup).
 - No `rules.events.openingEventIds`.
 
 Switches:

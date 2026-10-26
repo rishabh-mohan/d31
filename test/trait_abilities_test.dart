@@ -490,7 +490,7 @@ Future<void> main() async {
       final posted = game.state.weeklyGoal!;
       final plainNext = Goals.issue(game.state).rewardValue;
       expect(game.state.grantTrait(KssIds.judger), isTrue);
-      expect(Goals.rewardAmount(posted, game.state), posted.rewardValue);
+      expect(game.state.weeklyGoal!.rewardValue, posted.rewardValue);
       final next = Goals.issue(game.state).rewardValue;
       expect(next, closeTo(plainNext * 1.1, 1));
     });
@@ -501,7 +501,7 @@ Future<void> main() async {
       final reward = game.state.weeklyGoal!.rewardValue;
       final loaded = GameState.fromJson(kss16, game.state.toJson());
       loaded.removeTrait(KssIds.judger);
-      expect(Goals.rewardAmount(loaded.weeklyGoal!, loaded), reward);
+      expect(loaded.weeklyGoal!.rewardValue, reward);
     });
   });
 

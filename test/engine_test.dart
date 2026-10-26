@@ -103,12 +103,7 @@ Future<void> main() async {
       for (final n in pack.nodes.values) {
         if (n.type != 'option') continue;
         for (final o in n.options) {
-          final byId =
-              o.nextNodeId != null && pack.nodes.containsKey(o.nextNodeId);
-          final byBox =
-              o.nextBoxId != null &&
-              (pack.nodesByBox[o.nextBoxId]?.isNotEmpty ?? false);
-          if (!byId && !byBox) {
+          if (!pack.nodes.containsKey(o.nextNodeId)) {
             dangling.add('node ${n.id} -> "${o.text}"');
           }
         }

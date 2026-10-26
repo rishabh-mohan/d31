@@ -85,8 +85,7 @@ void main() {
   test('every pack sits the exam by default, borrowing colleges if needed', () {
     final files = Map.of(pack.sourceFiles)
       ..remove('colleges.json')
-      ..remove('colleges_us.json')
-      ..remove('admissions.json');
+      ..remove('colleges_us.json');
     final rules = jsonDecode(files['rules.json']!) as Map<String, dynamic>;
     rules.remove('exam');
     files['rules.json'] = jsonEncode(rules);

@@ -135,22 +135,8 @@ class EventRun {
     _walkFrom(node.nextNodeId);
   }
 
-  /// Take a choice on an `option` beat. The branch target is the option's own
-  /// `nextNodeId`; `nextBoxId` is the fallback for content that only names
-  /// the box.
-  void choose(EventChoice choice) {
-    final target =
-        choice.option.nextNodeId ??
-        _entryNodeOfBox(choice.option.nextBoxId)?.id;
-    _walkFrom(target);
-  }
-
-  EventNode? _entryNodeOfBox(int? boxId) {
-    if (boxId == null) return null;
-    final nodes = pack.nodesByBox[boxId];
-    if (nodes == null || nodes.isEmpty) return null;
-    return nodes.first;
-  }
+  /// Take a choice on an `option` beat: walk to the option's `nextNodeId`.
+  void choose(EventChoice choice) => _walkFrom(choice.option.nextNodeId);
 
   /// Walks the graph applying side effects until it reaches something the
   /// player must see, or runs out of graph.

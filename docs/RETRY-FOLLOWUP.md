@@ -16,10 +16,9 @@ Reproduce with `presentation_assets.py --story 20 --fetch-npc 9 --fetch-npc 27`.
 The user confirmed that stamina caps at 100. The old maximum-stamina formula
 added four per workout level; that interpretation was wrong. Maximum stamina
 now uses the pack's base cap (100 in both campaigns). Direct writes, dev edits,
-recovery, new states and loaded old saves all clamp to that cap, preventing
+recovery, new states and loaded saves all clamp to that cap, preventing
 hidden extra stamina before the first action. Workout's existing action-cost
-discount remains in effect. The legacy hpMaxPerLevel setting is unused and is
-written as zero by the builder.
+discount remains in effect.
 
 EffectEngine compares workout and part-time levels before/after authored
 changers and item effects, setting their existing notification switches when
@@ -64,7 +63,7 @@ This repairs this specific gate and flow, not the unresolved overall scheduler.
 ## Verification
 
 `test/retry_followup_test.dart` covers hidden/revealed names, dark nameplate,
-all Jian layers, stamina at every level and legacy-save overflow, event XP and
+all Jian layers, stamina at every level and loaded-save overflow, event XP and
 one-time global notification, its actual GameScreen presentation, first Hurry
 versus later Roll Call, both choices and the next-day reset, Thursday's option,
 and second-miss confinement/deadline/release.

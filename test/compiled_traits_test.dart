@@ -264,7 +264,7 @@ Future<void> main() async {
       expect(paid / total, inInclusiveRange(0.4, 0.6));
 
       // The once-a-tick guard survives a save.
-      expect(game.state.toJson()['walkRolledAt'], game.state.date.asInt);
+      expect(game.state.toJson()['abilityUses'], isNotEmpty);
 
       final plain = withTraits(const []);
       plain.state.hp = 50;

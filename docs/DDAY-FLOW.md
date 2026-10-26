@@ -58,7 +58,7 @@ List<ExamCard>  game.examCards             // subject, label, done, response
 ExamCard?       game.currentExamCard
 bool            game.examCardsComplete
 ExamTurn?       game.takeExamSubject()     // null when nothing is pending
-void            game.completeExamCards()   // headless / legacy screen
+void            game.completeExamCards()   // takes every remaining card
 EventRun        game.examResponseEvent(turn) // presentation-only one-line scene for the response (docs/DDAY-UI.md)
 String          game.subjectLabel(subject)
 ```
@@ -75,7 +75,6 @@ String          game.subjectLabel(subject)
   The exam cards are inserted after the authored Graduation Exam event; that
   event is untouched.
 * State: `state.examCardsDone`, `examCardScores`, `examResponses`, all saved.
-  Old saves infer "cards done" from an existing score card.
 
 ## Exam scoring (FITTED)
 

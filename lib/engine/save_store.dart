@@ -42,7 +42,7 @@ class SaveSummary {
     required this.daysRemaining,
     required this.savedAt,
     required this.stats,
-    this.packId = 'kss16',
+    required this.packId,
     this.portrait = '',
     this.modeTitle = '',
   });
@@ -64,7 +64,7 @@ class SaveSummary {
     if (j == null) return null;
     return SaveSummary(
       slot: slot,
-      packId: j['packId'] as String? ?? 'kss16',
+      packId: j['packId'] as String,
       name: j['name'] as String? ?? '',
       daysRemaining: (j['daysRemaining'] as num?)?.toInt() ?? 0,
       savedAt: at,
@@ -189,7 +189,7 @@ class SaveStore {
       final j = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final state = (j['state'] as Map?)?.cast<String, dynamic>();
       if (state == null) return null;
-      if ((state['packId'] ?? 'kss16') != pack.manifest.id) return null;
+      if (state['packId'] != pack.manifest.id) return null;
       return GameState.fromJson(pack, state);
     } catch (_) {
       return null;

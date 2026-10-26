@@ -151,10 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
     state.saveSlot = save.slot;
     state.attachWallet(AccountStore.current);
     if (state.usesAccountWallet) {
-      // Write both at once, so a legacy save's leftover balance moves onto
-      // the account exactly once.
+      // Attaching may grant a currency's first account balance.
       await AccountStore.save();
-      await SaveStore.write(save.slot, state);
       if (!mounted) return;
     }
     await _play(Game(pack: state.pack, state: state), location);

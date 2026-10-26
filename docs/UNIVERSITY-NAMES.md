@@ -35,5 +35,4 @@ Generation comparison confirmed eighty changed labels in each of
 `assets/account/catalog.json`, `packs/kss16/badges.json` and
 `packs/kss20/badges.json`. University IDs, ranks, colors, regions, sort IDs and
 badge effects remain identical. Admission cutoffs and Korean/US renaming are
-unaffected. Old account enrollment counters need no migration because IDs stay
-the same. Generated files are ignored; change the tracked overlay and rebuild.
+unaffected. Generated files are ignored; change the tracked overlay and rebuild.

@@ -209,9 +209,7 @@ class Account implements SharedWallet {
   /// Enrollments per university id, this account's own count.
   final Map<int, int> enrollments;
 
-  /// Enrollments per department id: the "# Enrollments" of a major. Counts
-  /// start when this field was introduced (older runs are not backfilled;
-  /// [countByDepartment] recounts from History records if wanted).
+  /// Enrollments per department id: the "# Enrollments" of a major.
   final Map<int, int> departmentEnrollments;
 
   /// Runs whose ending reward was paid (record id + finish time), so
@@ -367,9 +365,7 @@ class Account implements SharedWallet {
       final String name when validUsername(name) => name,
       _ => defaultUsername,
     },
-    renameCount:
-        (j['renameCount'] as num?)?.toInt() ??
-        (j['username'] != null && j['username'] != defaultUsername ? 1 : 0),
+    renameCount: (j['renameCount'] as num?)?.toInt() ?? 0,
     bgm: j['bgm'] as bool? ?? true,
     sfx: j['sfx'] as bool? ?? true,
     rumble: j['rumble'] as bool? ?? true,
@@ -452,17 +448,6 @@ class Account implements SharedWallet {
   /// The same for one major: "# Enrollments".
   int majorEnrollments(int departmentId) =>
       departmentEnrollments[departmentId] ?? 0;
-
-  /// Recounts per department from History [records] (authoritative when the
-  /// stored counters predate department tracking).
-  static Map<int, int> countByDepartment(Iterable<RunRecord> records) {
-    final out = <int, int>{};
-    for (final r in records) {
-      final id = r.enrolledDepartmentId;
-      if (id != null) out[id] = (out[id] ?? 0) + 1;
-    }
-    return out;
-  }
 
   int achievementProgress(AchievementInfo a) => switch (a.id) {
     'story_addict' => endings.length,

@@ -71,10 +71,10 @@ void main() {
     await SaveStore.write(0, a.state);
     await SaveStore.write(2, b.state);
 
-    expect(
-      (await SaveStore.list()).map((s) => s.name).toSet(),
-      {'A ${a.state.lastName}'.trim(), 'B ${b.state.lastName}'.trim()},
-    );
+    expect((await SaveStore.list()).map((s) => s.name).toSet(), {
+      'A ${a.state.lastName}'.trim(),
+      'B ${b.state.lastName}'.trim(),
+    });
     expect(await SaveStore.nextSlot(), 3);
 
     await SaveStore.delete(0);
@@ -95,11 +95,6 @@ void main() {
       expect(restored.date, retry.manifest.startDate);
       expect(restored.switches, game.state.switches);
       await SaveStore.write(1, Game.newRun(pack).state);
-      final file = File('${temp.path}/slot_1.json');
-      final legacy =
-          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      (legacy['summary'] as Map).remove('packId');
-      await file.writeAsString(jsonEncode(legacy));
       expect((await SaveStore.summary(1))!.packId, 'kss16');
       expect(await SaveStore.read(1, pack), isNotNull);
     },

@@ -19,10 +19,9 @@ is stale (it is a 0/1/2 state, see §6).
 **Node IDs must be unique pack-wide.** Convention: `eventId * 1000 + n`
 (tests assume `node.id ~/ 1000 == eventId`, `engine_test.dart:81`). Use it.
 
-**Don't rely on `boxId`/`nextBoxId`.** `nodesByBox` is grouped pack-wide, not
-per event, so a `nextBoxId` fallback resolves to the lowest node of that box
-number in *any* event (`event_engine.dart:148-153`). The editor should always
-write `nextNodeId` on options, and may keep `boxId` only as carried data.
+**Options link by `nextNodeId` only.** `boxId` and `nextBoxId` are carried
+from the original's data but not read (the box fallback was removed on
+2026-10-26). An option without a valid `nextNodeId` ends the event.
 
 A missing numeric `id` on an event or node throws a raw `TypeError`, not a
 friendly format error (`pack.dart:1030,1034`); a null `speakers[].name`
@@ -65,7 +64,7 @@ acquired items → apply `backgroundImg` (always) → type dispatch.
 | `last` | Ends the event, showing `text` (or `elseText` when the gate is false; silent if neither). |
 | anything else | Presentation (`standing`, `background`, `eventBGM`, `soundEffect`, `loopSoundEffect`, `mainBGM`, `mainBGMMute`, `allMute`): applies effects/portrait, follows `nextNodeId`. Audio is currently ignored. |
 
-Option record: `{text (default "..."), nextNodeId, nextBoxId, conditionSet}`.
+Option record: `{text (default "..."), nextNodeId, conditionSet}`.
 
 Other node fields read: `speakerId` (name chip only; ≤0 → "Me"; unknown →
 "???"), `isHideSpeakerName`, `standingId` (who is drawn), `standingOff`,
@@ -80,8 +79,8 @@ expression/clothes restyles the current actor. `speakerId` never changes who
 is drawn (`event_engine.dart:68-99`). With `rules.setup.genderSelection`,
 `rules.setup.genderPairs` swaps NPC IDs by protagonist gender.
 
-Carried, never read by the runner: `actionChanger`, `eventSound`, `imgPath`,
-`isEmpty`, `index`, `nextLinkedBoxId`, `nextBoxIdIfTrue/False`, `isNullNode`,
+Carried, never read by the runner: `boxId`, option `nextBoxId`,
+`actionChanger`, `eventSound`, `imgPath`, `isEmpty`, `index`, `nextLinkedBoxId`, `nextBoxIdIfTrue/False`, `isNullNode`,
 `isCloseAndOpenPopupWhenContinue`, `rightNow`, `stopLocalLoop`,
 `stopLocalMusic`, `pauseExceptLocal`, `startMain`.
 

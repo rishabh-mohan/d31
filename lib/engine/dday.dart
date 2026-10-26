@@ -236,7 +236,7 @@ extension DDayFlow on Game {
     );
   }
 
-  /// Takes every remaining card (headless runs and the legacy screen).
+  /// Takes every remaining card at once.
   void completeExamCards() {
     while (takeExamSubject() != null) {}
   }

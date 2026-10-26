@@ -179,17 +179,7 @@ class Game {
   EventRun? beginOpeningEvent() {
     if (!openingPending) return null;
     for (final id in openingEventIds) {
-      if (state.eventStates[id] == 2) {
-        // Old prototype saves completed event 1 while SHOW_ENDING was a no-op.
-        // Reconcile its continuation without replaying the ending/rewards.
-        final continuations =
-            pack.rules.section('events')['openingContinuationSwitches'] as Map?;
-        final name = continuations?['$id'];
-        if (name is String && state.switchValue(name) == 0) {
-          state.setSwitch(name, 1);
-        }
-        continue;
-      }
+      if (state.eventStates[id] == 2) continue;
       final event = pack.events[id];
       if (event == null) throw StateError('Opening event $id is missing');
       final dailyCount = state.eventsFiredToday;
@@ -255,8 +245,7 @@ class Game {
   }
 
   /// `rules.exam.curve`: `[stat, score]` points for one subject's score.
-  /// A pack that names neither a curve nor the older meanTotal/sdTotal gets
-  /// the calibrated default.
+  /// A pack that names no curve gets the calibrated default.
   List<List<num>> get examCurve => examCurveOf(pack);
 
   static List<List<num>> examCurveOf(ContentPack pack) {
@@ -266,8 +255,7 @@ class Game {
         if (p is List && p.length == 2 && p[0] is num && p[1] is num)
           [p[0] as num, p[1] as num],
     ];
-    if (curve.isNotEmpty) return curve;
-    return exam.containsKey('meanTotal') ? const [] : Admissions.defaultCurve;
+    return curve.isNotEmpty ? curve : Admissions.defaultCurve;
   }
 
   /// The CSAT standard scores the current stats earn: per subject and the
@@ -279,24 +267,16 @@ class Game {
     final pack = state.pack;
     final subjects = pack.manifest.subjects;
     final curve = examCurveOf(pack);
-    final mean = pack.rules.number('exam', 'meanTotal', 2600);
-    final sd = pack.rules.number('exam', 'sdTotal', 1300);
     // Each subject is scored on its own stat and the CSAT is their average,
     // so a lopsided student does worse than a balanced one with the same
-    // total. (Older packs: one linear curve over the total.)
-    double scoreOf(num stat) => curve.isNotEmpty
-        ? Admissions.subjectScoreFor(stat, curve)
-        : Admissions.standardScoreFor(
-            stat * subjects.length,
-            mean: mean,
-            sd: sd,
-          );
+    // total.
     final scores = <String, double>{
-      for (final s in subjects) s: scoreOf(state.stats[s] ?? 0),
+      for (final s in subjects)
+        s: Admissions.subjectScoreFor(state.stats[s] ?? 0, curve),
     };
-    final standard = curve.isNotEmpty && scores.isNotEmpty
-        ? scores.values.reduce((a, b) => a + b) / scores.length
-        : Admissions.standardScoreFor(state.totalStat, mean: mean, sd: sd);
+    final standard = scores.isEmpty
+        ? 0.0
+        : scores.values.reduce((a, b) => a + b) / scores.length;
     return (subjects: scores, standard: standard);
   }
 
@@ -398,7 +378,7 @@ class Game {
   }
 
   /// Sends the applications and decides each one. Returns the departments
-  /// that accepted. Headless/legacy entry: it fills the draft with [departmentIds]
+  /// that accepted. Headless entry: it fills the draft with [departmentIds]
   /// (skipping the ineligible and second departments of one school) and
   /// commits it. An empty list commits nothing. See `submitDraft`.
   List<int> submitApplications(List<int> departmentIds) {

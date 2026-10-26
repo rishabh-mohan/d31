@@ -19,13 +19,6 @@ void main() {
     pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
   });
 
-  /// The same campaign with the optional per-run refresh wallet.
-  Future<ContentPack> perRunRefreshPack() async {
-    final p = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
-    (p.rules.raw['refresh'] as Map)['shared'] = false;
-    return p;
-  }
-
   test('defaults: cookies and refresh tickets shared', () {
     final state = Game.newRun(pack, random: Random(1)).state;
     expect(state.sharesWallet('cookies'), isTrue);
@@ -75,26 +68,10 @@ void main() {
       ..attachWallet(account);
     final json = state.toJson();
     expect(json['cookies'], 0);
-    expect(json['sharedWallet'], ['cookies', 'refresh']);
     account.cookies = 12;
     final resumed = GameState.fromJson(pack, json)..attachWallet(account);
     expect(account.cookies, 12);
     expect(resumed.cookies, 12);
-  });
-
-  test('a legacy save moves its leftover run balance onto the account', () {
-    final legacy = Game.newRun(pack, random: Random(1)).state.toJson()
-      ..remove('sharedWallet')
-      ..['cookies'] = 9;
-    final account = Account(cookies: 4, walletGrants: {'cookies'});
-    final resumed = GameState.fromJson(pack, legacy)..attachWallet(account);
-    expect(account.cookies, 13);
-    expect(resumed.cookies, 13);
-    // Saved again, it is a shared save: nothing to move a second time.
-    final again = GameState.fromJson(pack, resumed.toJson())
-      ..attachWallet(account);
-    expect(account.cookies, 13);
-    expect(again.cookies, 13);
   });
 
   test('refresh tickets can be per-run by the rules switch', () async {
@@ -106,12 +83,6 @@ void main() {
     expect(game.refreshHand(), isTrue);
     expect(account.refreshTokens, 49);
     expect(game.state.toJson()['rerolls'], 0);
-    // Turned off again, an old shared save starts the run's own counter.
-    final back = GameState.fromJson(
-      await perRunRefreshPack(),
-      game.state.toJson(),
-    );
-    expect(back.rerolls, 50);
   });
 
   test('the account round-trips its grants, username and settings', () {

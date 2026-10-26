@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/pack.dart';
-import 'package:d30mode/ui/inventory_screen.dart';
+import 'package:d30mode/ui/commerce_screen.dart';
 import 'package:d30mode/ui/item_views.dart';
 
 /// The checking items' views (project design) render at phone size without
@@ -101,7 +101,7 @@ void main() {
     g.state.addItem(90001);
     g.state.setSwitch('SING_SW', 1);
     g.state.setSwitch('SING_TARGET', 4);
-    await phone(tester, InventoryScreen(game: g));
+    await phone(tester, CommerceScreen(game: g, initialMenu: PackMenu.items));
     await settle(tester);
 
     await tester.tap(find.byKey(const ValueKey('use-item-80011')));
@@ -130,7 +130,7 @@ void main() {
     final g = game(original);
     g.state.addItem(30);
     g.state.addItem(20236);
-    await phone(tester, InventoryScreen(game: g));
+    await phone(tester, CommerceScreen(game: g, initialMenu: PackMenu.items));
     await settle(tester);
     expect(find.byKey(const ValueKey('use-item-20236')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('use-item-30')));

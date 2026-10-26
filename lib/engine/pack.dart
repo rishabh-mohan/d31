@@ -14,12 +14,7 @@ import 'game_date.dart';
 import 'quiz.dart';
 
 export 'admissions.dart'
-    show
-        AdmissionsCatalog,
-        University,
-        Department,
-        collegesFile,
-        overlayColleges;
+    show AdmissionsCatalog, University, Department, overlayColleges;
 
 /// Thin wrapper so hand-edited JSON yields a useful message instead of a cast
 /// error ten frames deep.
@@ -160,7 +155,6 @@ class Rules {
     return v.map((k, val) => MapEntry(k.toString(), val is num ? val : 0));
   }
 
-  int get ticksPerDay => number('day', 'ticksPerDay', 15).toInt();
   num get hpInitial => number('hp', 'initial', 100);
   num get hpMax => number('hp', 'max', 100);
   num get hpMin => number('hp', 'min', 0);
@@ -304,20 +298,17 @@ class GameLocation {
 class EventOption {
   final String text;
   final int? nextNodeId;
-  final int? nextBoxId;
   final Map<String, dynamic>? conditionSet;
 
   EventOption({
     required this.text,
     required this.nextNodeId,
-    required this.nextBoxId,
     required this.conditionSet,
   });
 
   factory EventOption.fromJson(Map<String, dynamic> j) => EventOption(
     text: j['text'] as String? ?? '...',
     nextNodeId: (j['nextNodeId'] as num?)?.toInt(),
-    nextBoxId: (j['nextBoxId'] as num?)?.toInt(),
     conditionSet: (j['conditionSet'] as Map?)?.cast<String, dynamic>(),
   );
 }
@@ -866,11 +857,11 @@ class ContentPack {
   /// them.
   ContentPack withCollegesFrom(ContentPack donor) {
     if (!admissions.isEmpty || donor.admissions.isEmpty) return this;
-    final catalog = collegesFile(donor.sourceFiles);
+    final catalog = donor.sourceFiles['colleges.json'];
     if (catalog == null) return this;
     return ContentPack.fromFiles({
       ...sourceFiles,
-      'colleges.json': donor.sourceFiles[catalog]!,
+      'colleges.json': catalog,
       'colleges_us.json': ?donor.sourceFiles['colleges_us.json'],
     }, collegeSet: collegeSet);
   }
@@ -957,10 +948,6 @@ class ContentPack {
   final Map<int, EventNode> systemNodes;
   final Map<String, int> systemEventBindings;
 
-  /// Nodes grouped by boxId: an `option` node's children are the nodes whose
-  /// boxId is listed in its `options`, which is how KSS links choices.
-  final Map<int, List<EventNode>> nodesByBox;
-
   ContentPack({
     this.presentation = const {},
     required this.manifest,
@@ -984,7 +971,6 @@ class ContentPack {
     required this.studyLevels,
     required this.exerciseLevels,
     required this.partTimeLevels,
-    required this.nodesByBox,
     this.rawLevels = const {},
     this.speakers = const {},
     this.shop = const {},
@@ -1033,13 +1019,6 @@ class ContentPack {
       for (final j in _list('events/events.json', evRaw, 'nodes'))
         (j['id'] as num).toInt(): EventNode.fromJson(j),
     };
-    final nodesByBox = <int, List<EventNode>>{};
-    for (final n in nodes.values) {
-      nodesByBox.putIfAbsent(n.boxId, () => []).add(n);
-    }
-    for (final l in nodesByBox.values) {
-      l.sort((a, b) => a.id.compareTo(b.id));
-    }
 
     final switchDefaults = <String, int>{};
     final switchLabels = <String, String>{};
@@ -1127,7 +1106,6 @@ class ContentPack {
       studyLevels: table(lv, 'study', 'levels'),
       exerciseLevels: table(lv, 'exercise', 'levels'),
       partTimeLevels: table(lv, 'partTimeJob', 'levels'),
-      nodesByBox: nodesByBox,
       rawLevels: lv,
       systemEvents: indexed('events/system.json', 'events', GameEvent.fromJson),
       systemNodes: indexed('events/system.json', 'nodes', EventNode.fromJson),
@@ -1171,10 +1149,9 @@ class ContentPack {
               _obj('quizzes.json', opt('quizzes.json')!),
               'problems',
             ).map(QuizProblem.fromJson).toList(),
-      // colleges.json is the catalog; admissions.json is its older name.
-      admissions: switch (collegesFile(files)) {
+      admissions: switch (files['colleges.json']) {
         null => const AdmissionsCatalog(),
-        final name => AdmissionsCatalog.fromJson(_obj(name, files[name]!)),
+        final text => AdmissionsCatalog.fromJson(_obj('colleges.json', text)),
       },
       shop: indexed('commerce.json', 'offers', (j) => j),
       stationery: indexed('commerce.json', 'stationery', (j) => j),
@@ -1210,7 +1187,6 @@ class ContentPack {
     'badges.json',
     'colleges.json',
     'colleges_us.json',
-    'admissions.json',
     'events/events_female.json',
     'quizzes.json',
   ];

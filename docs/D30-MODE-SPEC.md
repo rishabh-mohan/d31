@@ -1557,8 +1557,7 @@ therefore pays the moment the threshold is reached (after an action, an
 event, or an item) and the host shows `GoalMetDialog`; Monday only reports a
 failure. The final partial week is settled on the rollover into exam day. The
 reward is snapshotted with the modifiers held when the goal is *issued*, so a
-planner bought midweek counts from the next goal, as its text says. Saves
-from before carry `rewardFinal: false` and keep the old payout-time bonus.
+planner bought midweek counts from the next goal, as its text says.
 
 ```dart
 // RECONSTRUCTED

@@ -21,8 +21,7 @@ change the existing one-point-per-level stamina discount.
 
 ## Player identity and text
 
-Runs save `firstName` and `lastName`; legacy saves and new runs default to
-`pack.json.start`. My Info and event variables share this identity. The English
+Runs save `firstName` and `lastName`; new runs default to `pack.json.start`. My Info and event variables share this identity. The English
 catalog still uses these Korean placeholders:
 
 | Token | Substitution |

@@ -433,8 +433,7 @@ carried but not yet read.
 ## Current coverage and remaining gaps
 
 Both campaigns now run their Graduation Exam, the CSAT/admissions UI and ending
-scenes. `colleges.json` holds the recovered university/department catalog
-(packs built before it call the same file `admissions.json`, which still loads);
+scenes. `colleges.json` holds the recovered university/department catalog;
 edit it to change a pack's colleges. `colleges_us.json` is an optional overlay,
 `{"universities": [{"id", "name", "colorCode"}]}`, that renames listed
 universities in the catalog and in `badges.json` when Settings selects US
@@ -497,8 +496,7 @@ Stationery catalogs and four-piece sets live in `commerce.json`. The
 `rules.json.stationery` section controls `drawWeights` by S/A/B/C rank,
 `redrawCookies`, and `combineUpgradeChance` (default 0.05, clamped to 0-1).
 Draws pick a rank before an item. Combination preserves the best of two to four
-input tiers, with that chance of upgrading one tier; S stays S. Legacy
-`combineWeights` tables are ignored. These probability values are provisional,
+input tiers, with that chance of upgrading one tier; S stays S. These probability values are provisional,
 not recovered original odds;
 see [STATIONERY.md](STATIONERY.md). The weekly Thursday award is free.
 
@@ -524,8 +522,7 @@ See `TODO-FOLLOWUP.md` for regeneration and deployment.
 Run saves now keep shopOfferWeek, shopOfferIds and shopRerolls alongside
 shopPurchases. The shop-week boundary is Saturday, based on the campaign start
 weekday. A new period restores the configured offer IDs and zero rerolls.
-Purchase records from that period prevent refresh; legacy saves derive the
-same lock from their existing shopPurchases. Offers omitted by a reroll cannot
+Purchase records from that period prevent refresh. Offers omitted by a reroll cannot
 be purchased by ID. Refresh uses account cookies when shared-wallet rules apply.
 
 Retry Year event switches GATHER_ITEM, GATHER_DOUBLE and GATHER_GINSENG retain

@@ -31,17 +31,6 @@ void main() {
     expect(pack.collegeSet, 'korean');
   });
 
-  test('admissions.json still loads for packs built before colleges.json', () {
-    final files = Map.of(pack.sourceFiles)
-      ..['admissions.json'] = pack.sourceFiles['colleges.json']!
-      ..remove('colleges.json');
-    final old = ContentPack.fromFiles(files);
-    expect(
-      old.admissions.departments.length,
-      pack.admissions.departments.length,
-    );
-  });
-
   test('the US set preserves existing majors while adding its own', () {
     final us = pack.withColleges('us');
     expect(us.collegeSet, 'us');

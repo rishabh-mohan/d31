@@ -136,20 +136,13 @@ Future<void> main() async {
       expect(game.state.stats[goal.rewardSubject]! - before, goal.rewardValue);
     });
 
-    test('snapshotted rewards survive a save; old saves still pay', () {
+    test('snapshotted rewards survive a save', () {
       final game = Game.newRun(pack, random: Random(11));
       final restored = GameState.fromJson(pack, game.state.toJson());
-      expect(restored.weeklyGoal!.rewardFinal, isTrue);
       expect(
         restored.weeklyGoal!.rewardValue,
         game.state.weeklyGoal!.rewardValue,
       );
-      final legacy = game.state.weeklyGoal!.toJson()
-        ..remove('rewardFinal')
-        ..remove('paid');
-      final old = WeeklyGoal.fromJson(legacy)!;
-      expect(old.rewardFinal, isFalse);
-      expect(old.paid, isFalse);
     });
 
     testWidgets('the mid-day popup shows objective, reward and Confirm', (

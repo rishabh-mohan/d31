@@ -428,26 +428,6 @@ void main() {
       game.enroll(game.acceptedPrograms.first.department.id);
       expect(game.ddayStage, DDayStage.ending);
     });
-
-    test('a pre-flow save in progress lands where it stood', () {
-      final game = examDay(pack, each: 50000)..completeExamCards();
-      game.addToDraft(withRate(game, 100, take: 1).single.id);
-      game.submitDraft();
-      final json =
-          jsonDecode(jsonEncode(game.state.toJson())) as Map<String, dynamic>
-            ..remove('examCardsDone')
-            ..remove('scoreAnnounced')
-            ..remove('applicationsCommitted')
-            ..remove('resultsReviewed')
-            ..remove('finalDecided')
-            ..remove('applicationRates')
-            ..remove('draft');
-      final old = Game(pack: pack, state: GameState.fromJson(pack, json));
-      expect(old.state.applicationsCommitted, isTrue);
-      expect(old.examCardsComplete, isTrue);
-      expect(old.applicationResults.single.rate, isNonNegative);
-      expect(old.submitDraft(), hasLength(1));
-    });
   });
 
   group('catalog', () {
@@ -581,10 +561,6 @@ void main() {
         expect(account.universityEnrollees(uni), 3);
         expect(account.majorEnrollments(department), 3);
         expect(account.majorEnrollments(999999), 0);
-        expect(
-          Account.countByDepartment(await RecordStore.list())[department],
-          3,
-        );
         // Round-trips with the account.
         final back = Account.fromJson(
           jsonDecode(jsonEncode(account.toJson())) as Map<String, dynamic>,

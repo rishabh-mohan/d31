@@ -370,11 +370,9 @@ class TraitEngine {
       _abilityFactor(state, 'itemHpFactor', item);
   void applyMovement(GameState state) {
     final tick = state.date.asInt;
-    final legacy = state.walkRolledAt == tick && state.abilityUses.isEmpty;
     for (final a in abilities(state, 'moveHp')) {
       final key = '${a.source}:${a.index}:moveHp';
-      if (a.data['oncePerTick'] != false &&
-          (legacy || state.abilityUses[key] == tick)) {
+      if (a.data['oncePerTick'] != false && state.abilityUses[key] == tick) {
         continue;
       }
       state.abilityUses[key] = tick;
@@ -382,7 +380,6 @@ class TraitEngine {
         state.addHp(a.data['value'] as num? ?? 0);
       }
     }
-    state.walkRolledAt = tick; // Old saves retain their movement-proc guard.
   }
 
   List<StudyBonus> studyBonuses(GameState state) {
