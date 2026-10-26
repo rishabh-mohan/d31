@@ -454,6 +454,129 @@ def _rule_meta(t: str, ctx: dict) -> list:
     return out
 
 
+# --------------------------------------------------------------------------
+# Hand-authored effects, per story, for items whose effectText cannot say
+# what the item does. Each entry REPLACES the parsed effects; `note` is
+# copied to the pack as `effectNote` so the evidence travels with the data.
+# Evidence and provisional values are listed in docs/EFFECTS-REFERENCE.md
+# ("Item effects, 2026-10-25"). Everything here is plain pack data: the
+# engine has no branch on these item IDs.
+# --------------------------------------------------------------------------
+
+# Read-only "is the next sing-off's opponent already drawn?" The target is
+# drawn by SET_SING_TARGET when SING_SW becomes 1 (events 31, 221) and read by
+# FUNC_SING_TARGET at the results (220) and the champion match (227, which
+# keeps the last target once SING_POINT >= 15). Character 67 always wins.
+_SING_DRAWN = {"any": [
+    {"eq": [{"field": "characterId"}, 67]},
+    {"eq": [{"switch": "SING_SW"}, 1]},
+    {"eq": [{"switch": "SING_SW"}, 2]},
+    {"all": [{"eq": [{"switch": "SING_SW"}, 3]},
+             {"gte": [{"switch": "SING_POINT"}, 15]}]},
+]}
+
+OVERLAYS: dict[int, dict[int, dict]] = {
+    16: {
+        # Bizarre Author's Note. The native itemEffectWebtoonGuideBook reads
+        # DRAW_* against TARGET_DRAW_* and gives the note back (addItem
+        # 20018), so it is kept. This engine's drawing model does not keep
+        # DRAW_* yet, so the view shows the student's abilities (study stats
+        # and levels) and adds the comic progress rows once a target is set.
+        20018: {
+            "effects": [{
+                "type": "ui", "action": "checkAbilities", "keepItem": True,
+                "progress": [
+                    {"label": "Drawings", "value": "DRAW_COUNT",
+                     "target": "TARGET_DRAW_COUNT"},
+                    {"label": "Korean", "value": "DRAW_KOREAN",
+                     "target": "TARGET_DRAW_KOREAN"},
+                    {"label": "Maths", "value": "DRAW_MATH",
+                     "target": "TARGET_DRAW_MATH"},
+                    {"label": "English", "value": "DRAW_ENGLISH",
+                     "target": "TARGET_DRAW_ENGLISH"},
+                    {"label": "Inquiry", "value": "DRAW_TAMGOO",
+                     "target": "TARGET_DRAW_TAMGOO"},
+                ],
+            }],
+            "note": "Kept on use: native itemEffectWebtoonGuideBook re-adds "
+                    "20018. View layout is this project's design.",
+        },
+    },
+    20: {
+        # Recipe. Native itemEffectRecipe gives the recipe back (addItem
+        # 80011), so it is a kept reference. The three potions and their
+        # ingredients are the Foodcraft graph's own (event 120, nodes
+        # 120005/120019/120033), each for the chef's 1000 Gold fee.
+        80011: {
+            "effects": [{
+                "type": "ui", "action": "recipes", "keepItem": True,
+                "fee": 1000,
+                "where": "Bring the ingredients to the Mountain Chef "
+                         "(Foodcraft).",
+                "recipes": [
+                    {"output": 80012, "inputs": [80003, 80004, 80007]},
+                    {"output": 80013, "inputs": [80005, 80006, 80007]},
+                    {"output": 80014, "inputs": [80003, 80004, 80005]},
+                ],
+            }],
+            "note": "Kept on use: native itemEffectRecipe re-adds 80011. "
+                    "Recipes from Foodcraft (event 120). View layout is "
+                    "this project's design.",
+        },
+        # Strawberry Milk. The native itemEffectStrawberryMilk applies the
+        # constant 50 the way Chocolate Milk (Stamina +50) does; the effect
+        # text hides it ("???"). Event 210 branches on still holding it.
+        80041: {
+            "effects": [{"type": "hp", "value": 50, "provisional": True}],
+            "note": "PROVISIONAL Stamina +50: native handler constant 50, "
+                    "sign/target not fully decoded.",
+        },
+        # Bug Spray and Sturdy Ladder are read by their event graphs
+        # (39/129-132 and 109-113 branch on FUNC_ITEM_COUNT), like the
+        # other prevention items.
+        90002: {
+            "effects": [{"type": "preventEvent", "label": "cockroach"}],
+            "note": "Held: the cockroach events branch on it.",
+        },
+        90005: {
+            "effects": [{"type": "preventEvent",
+                         "label": "falling from the bunk bed"}],
+            "note": "Held: the bunk-bed events branch on it.",
+        },
+        # Scouter: a kept checking tool. Same rule as the sing-off and the
+        # IS_SING_WIN choice label (FUNC_SING_TARGET); only reads state.
+        90021: {
+            "effects": [{
+                "type": "report", "keepItem": True,
+                "text": {"if": [
+                    {"eq": [{"switch": "SING_WIN"}, 1]},
+                    "Scouter: there is no sing-off left to forecast.",
+                    {"if": [
+                        _SING_DRAWN,
+                        {"if": [
+                            {"predicate": "FUNC_SING_TARGET"},
+                            "Scouter: with your practice so far, you will "
+                            "win the next sing-off.",
+                            "Scouter: with your practice so far, you will "
+                            "lose the next sing-off.",
+                        ]},
+                        "Scouter: no sing-off opponent has been decided "
+                        "yet.",
+                    ]},
+                ]},
+            }],
+            "note": "Kept checking tool; reads FUNC_SING_TARGET, draws "
+                    "nothing.",
+        },
+    },
+}
+
+
+def overlay(story: int, item_id: int) -> dict | None:
+    """The hand-authored effects for this story's item, or None."""
+    return OVERLAYS.get(story, {}).get(item_id)
+
+
 RULES = (
     _rule_study_efficiency,
     _rule_exercise_efficiency,

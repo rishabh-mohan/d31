@@ -97,3 +97,80 @@ not prove a graph-driven passive is absent.
 Stubborn/I will not falter!/Energizer rates remain configurable 30%/70%/5%
 prototype defaults: the latest local pseudocode/catalog review did not recover
 attributable original arithmetic, and the user has no published odds source.
+
+
+## Item effects — 2026-10-25
+
+Scope: the items TODO I02/78 left with empty, no-op or unread effects in
+kss16 and kss20. Each one was checked against the event graphs the packs
+ship (global 1.27.4), the Korean 1.61.0 story-16 graph and the Korean native
+pseudocode before anything was added. Hand-authored effects live in
+`OVERLAYS` (`tools/item_effects.py`) with an `effectNote`; `build_pack.py`
+also writes `graphEvents` (events whose conditions test the item) and, on
+`preventEvent`, the gated `events`. The engine has no branch on these IDs.
+Tests: `test/item_effects_test.dart`, `test/item_views_test.dart`.
+
+**Consumption evidence.** Native checking handlers give their own item back
+through the same `addItem` (`sub_ae3640`) that Coffee Machine uses to add
+coffee: `itemCheckExamPaper` (80042), `itemEffectRecipe` (80011),
+`itemEffectWebtoonGuideBook` (20018), `itemEffectHandLetter` (20218),
+`itemEffectVase` (20236). Those are kept (`keepItem`). `itemEffectMockTest`
+(30) does not re-add its item, so the Mock Exam Paper is spent.
+
+**Use rule.** An item is offered for Use/Check only when it has an on-use
+effect (`GameItem.canUse`); `Game.useItemWith` refuses the rest. This applies
+the "Unknown item effects" rule above. Side effect: story 16's Focus Potion
+(20022) and Modified Potion (20029) carry only `duration` passives, which
+the loop does not enforce, so they are no longer used up for nothing; they
+stay in the bag until timed item effects exist.
+
+### Prevention items — graph-handled
+
+Every one is a held `normal` item that the event graph already reads with
+`FUNC_ITEM_COUNT` in an `ifElse`; no graph removes it, so it is not consumed.
+A second engine reader would duplicate the graph. Tests play each listed
+event with and without the item.
+
+| Item | Events | Without the item | Status |
+|---|---|---|---|
+| 30003 Low Blood Pressure Prevention Band | 157–161 Orthostatic Hypotension | Stamina −30 | graph-handled |
+| 30004 Park Stake | 99 Park Under Construction | Park locked until exams | graph-handled |
+| 30008 Mining Rights | 60 Illegal Mining | 10000 Gold fine | graph-handled |
+| 30010 Anti-slip shoes | 149–151 Turd | Stamina −30 | graph-handled |
+| 30012 The Art of Dishwashing | 154–156 Smash! | 5000 Gold | graph-handled |
+| 90020 Seat Ticket | 192 My Seat! | Stamina −10 | graph-handled |
+| 90002 Bug Spray | 39, 129–132 G (cockroach) | All stats −50 (with it: Stamina +100) | graph-handled; now typed `preventEvent` |
+| 90005 Sturdy Ladder | 109–113 Crash! | Stamina −20 | graph-handled; now typed `preventEvent` |
+
+### Checking items — implemented
+
+| Item | Behavior | Consumed? | Evidence / provisional |
+|---|---|---|---|
+| 30 Mock Exam Paper (both) | Predicted Grades view: per-subject stat, standard score and grade, overall score/top %/grade, from `Game.forecastCsat` (the CSAT's own arithmetic, nothing recorded, no draws) | Yes | No self re-add in native. Scores use the fitted `rules.exam.curve`, as the real CSAT does. |
+| 20018 Bizarre Author's Note (16) | Abilities view: study stats, total, Study/Exercise/Part-Time levels; comic `DRAW_*`/`TARGET_DRAW_*` rows appear once a target is non-zero | No | Native reads the webtoon counters and re-adds 20018. This engine's drawing model (`SET_DRAW_VALUE`/`DO_DRAW` → `drawValue`) never sets them, so the stats are a stand-in. |
+| 80011 Recipe (20) — I02 | Recipes view: Red (80012) = Mushroom+Root+Herb, Blue (80013) = Sap+Flower+Herb, Green (80014) = Mushroom+Root+Sap; held ingredients ticked, "Ready" when all held; 1000 Gold fee; made at the Mountain Chef's Foodcraft | No | Recipes are Foodcraft's (event 120) and a test checks them against the graph. Native re-adds 80011. Character 66's Weird Cookie is not a potion and is not listed. |
+| 90021 Scouter (20) | Check: "you will win/lose the next sing-off" via the pack predicate `FUNC_SING_TARGET` (SING_COUNT ≥ SING_TARGET, or character 67); "no opponent decided yet" until `SET_SING_TARGET` has drawn (SING_SW 1/2, or 3 with SING_POINT ≥ 15 for the champion match); nothing left after SING_WIN | No (held) | Read-only expression; previews draw nothing. No graph grants the Scouter. |
+
+The three views are **this project's design** (no original capture): the
+acquisition popup's frame and the score card's table. Code: `lib/ui/item_views.dart`.
+
+### Other items
+
+| Item | Status | Evidence |
+|---|---|---|
+| 80041 Strawberry Milk (20) | **Provisional** Stamina +50 on use; graph-handled story | Native `itemEffectStrawberryMilk` applies 50 through the op Chocolate Milk (+50) uses, on a different receiver; sign/target not fully decoded. Event 210 branches on still holding it; drinking it from the hand-over popup takes the "You drank that...?" path (−50 there). Edit the effect's `value` to change it. |
+| 90001 Key (20) | graph-handled | Bought in 21 (Visitor); 22 New Location! needs it in the Reflection Room and unlocks the Secret Mountain. Not consumed. |
+| 90003 Isekai Lord Vol. 9 (20) | graph-handled | Granted in 21; 52 Reading branches on it. |
+| 90004 Medicine for Mother (20) | graph-handled | Granted and handed over inside 106 Hi. |
+| 90018 Student Recommendation (Standard) (20) | data only | No graph grants it and no Standard Retry department requires it (catalog has no condition). Elite 90019 is granted by 66 and required by 54001/54002. |
+| 90019 Student Recommendation (Elite) (20) | graph-handled / admissions | Unchanged. |
+| 30011 Art of Bargaining (16) | graph-handled | Fishy Vendor 18/207/208: 4000 Gold instead of 8000. |
+| 30001 Museum Ticket (16) | graph-handled (indirect) | 29 sells it and adds the gallery task that gates 30; Korean 1.61.0 also checks the ticket, equivalent since nothing removes it. |
+| 30002 Bouquet (16) | token | Granted by 89; nothing reads it in either graph. |
+| 20202–20206, 20212 silver…Diamond, Guri (16) | not obtainable | Consumers (256 Motherlode v2, 258 Mineral Appraisal, 260 Upgrade Cookie) exist only in the Korean 1.61.0 graph, not imported. Not usable. |
+| 20218 Handwritten Letter (16) | not obtainable | Granted by Korean-only 307 and read by 308/309 (`FUNC_ITEM_USE_COUNT` ≥ 1 while still held: native `itemEffectHandLetter` keeps it). Not usable here. |
+| 20215 Butter Cookie ("Temporary"), 20236 Vase (16) | not obtainable | No local graph grants either. Native `itemEffectVase` keeps the vase and resets `EVENT_10020182`, an event in no local catalog. Not usable here. |
+| 30013/30014 Minari's items, 30202/30203/30206 tokens, 30209 Second Summary Notes, 30210 Friend's glasses (16) | not obtainable | Korean-only events (203–205, 256/258, 374/375, 379). |
+
+Importing the Korean-only story-16 events is content-port work and was not
+attempted. A test asserts the shipped graph grants none of those items.

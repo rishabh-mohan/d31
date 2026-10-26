@@ -58,6 +58,10 @@ class EffectEngine {
   /// Kit's reading. The UI drains these after using an item.
   final List<String> reports = [];
 
+  /// Item interfaces a used item asked to open (`ui` effects: predicted
+  /// grades, abilities, recipes). The UI drains these with [reports].
+  final List<Map<String, dynamic>> views = [];
+
   EffectEngine({
     ConditionEvaluator? conditions,
     Map<String, ChangerHandler>? extra,
@@ -205,7 +209,12 @@ class EffectEngine {
         if (name != null) state.addSwitch(name, amount('value').toInt());
       case 'report':
         final name = e['switch'] as String?;
-        if (name != null) {
+        // A pack-authored, read-only expression (the Scouter's forecast).
+        // It must not draw: previews and checks never consume rolls.
+        if (e['text'] != null) {
+          final text = '${MechanicRuntime(state).value(e['text']) ?? ''}';
+          if (text.isNotEmpty) reports.add(text);
+        } else if (name != null) {
           reports.add(
             '${e['label'] ?? name}: ${state.switchValue(name)}'
             '${e['suffix'] ?? ''}',
@@ -223,7 +232,12 @@ class EffectEngine {
             state.removeTrait(id);
           }
         }
+      case 'ui':
+        views.add(e);
       // Passive modifiers: read via passiveSum while the item is held.
+      // `preventEvent` items are read by the imported event graphs, which
+      // branch on FUNC_ITEM_COUNT for the item (the effect's `events` list
+      // names them); there is nothing to apply here.
       case 'studyEfficiency':
       case 'exerciseEfficiency':
       case 'partTimeEarnings':
@@ -233,7 +247,6 @@ class EffectEngine {
       case 'acceptanceRate':
       case 'surviveExhaustion':
       case 'preventEvent':
-      case 'ui':
         break;
       default:
         break;

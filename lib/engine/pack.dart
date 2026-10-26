@@ -498,6 +498,48 @@ class GameItem {
 
   bool get isConsumable => kind == 'consume';
 
+  /// Effect types `EffectEngine.applyItemEffect` acts on when the item is
+  /// used. Passive types (`studyEfficiency`, `preventEvent`, ...) are read
+  /// while held, so they do not make an item usable on their own.
+  static const activeEffectTypes = {
+    'stat',
+    'hp',
+    'hpMultiply',
+    'hpSet',
+    'money',
+    'exerciseExp',
+    'partTimeExp',
+    'readCount',
+    'acquireItem',
+    'acquireItemRandom',
+    'unlockLocation',
+    'switchAdd',
+    'report',
+    'removeTraits',
+    'cureTrait',
+    'ui',
+  };
+
+  /// A checking tool (Promotion Exam Kit, Recipe, Scouter) is read, not
+  /// used up.
+  bool get keepsOnUse => effects.any((e) => e['keepItem'] == true);
+
+  /// Whether Use/Check does anything. An item with no supported active
+  /// effect is not offered for use, so it is never consumed for nothing
+  /// (docs/EFFECTS-REFERENCE.md, "Unknown item effects"). A normal item is
+  /// usable only as a kept checking tool.
+  bool get canUse =>
+      (isConsumable || keepsOnUse) &&
+      effects.any(
+        (e) =>
+            e['trigger'] == null &&
+            activeEffectTypes.contains(e['type']) &&
+            (e['type'] != 'ui' || uiActions.contains(e['action'])),
+      );
+
+  /// The `ui` views this build can open (lib/ui/item_views.dart).
+  static const uiActions = {'predictedGrades', 'checkAbilities', 'recipes'};
+
   factory GameItem.fromJson(Map<String, dynamic> j) => GameItem(
     id: (j['id'] as num).toInt(),
     name: j['name'] as String? ?? 'Item',
