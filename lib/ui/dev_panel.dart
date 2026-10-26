@@ -25,6 +25,7 @@ import '../engine/game_date.dart';
 import '../engine/game.dart';
 import '../engine/pack.dart';
 import '../engine/save_store.dart';
+import '../engine/setup.dart';
 import '../engine/showcase.dart';
 import '../engine/state.dart';
 import 'game_screen.dart';
@@ -760,6 +761,22 @@ class _TraitsTabState extends State<_TraitsTab> {
                 ? 'Effects on for this session.'
                 : 'Effects off for this session.';
           }),
+        ),
+        SwitchListTile(
+          key: const ValueKey('dev-setup-ownership'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          value:
+              SetupOwnership.debugRequireOwnership ??
+              AccountStore.catalog.setupRequiresOwnership,
+          title: const Text('New-game setup requires ownership'),
+          subtitle: const Text(
+            'On: setup lists only unlocked badges and owned traits. '
+            'Off: every badge and eligible trait. This session only.',
+            style: TextStyle(fontSize: 11),
+          ),
+          onChanged: (v) =>
+              widget.onChange(() => SetupOwnership.debugRequireOwnership = v),
         ),
         const Divider(height: 24),
         _header(context, 'What they are doing right now'),

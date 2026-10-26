@@ -35,6 +35,43 @@ Widget setupPanel(Widget child, {Color color = const Color(0xFFFFEEDB)}) =>
       child: child,
     );
 
+/// What a badge or trait step shows when the account owns none: a message,
+/// with Next still available, so setup is never a dead end.
+class SetupEmptyNote extends StatelessWidget {
+  final String title;
+  final String body;
+  const SetupEmptyNote({super.key, required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 44,
+            color: setupInk.withValues(alpha: .55),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20, color: setupInk),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: Colors.brown),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 /// Select Character (2 / 5), second half: the protagonist's gender, for packs
 /// that turn `rules.setup.genderSelection` on (TODO 65/66). The character's
 /// own gender is recommended and its card is the bright one; tapping a card
@@ -68,9 +105,15 @@ class GenderSelectPage extends StatelessWidget {
             style: const TextStyle(fontSize: 16, color: Color(0xFF4A2E12)),
             children: [
               const TextSpan(text: 'The selected character’s gender is '),
-              TextSpan(text: word, style: TextStyle(color: colour)),
+              TextSpan(
+                text: word,
+                style: TextStyle(color: colour),
+              ),
               const TextSpan(text: '.\nWe recommend you to select '),
-              TextSpan(text: word, style: TextStyle(color: colour)),
+              TextSpan(
+                text: word,
+                style: TextStyle(color: colour),
+              ),
               const TextSpan(text: '!'),
             ],
           ),
@@ -335,17 +378,49 @@ class SetupBadgeList extends StatelessWidget {
   final Set<int> selected;
   final ValueChanged<int> onToggle;
   final String Function(Map<String, dynamic>) describe;
+
+  /// Only owned badges are listed; the original's captures show no locked
+  /// entries in this list.
+  final SetupOwnership ownership;
   const SetupBadgeList({
     super.key,
     required this.pack,
     required this.selected,
     required this.onToggle,
     required this.describe,
+    this.ownership = SetupOwnership.unrestricted,
   });
   @override
   Widget build(BuildContext context) {
-    final badges = pack.badges.values.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final badges = [
+      for (final b in pack.badges.values)
+        if (ownership.ownsBadge(b.universityId)) b,
+    ]..sort((a, b) => a.name.compareTo(b.name));
+    if (badges.isEmpty) {
+      return Column(
+        children: [
+          setupTitle('Select University Badges'),
+          const Text('(up to 7 Badges)', style: TextStyle(fontSize: 17)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: UniversityBadgeSlots(
+              pack: pack,
+              ids: const [],
+              onRemove: onToggle,
+            ),
+          ),
+          const Expanded(
+            child: SetupEmptyNote(
+              key: ValueKey('setup-badges-empty'),
+              title: 'No university badges yet',
+              body:
+                  'Enroll in a university at the end of a run to unlock its '
+                  'badge. You can start without badges.',
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         setupTitle('Select University Badges'),
@@ -435,14 +510,15 @@ class SetupTraitList extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    final traits =
-        pack.traits.values.where((t) => RunSetup.eligible(t, pack)).toList()
-          ..sort((a, b) {
-            final rank = 'SABCDEF'
-                .indexOf(a.rank)
-                .compareTo('SABCDEF'.indexOf(b.rank));
-            return rank == 0 ? a.name.compareTo(b.name) : rank;
-          });
+    // Owned, setup-eligible traits only, like the original's inventory list
+    // with its ×n counts; no locked cards are shown.
+    final traits = draft.traitChoices(pack)
+      ..sort((a, b) {
+        final rank = 'SABCDEF'
+            .indexOf(a.rank)
+            .compareTo('SABCDEF'.indexOf(b.rank));
+        return rank == 0 ? a.name.compareTo(b.name) : rank;
+      });
     final selected = draft.traits.toList();
     return Column(
       children: [
@@ -512,110 +588,121 @@ class SetupTraitList extends StatelessWidget {
             Column(
               children: [
                 setupTitle('Traits List', size: 23),
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(6),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisExtent: 170,
-                          mainAxisSpacing: 18,
-                          crossAxisSpacing: 16,
-                        ),
-                    itemCount: traits.length,
-                    itemBuilder: (_, i) {
-                      final t = traits[i];
-                      final chosen = draft.traits.contains(t.id);
-                      final tier = t.rank == 'S'
-                          ? Colors.black87
-                          : t.rank == 'A'
-                          ? const Color(0xFFBDB44D)
-                          : const Color(0xFF9B9B9B);
-                      return PressFeedback(
-                        child: InkWell(
-                          key: ValueKey('setup-trait-${t.id}'),
-                          onTap: () => onToggle(t.id),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: BoxDecoration(
-                                    color: D30Colors.panel,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: setupInk,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        color: tier,
-                                        padding: const EdgeInsets.all(4),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              ' ${t.rank}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            const Text(
-                                              '×1',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                if (traits.isEmpty)
+                  const Expanded(
+                    child: SetupEmptyNote(
+                      key: ValueKey('setup-traits-empty'),
+                      title: 'No traits yet',
+                      body:
+                          'Get traits from trait packs on the Traits page. '
+                          'You can start without traits.',
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(6),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisExtent: 170,
+                            mainAxisSpacing: 18,
+                            crossAxisSpacing: 16,
+                          ),
+                      itemCount: traits.length,
+                      itemBuilder: (_, i) {
+                        final t = traits[i];
+                        final chosen = draft.traits.contains(t.id);
+                        final tier = t.rank == 'S'
+                            ? Colors.black87
+                            : t.rank == 'A'
+                            ? const Color(0xFFBDB44D)
+                            : const Color(0xFF9B9B9B);
+                        return PressFeedback(
+                          child: InkWell(
+                            key: ValueKey('setup-trait-${t.id}'),
+                            onTap: () => onToggle(t.id),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    clipBehavior: Clip.antiAlias,
+                                    decoration: BoxDecoration(
+                                      color: D30Colors.panel,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: setupInk,
+                                        width: 2,
                                       ),
-                                      Expanded(
-                                        child: SingleChildScrollView(
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(8),
-                                            child: Column(
-                                              children: [
-                                                Text(
-                                                  t.name,
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                  ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          color: tier,
+                                          padding: const EdgeInsets.all(4),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                ' ${t.rank}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
                                                 ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  t.description,
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.brown,
-                                                  ),
+                                              ),
+                                              Text(
+                                                '×${draft.ownership.traitCount(t.id)}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
                                                 ),
-                                              ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: SingleChildScrollView(
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(8),
+                                              child: Column(
+                                                children: [
+                                                  Text(
+                                                    t.name,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    t.description,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.brown,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Icon(
-                                chosen
-                                    ? Icons.check_box
-                                    : Icons.check_box_outline_blank,
-                                color: setupOrange,
-                              ),
-                            ],
+                                Icon(
+                                  chosen
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  color: setupOrange,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           ),

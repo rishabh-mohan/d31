@@ -4,9 +4,61 @@ Current follow-up (25 October 2026): Home Start opens Select Game before setup.
 Both campaigns use shared account cookies and refresh tokens with one-time
 starting grants; new runs do not refill an existing shared balance. Each new
 run still starts fresh stationery ownership/equipment, while resuming a run
-preserves its stationery. Prototype unlocked characters/badges/eligible traits
-remain intentional. See [CURRENT-STATE.md](CURRENT-STATE.md); dated setup notes
-below describe the implementation stage when written.
+preserves its stationery. Characters stay all unlocked; badges and traits are
+now account-owned (see the ownership checkpoint below, which supersedes the
+earlier "all badges/eligible traits unlocked" prototype rule). See
+[CURRENT-STATE.md](CURRENT-STATE.md); dated setup notes below describe the
+implementation stage when written.
+
+## Ownership checkpoint — 2026-10-25 (branch feat/setup)
+
+User request: "Change the overall college and trait unlock so that it now uses
+the player's traits and unlocked colleges instead of giving everything in the
+selection screen." This replaces the unlock-all prototype for badges and traits.
+Characters are unchanged (all story characters offered).
+
+- **Badges (3/5)** list only universities the account has enrolled in at least
+  once (`Account.enrollments[id] > 0`, the same first-enrollment unlock that
+  completes the university achievement and pays two cookies, M05).
+- **Traits (4/5)** list only traits the account holds copies of
+  (`Account.traits`, from packs and combining, M08), still filtered by setup
+  eligibility (`gachable` and global or matching-campaign story). Each card's
+  ×n header shows the copies held.
+- Limits are unchanged: seven badges, five traits, distinct IDs.
+- **Locked entries are hidden**, not greyed. The original's captures (UIR-03/04
+  badges, UIR-05/06 traits with ×1 counts) show only selectable rows and no lock
+  state, so the lists follow that.
+- **Empty states** keep setup passable: "No university badges yet" (enroll to
+  unlock) and "No traits yet" (get them from trait packs), with Next enabled;
+  a run can start with no badges or traits.
+- **No consumption.** Starting a run with a trait does not spend a copy. The
+  original's rule is unrecovered (open question; see "Remaining verification").
+- **Rule flag.** `content/kss/account-rules.json` `setupRequiresOwnership`
+  (default `true`, also when the catalog is missing) is exported into the
+  account catalog's `rewards` and read as `AccountCatalog.setupRequiresOwnership`.
+  Off restores the unlock-all lists. The dev panel's Traits tab has a
+  session-only "New-game setup requires ownership" switch
+  (`SetupOwnership.debugRequireOwnership`).
+- **Engine.** `SetupOwnership` (lib/engine/setup.dart) is built by
+  `SetupOwnership.fromAccount`; `RunSetup.ownership` defaults to unrestricted,
+  so code that builds a draft directly (tests, tools) keeps the old behavior,
+  and Home supplies the account's via `RunSetup.useOwnership` each time setup
+  opens. `RunSetup.commit` rejects unowned badges/traits like any other invalid
+  pick.
+- **Remembered picks.** A draft kept between setups (or switched to another
+  campaign) silently drops badges/traits the account no longer covers when
+  ownership is applied, so Start Game is never blocked. Saved runs are not
+  touched: loading reads `badgeIds`/`initialTraitIds` from the save and never
+  consults ownership.
+- Tests: `test/setup_ownership_test.dart` (rule parsing, gating on/off, counts,
+  enrollment unlock, commit validation and no consumption, limits, draft
+  pruning, old-run loading, and 393×873 renders of populated and empty badge
+  and trait steps).
+
+Open questions: whether the original consumes a trait copy at Start Game;
+whether it lists unowned badges/traits in another filter (the character step
+has an Owned filter, the badge/trait captures show none); whether badge
+unlocks need anything beyond a first enrollment.
 
 ## Implementation checkpoint — 2026-10-23
 
@@ -195,7 +247,8 @@ Last Name fields, and large orange Start Game button.
 
 ## Remaining verification before implementing this flow
 
-Confirm Global difficulty modifiers/entitlements, character/badge ownership gates,
+Confirm Global difficulty modifiers/entitlements, character/badge ownership gates
+(badge/trait gating is implemented provisionally, see the 2026-10-25 checkpoint),
 trait duplicate/compatibility and consumption rules, name validation, exact badge
 effect scaling, account/save-slot persistence, and preset scoping. Screenshots
 establish the UI requirements; sibling-build pseudocode establishes persistence
