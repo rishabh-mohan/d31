@@ -174,7 +174,16 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (_) => SetupScreen(
           pack: pack,
-          draft: _setup ??= RunSetup(pack),
+          // Badges and traits come from the account (setupRequiresOwnership);
+          // a kept draft drops picks the account no longer covers.
+          draft: (_setup ??= RunSetup(pack))
+            ..useOwnership(
+              SetupOwnership.fromAccount(
+                AccountStore.current,
+                AccountStore.catalog,
+              ),
+              pack,
+            ),
           campaigns: [
             for (final (campaign, _) in _campaigns.values)
               campaign.withColleges(colleges),

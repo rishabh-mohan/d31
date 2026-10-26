@@ -67,7 +67,9 @@ specification's evidence labels before treating navigation as confirmed.
 - Keep event questions and authored choice headings readable. Keep the last NPC
   portrait when the player speaks, as the Karaoke capture illustrates.
 - Zero stamina on the final player action does not show exhaustion dialogue.
-- All setup-eligible collections are unlocked for this prototype; screenshot
+- Characters stay unlocked for this prototype; since 2026-10-25 badges and
+  traits are limited to the account's enrolled schools and owned traits, with
+  unowned entries hidden (START-GAME-INITIALIZATION.md). Screenshot
   ownership/cookies are examples. Event-only traits remain excluded from setup.
 - User clarified that the stationery draw rolls until stopped. One still does
   not establish speed or odds. The quick stamina-item interaction is documented
