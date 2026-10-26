@@ -110,10 +110,12 @@ class EffectEngine {
     void call(String name, List<dynamic> values) =>
         _dispatch(name, values, state, depth + 1);
     if (steps is List) {
-      MechanicRuntime(
-        state,
-        args,
-      ).execute(steps, call: call, pulse: pulsedSwitches.add);
+      MechanicRuntime(state, args).execute(
+        steps,
+        call: call,
+        pulse: pulsedSwitches.add,
+        report: reports.add,
+      );
     } else {
       final handler = handlers[code];
       if (handler == null) {
@@ -123,16 +125,54 @@ class EffectEngine {
       handler(state, args, this);
     }
     final traits = TraitEngine(pack: state.pack);
-    for (final ability in traits.abilities(state, 'callback')) {
+    // Collected first: an ability's steps may grant or remove traits.
+    for (final ability in traits.abilities(state, 'callback').toList()) {
       if (ability.data['callback'] == code &&
           traits.abilityRoll(state, ability)) {
         MechanicRuntime(state, args).execute(
           ability.data['steps'] as List? ?? const [],
           call: call,
           pulse: pulsedSwitches.add,
+          report: reports.add,
         );
       }
     }
+  }
+
+  /// Runs the callback a pack binds to an engine moment in its `hooks`
+  /// section (`bookCompleted`, `sleep`, `actionCompleted`, ...). Trait and
+  /// character `callback` abilities attached to that callback run with it.
+  /// A pack that binds nothing makes this a no-op.
+  void runHook(GameState state, String hook, [List<dynamic> args = const []]) {
+    final callback = state.pack.mechanics.section('hooks')[hook];
+    if (callback is! String) return;
+    applyChanger({'funcCode': callback, 'args': args}, state);
+  }
+
+  /// Gains a trait the way content hands one over (ACQUIRE_TRAIT and its
+  /// random form). Unlike a setup or dev-panel grant this is an *obtained*
+  /// trait, so a held `blockNegativeTrait` ability (Salt and Light) can turn
+  /// a negative one away -- and is used up doing so -- and the pack's
+  /// `traitAcquired` hook hears about it with `[id, type]`.
+  bool acquireTrait(GameState state, int id) {
+    final trait = state.pack.traits[id];
+    if (trait == null || state.traits.contains(id)) return false;
+    if (trait.type == 'bad') {
+      final guard = TraitEngine(pack: state.pack).negativeTraitGuard(state);
+      if (guard != null) {
+        if (guard.data['consume'] != false && guard.source > 0) {
+          state.removeTrait(guard.source);
+        }
+        final text = '${guard.name} blocked ${trait.name}.';
+        state.note(text, 'effect');
+        reports.add(text);
+        return false;
+      }
+    }
+    if (!state.grantTrait(id)) return false;
+    state.note('Gained trait: ${trait.name}.', 'effect');
+    runHook(state, 'traitAcquired', [id, trait.type]);
+    return true;
   }
 
   /// Applies one item's `effects` list. Consumables apply on use; normal
@@ -375,12 +415,9 @@ class EffectEngine {
     // --- traits ---
     'ACQUIRE_TRAIT': (s, a, e) {
       final id = _int(a, 0);
-      // grantTrait starts a temporary trait's clock and refuses traits
-      // belonging to another story.
-      if (id != null && s.grantTrait(id)) {
-        final trait = s.pack.traits[id];
-        if (trait != null) s.note('Gained trait: ${trait.name}.', 'effect');
-      }
+      // grantTrait (inside acquireTrait) starts a temporary trait's clock
+      // and refuses traits belonging to another story.
+      if (id != null) e.acquireTrait(s, id);
     },
     // One trait from the list that the player does not hold yet (Hyunho's
     // robots, the Gifted draws).
@@ -391,10 +428,7 @@ class EffectEngine {
           .where((id) => !s.traits.contains(id) && s.pack.traits[id] != null)
           .toList();
       if (pool.isEmpty) return;
-      final id = pool[s.random.nextInt(pool.length)];
-      if (s.grantTrait(id)) {
-        s.note('Gained trait: ${s.pack.traits[id]!.name}.', 'effect');
-      }
+      e.acquireTrait(s, pool[s.random.nextInt(pool.length)]);
     },
     'REMOVE_TRAIT': (s, a, e) {
       final id = _int(a, 0);

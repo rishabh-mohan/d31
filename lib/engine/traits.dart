@@ -177,7 +177,47 @@ class TraitEngine {
         total += (e['cost'] as num?) ?? 0;
       }
     }
+    // Pack-owned surcharges for traits that ship no effectList (Sunstroke
+    // "Stamina Cost +5"). Optional `actionType` narrows one to a block kind.
+    for (final a in abilities(state, 'hpCost')) {
+      final want = a.data['actionType'];
+      if (want is String && want != actionType) continue;
+      if (!_roll(state, a)) continue;
+      total += a.data['value'] as num;
+    }
     return total;
+  }
+
+  /// A fixed Store price that replaces the listed one when it is at most
+  /// `maxPrice` ("Scrooge: items of 3000 Gold or below cost 100 Gold").
+  /// Null when no held ability applies; the lowest applicable price wins.
+  num? priceOverride(GameState state, num listed) {
+    num? best;
+    for (final a in abilities(state, 'priceOverride')) {
+      if (listed > (a.data['maxPrice'] as num)) continue;
+      if (!_roll(state, a)) continue;
+      final price = a.data['price'] as num;
+      if (best == null || price < best) best = price;
+    }
+    return best;
+  }
+
+  /// The name of a held ability that forbids using [item] (Lactose
+  /// Intolerant: milk-tagged food), or null when it may be used.
+  String? itemUseBlockedBy(GameState state, GameItem item) {
+    for (final a in abilities(state, 'blockItemUse')) {
+      if (item.detailTypes.contains(a.data['itemTag'])) return a.name;
+    }
+    return null;
+  }
+
+  /// The ability that turns away the next negative trait (Salt and Light),
+  /// if one is held.
+  PackAbility? negativeTraitGuard(GameState state) {
+    for (final a in abilities(state, 'blockNegativeTrait')) {
+      if (_roll(state, a)) return a;
+    }
+    return null;
   }
 
   /// `(flat Gold, multiplier)` for a part-time shift's pay. "Workaholic:
@@ -221,7 +261,10 @@ class TraitEngine {
 
   /// Multiplier on a met Weekly Goal's reward — "MBTI J. Judger: Weekly
   /// Goals rewards +10%" is `percentPlusReward: 1.1`. Its description adds
-  /// "effect begins the week after obtaining", which is not modelled.
+  /// "effect begins the week after obtaining" (Korean: goals that appear
+  /// from now on). That delay comes from `Goals.issue` reading this factor
+  /// once, when a goal is posted: a trait gained mid-week cannot change the
+  /// goal already on the board, and the next Monday's goal includes it.
   num goalRewardFactor(GameState state) =>
       _factor(state, 'goalReward', 'percentPlusReward', TraitContext.none);
 
