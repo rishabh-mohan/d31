@@ -2,6 +2,66 @@
 
 Read this checkpoint before dated historical notes. [TODO.md](../TODO.md) tracks per-item status; [the branch integration report](BRANCH-INTEGRATION-2026-10-25.md) records the original assignments and remaining blockers. Code/tests are the implementation source of truth; original-game references establish targets, not proof that a feature exists.
 
+## Items, traits, acceptance, badges and setup ownership — 25 October 2026
+
+Four parallel branches (feat/setup, feat/acceptance, feat/items, feat/traits)
+are merged on main. Details and evidence labels: EFFECTS-REFERENCE.md
+("Item effects" and "Pack-owned trait abilities, second pass"), DDAY-FLOW.md,
+START-GAME-INITIALIZATION.md ("Ownership checkpoint").
+
+- **Setup ownership (user request):** badge step lists only colleges the
+  account has enrolled in; trait step lists only owned trait copies (xN shown,
+  not consumed). Account rule `setupRequiresOwnership` (default on); dev-panel
+  Traits switch. Empty steps stay passable; characters remain unlocked.
+- **Acceptance (user decision):** traits 47 (x1.08), 74 (+3), 89 (+1), 40
+  (+1 provisional) and held items 3004/3007/3011 modify the final acceptance
+  chance (multiply, add points, clamp). The standard-score conversion is gone;
+  displayed, stored and rolled rates agree.
+- **Badges:** a data-driven test exercises all 136 badges per campaign. Fixed
+  `firstPlusStat` tamgoos granting every subject (4 badges).
+- **Items:** use is refused for items with nothing to apply. Prevention items
+  are graph-handled (tests added). New Predicted Grades (Mock Exam Paper),
+  Abilities (Bizarre Author's Note), Recipes (80011, I02) views and a Scouter
+  check; Strawberry Milk provisional +50. 15 story-16 items stay unobtainable
+  (Korean-only events, TODO 121); Focus/Modified Potion await timed effects
+  (TODO 122).
+- **Traits:** new generic hooks/ability types in pack mechanics implement
+  Master of Notes, Bully, Talented Singer, Exam Dreams, Latecomer, Salt and
+  Light, Scrooge, Stocks Manager, Lactose Intolerant, Sunstroke/Heat Stroke and
+  Customer's Lover/Curse. Unrecovered rates are configurable provisional
+  defaults. Jailbreaker/Delinquent/Cooking Master/Favourite Student are
+  graph-handled.
+
+Validation: both packs regenerated on main; analysis clean; 490 tests pass
+(build/merge-analyze.log, build/merge-tests.log).
+
+**Backwards-compatibility sweep (2026-10-26, user decision).** Removed every
+migration and fallback kept for older saves, History records, account files,
+pack builds and internal APIs: eventCounts→eventStates, openingComplete/task/
+D-Day stage inference, the legacy shared-wallet move (and `sharedWallet`),
+`rewardFinal`, `walkRolledAt`, packId→kss16 defaults, History records without
+snapshots and `csatStandardScore`, `renameCount` inference,
+`countByDepartment`, `admissions.json`, the meanTotal/sdTotal curve, the
+flat specialDays date, `nextBoxId`/`nodesByBox`, `openingContinuationSwitches`,
+the category-from-storyOnly guess, `InventoryScreen`, and dead rules keys.
+Old files that no longer parse are skipped by the save/record stores.
+Analysis clean; 485 tests pass (build/sweep-tests.log).
+
+## Trait combination probabilities
+
+The supplied probability PDF replaces the provisional 25% upgrade rule with
+seven published rank distributions. User clarification supplies the omitted
+mixes: AAC uses ABB, ABC uses BBB, ACC uses BBC. Draws and the Combine Rates
+dialog share the same table; input order is irrelevant. Existing S-only,
+combine-lock and campaign-pool rules remain. See
+[TRAIT-COMBINATION-RATES.md](TRAIT-COMBINATION-RATES.md) for the complete table
+and provenance distinctions. The 22 focused tests pass, including 3,300
+deterministic combines across all campaigns; analysis is clean.
+Profile APK SHA-256 `6f638fb3…` was installed on Nord N30 `7c2c1cc8` with
+data preserved. Startup and hardware Impeller succeeded; the complete rates
+panel was visually checked on the phone with no clipping or sampled app
+layout/asset/fatal errors. No owned traits were consumed by this check.
+
 ## Puzzle backgrounds (TODO 102)
 
 A finished puzzle becomes the Home background, from its green tag in a
@@ -23,16 +83,36 @@ pixel art). `tools/import_wallpapers.py` bundles them from
 `references/recovery/wallpapers-1.29.3/` (local only), and
 `build_account_catalog.py` now reads the 1.29.3 catalog there, which adds
 event puzzles 1013–1015, and flags each puzzle that has bundled art. The
-rest (wallpaper1–6, 1003, 1010–1013) are not owned on that account, so they
-still fill the screen from their square thumbnails. Event Limited lists
-only puzzles with full-screen art (1014, 1015) until the others are
-captured (user decision 2026-10-25); Amnesia's wallpaper1–6 stay listed on
-the thumbnail fallback. The equip interaction itself is the project's own;
+remaining eleven (wallpaper1–6, 1003, 1010–1013) were subsequently recovered
+on the same date with the user's explicit authorization, through the phone
+app's existing signed-in Firebase Storage client. A temporary runtime probe
+captured a real request for `wallpapers/wallpaper181.png` in bucket
+`student-maker-en.firebasestorage.app`; unsigned HTTP requests returned 403.
+All eleven missing PNGs were downloaded without exporting credentials,
+validated, and bundled. All 23 catalog entries now have full-screen art;
+Event Limited's existing full-art filter therefore admits all seven event
+puzzles. This supersedes the earlier thumbnail fallback/server-request scope.
+Recovery results, hashes, dimensions and a contact sheet are retained locally
+in `references/recovery/wallpapers-1.29.3/`. The temporary diagnostic service
+was stopped and removed; original app saves were preserved. BlueStacks'
+older modded build hit a missing-wallpaper6800 catalog error; its temporary
+catalog edit was restored. The equip interaction itself is the project's own;
 E19 (how the original shows equipped versus owned) is still uncaptured.
 
-Validation: 405 tests pass and analysis is clean. The profile APK
+Prior deployment validation: 405 tests pass and analysis is clean. The profile APK
 (SHA-256 `7c12f1ad…`, matched on the device) is installed with data
 preserved on Nord N30 `7c2c1cc8`.
+
+Recovery validation: all 23 image files and catalog flags verified; the
+eleven new PNGs passed decode, dimension and SHA-256 copy checks. The 17
+focused account/puzzle tests pass and Flutter analysis is clean. The new
+profile APK (SHA-256 `72135ebff6dac981a076bc77952fab67c86179c5659aa09539985993d688c9c5`)
+was inspected for all 23 images and the catalog, then installed on the Nord
+with `adb install -r` and data preserved. Cold launch returned Status: ok,
+hardware Impeller initialized, and sampled app logs showed no missing-asset
+or Flutter fatal errors. Home, Amnesia collection and puzzle categories were
+visually checked; the recovered Karaoke wallpaper1013 also appeared as the
+background. Local screenshots are with the recovery evidence.
 
 ## School names and History recreation
 
@@ -44,9 +124,9 @@ inferences. Both campaign badge files and the account catalog were regenerated.
 History cards open the reference-style Info / Score Card / University Apps
 panel. Newly completed runs retain compact, detached snapshots of EXP, Gold,
 traits, equipped stationery, college display data and application outcomes.
-Legacy records remain readable without inventing missing details. The confirmed
+Records without a snapshot are no longer read (no backwards compatibility, 2026-10-26). The confirmed
 first-university enrollment reward now pays two cookies once per school and
-survives account reloads; setup collections remain unlocked. Further details and
+survives account reloads; setup collections are now ownership-gated (see above). Further details and
 limits: [HISTORY-DETAILS.md](HISTORY-DETAILS.md).
 
 Validation: 333 tests pass; the final UI adjustment also passed six focused
@@ -84,11 +164,11 @@ as reminder-only work alongside book-completion item gacha.
 ## Integrated on main
 
 - Home and captured Settings/Mail Box/Profile/Charging/Store destinations are connected. Username and preferences persist; first rename is free, subsequent changes cost nine cookies. Real purchases, ads, invitations and mail delivery remain unavailable. Notices and the seasonal destination still lack references.
-- Cookies and refresh tokens share the account wallet in both generated packs. Starting balances are one-time grants; legacy saves migrate through the shared-wallet plumbing. Debug → State → Wallet edits these balances with direct entry or quick steps, saving account changes. Fresh stationery per run remains an intentional, separate policy.
+- Cookies and refresh tokens share the account wallet in both generated packs. Starting balances are one-time grants. Debug → State → Wallet edits these balances with direct entry or quick steps, saving account changes. Fresh stationery per run remains an intentional, separate policy.
 - All five original branch tips were already merged. Remaining recoverable drafts have now been completed on main. Original worktrees are retained as recovery copies; do not reapply their entire older files over current Home/wallet changes.
 - Evening scenes hold date, stamina reset and trait aging until they close; the following morning event is delivered. Exhaustion checks eligible events on each skipped action tick in both campaigns; dialogue pauses the fill. Lost slots grant no action rewards. The ordinary evening slot runs before rollover.
 - Walking Enthusiast uses a serialized once-per-tick movement guard (prototype anti-farming rule). Multitasker's authored STAT_1 pays three stat points to a deterministic random subject on Study and previews the bonus. Street Performer pays 600 Gold on scoped Karaoke singing. Earlier trait and item fixes remain; unspecified proc/discount rates are configurable reconstructions.
-- Day-menu Score Card displays the retained CSAT result. New History records store per-subject scores and open the same card. Legacy total-only records are not backfilled; current mock-exam callbacks do not generate per-subject score cards.
+- Day-menu Score Card displays the retained CSAT result. New History records store per-subject scores and open the same card. Current mock-exam callbacks do not generate per-subject score cards.
 - Stationery cards reserve an inset, clip inner fills and paint the outline last. Empty hub slots use the same border approach. Draw and combination results use rainbow/gold/blue/gray confetti, ignore touches and honor reduced motion. The original name-fit cache remains intact.
 - My Info/Home fades, full-page Achievements, full-width account headers and aspect-preserving image decoding are integrated. TODO 95 records the squished save portraits; the likely shared decoding cause is fixed, pending confirmation of those specific thumbnails during playtesting.
 
@@ -121,6 +201,6 @@ The final profile APK was installed with data-preserving replacement on Nord N30
 
 Local installed-artifact source: `build/app/outputs/flutter-apk/app-profile.apk`, 385677158 bytes. Local SHA-256: `dee0ce3b0e884b139e7043f21c74d9d6836896361721d13fc3f9ca21ef0d7f12`. This is the local APK installed, not a separately pulled device checksum. Source commit: `16a8f87`. APK inspection verified all 80 corrected labels in the account and both badge catalogs, plus the configured two-cookie first-enrollment reward. Data-preserving installation, cold launch and legacy History tab checks succeeded.
 
-Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Do not adb-push packs**: the app seeds/reseeds editable JSON when the APK's bundle stamp changes. Manual pushes create shell-owned files that can shadow future updates. Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
+Build/test first, then install the profile APK with `adb install -r`. Use the absolute Windows Android SDK path and PowerShell for adb. **Packs are not bundled**: stage and `mv` them into the app packs folder (see CLAUDE.md Device notes). Preserve saves/account data; do not clear the app or delete pack/image overrides as a routine update step. See CLAUDE.md's current Device notes for exceptions and recovery.
 
 Latest validation logs: `build/history-full-tests.log`, `build/history-focused-final.log`, `build/history-render-final.log`, `build/history-analysis-final.log`, `build/history-profile-build.log`, `build/history-install.log`, `build/history-launch.log`, `build/history-startup.log`; rendered snapshots: `build/history-review/`; phone checks: `build/history-phone*.png`. Earlier logs remain under build/. Generated packs, reference captures and imported art remain local-only under existing ignore rules.

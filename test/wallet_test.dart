@@ -1,5 +1,5 @@
 /// TODO 84 M04: a run's cookies (and, when switched on, refresh tickets)
-/// spend the account wallet, with a one-time grant and save migration.
+/// spend the account wallet, with a one-time grant.
 library;
 
 import 'dart:io';

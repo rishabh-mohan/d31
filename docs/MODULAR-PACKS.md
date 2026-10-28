@@ -36,8 +36,7 @@ no executable scripts or external IO are accepted.
 location, crafting block, trait and character. Copy the `workshop` directory into
 an editable `packs` root and select it. Editable roots include desktop `packs`,
 app documents `packs`, and Android app external-storage `packs`. A unique pack
-ID loads without a bundled counterpart. This is separate from updating bundled
-KSS content: normal phone deployment still uses APK bundle-stamp reseeding.
+ID loads from any editable root. Nothing is bundled in the APK.
 
 KSS identities and aliases live in `content/kss/mechanics.json` in the
 local-only `../d30mode-kss` folder (moved out of this repo on 2026-10-26).

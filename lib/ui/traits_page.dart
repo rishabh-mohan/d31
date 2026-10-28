@@ -3,9 +3,9 @@
 ///
 /// Recovered: each pack's per-card rank odds and card count (Chances Info),
 /// Standard/Jumbo prices and mileage, the 1000-mileage S guarantee, three
-/// cards per combine, S only with S, and combine-locking per copy. Not
-/// recovered, so provisional and labelled as such: the other packs' prices,
-/// and combine results (the original's Combine Rates was a web page).
+/// cards per combine, S only with S, and combine-locking per copy. Combine
+/// rank rates follow the supplied probability PDF and clarified A/C mixes.
+/// The other packs' prices remain provisional and labelled as such.
 ///
 /// The account collection does not yet gate setup's trait picks, which stay
 /// all-owned (setup.dart's prototype policy).
@@ -771,12 +771,54 @@ class _CombineState extends State<_Combine> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Combine Rates'),
-            content: Text(
-              'Three traits make one. S-Ranks can only be combined with other '
-              'S-Ranks.\n\nThe original\'s rates were not recovered. Here the '
-              'result takes the highest rank among the three, with a '
-              '${(Account.combineUpgradeChance * 100).round()}% chance of one '
-              'rank higher (provisional).',
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Three traits make one. Input order does not matter. '
+                    'S-Ranks combine only with S-Ranks and return an S-Rank.',
+                  ),
+                  const SizedBox(height: 16),
+                  Table(
+                    key: const ValueKey('trait-combine-rate-table'),
+                    columnWidths: const {0: FlexColumnWidth(1.5)},
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      for (final row in [
+                        ['Input', 'S', 'A', 'B', 'C'],
+                        for (final entry in Account.combineRates.entries)
+                          [
+                            entry.key,
+                            for (final rank in ['S', 'A', 'B', 'C'])
+                              entry.value.containsKey(rank)
+                                  ? '${entry.value[rank]}%'
+                                  : '—',
+                          ],
+                      ])
+                        TableRow(
+                          children: [
+                            for (final text in row)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 5,
+                                ),
+                                child: Text(text),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    [
+                      for (final entry in Account.combineRateAliases.entries)
+                        '${entry.key} uses ${entry.value} rates.',
+                    ].join('\n'),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(

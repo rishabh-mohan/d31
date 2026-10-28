@@ -23,16 +23,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # The content pack. Everything the game is made of lives here as JSON; the
-  # app copies it to a writable directory on first run and loads that copy, so
-  # it can be edited and reloaded without rebuilding. See docs/PACK-FORMAT.md.
+  # Packs are not bundled: they are directories loaded from disk at run time
+  # (see docs/MODULAR-PACKS.md). Only account data and placeholder art ship.
   assets:
     - assets/account/
-    - packs/kss16/
-    - packs/kss16/events/
-    - packs/kss20/
-    - packs/kss20/events/
     # Placeholder art lifted from KSS by tools/copy_assets.py. Local use
     # only; gitignored. A pack may override any of these by shipping its own
     # images/ folder.

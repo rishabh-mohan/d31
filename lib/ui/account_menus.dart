@@ -463,9 +463,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                           style: note,
                         ),
                         Text(
-                          location.editable
-                              ? 'Editable pack: ${location.describe}'
-                              : location.describe,
+                          location.describe,
                           style: note.copyWith(fontStyle: FontStyle.italic),
                         ),
                       ],

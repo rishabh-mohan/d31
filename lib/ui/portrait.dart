@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../engine/pack.dart';
+import 'missing_icon.dart';
 import 'pack_image.dart';
 
 /// All source layers share a canvas; fitting each into the same bounds keeps
@@ -46,7 +47,7 @@ class Portrait extends StatelessWidget {
         path: fallback,
         fit: BoxFit.contain,
         alignment: Alignment.bottomCenter,
-        placeholder: const SizedBox.shrink(),
+        placeholder: const MissingIcon(),
       );
     }
     return Stack(
@@ -57,7 +58,10 @@ class Portrait extends StatelessWidget {
             path: path,
             fit: BoxFit.contain,
             alignment: Alignment.bottomCenter,
-            placeholder: const SizedBox.shrink(),
+            // Only the body layer stands in for the whole character.
+            placeholder: path == paths.first
+                ? const MissingIcon()
+                : const SizedBox.shrink(),
           ),
       ],
     );

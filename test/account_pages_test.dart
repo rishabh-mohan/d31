@@ -24,7 +24,7 @@ void main() {
     retry = await ContentSource.loadFromDirectory(Directory('packs/kss20'));
     AccountStore.catalog = AccountCatalog.parse(
       File('assets/account/catalog.json').readAsStringSync(),
-    );
+    ).withShelves([retry.puzzleShelf(Directory('packs/kss20').absolute.path)!]);
   });
 
   setUp(() => AccountStore.current = Account(cookies: 500));
@@ -79,11 +79,6 @@ void main() {
     expect(find.text('True Ending'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('panel-close')));
     await settle(tester);
-
-    await tester.tap(find.byKey(const ValueKey('ach-tab-Other')));
-    await settle(tester);
-    expect(find.text('Story Addict'), findsOneWidget);
-    expect(find.text('Reach Campaign Ending 1/5'), findsOneWidget);
   });
 
   testWidgets('Achievements filter: the arrow cell spans the pill height', (
@@ -118,60 +113,40 @@ void main() {
   });
 
   testWidgets('Puzzles: categories, collection and detail', (tester) async {
-    await pumpPhone(tester, const PuzzlesPage(installedStories: {16, 20}));
-    expect(find.byKey(const ValueKey('puzzle-category-3')), findsOneWidget);
-    // Every banner's art is bundled and decodes: the category name only
-    // appears as text when its title image fails to load (TODO 93).
-    for (var i = 0; i < 3; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)),
-      );
-      await tester.pump();
-    }
-    for (final name in [
-      'Amnesia',
-      'Endless Winter',
-      'The Year I Retook',
-      'Event Limited',
-    ]) {
-      expect(find.text(name), findsNothing, reason: '$name banner art');
-    }
-    await tester.tap(find.byKey(const ValueKey('puzzle-category-3')));
+    await pumpPhone(tester, const PuzzlesPage());
+    expect(find.byKey(const ValueKey('puzzle-category-kss20')), findsOneWidget);
+    expect(find.byKey(const ValueKey('puzzle-category-event')), findsOneWidget);
+    expect(find.byKey(const ValueKey('puzzle-category-3')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('puzzle-category-kss20')));
     await settle(tester);
-    expect(find.text('Ihyeon’s Break (F)'), findsOneWidget);
-    await tester.tap(find.text('Ihyeon’s Break (F)'));
-    await tester.tap(find.byKey(const ValueKey('puzzle-wallpaper1')).first);
+    expect(find.text('Suin in the Reflection Room'), findsOneWidget);
+    // Installing the pack is the first puzzle's only piece.
+    await tester.tap(find.byKey(const ValueKey('puzzle-wallpaper200')).first);
     await settle(tester);
-    expect(find.text('(0/4)'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('complete-now')));
-    await settle(tester);
-    expect(find.text('(4/4)'), findsOneWidget);
-    expect(AccountStore.current.cookies, 500 - 99);
     // Finished, it can become the Home background (TODO 102).
     expect(find.text('Use as Background'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('use-as-background')));
     await settle(tester);
-    expect(AccountStore.current.background, 'wallpaper1');
+    expect(AccountStore.current.background, 'wallpaper200');
     expect(find.text('Current Background'), findsOneWidget);
   });
 
   testWidgets('a finished puzzle\'s green tag selects it', (tester) async {
     await pumpPhone(
       tester,
-      const PuzzleCollectionPage(
+      PuzzleCollectionPage(
         title: 'Event Limited',
-        storyId: 0,
-        installedStories: {16, 20},
+        puzzles: AccountStore.catalog.puzzles,
       ),
     );
     await settle(tester);
-    // Only event puzzles with captured full-screen art are listed.
-    expect(find.byKey(const ValueKey('puzzle-wallpaper1010')), findsNothing);
-    expect(find.byKey(const ValueKey('puzzle-wallpaper1014')), findsOneWidget);
+    // Recovered full-screen art makes the previously hidden events available.
+    expect(find.byKey(const ValueKey('puzzle-wallpaper1010')), findsOneWidget);
+    expect(find.byKey(const ValueKey('puzzle-wallpaper1003')), findsOneWidget);
     expect(AccountStore.current.background, 'wallpaper0');
-    await tester.tap(find.byKey(const ValueKey('puzzle-use-wallpaper1014')));
+    await tester.tap(find.byKey(const ValueKey('puzzle-use-wallpaper1010')));
     await settle(tester);
-    expect(AccountStore.current.background, 'wallpaper1014');
+    expect(AccountStore.current.background, 'wallpaper1010');
   });
 
   testWidgets('Manage Traits: buy, open, results, collection and combine', (
@@ -212,6 +187,17 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('traits-Combine')));
     await settle(tester);
     expect(find.text('Combine Traits'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('combine-rates')));
+    await settle(tester);
+    expect(
+      find.byKey(const ValueKey('trait-combine-rate-table')),
+      findsOneWidget,
+    );
+    expect(find.text('6%'), findsOneWidget);
+    expect(find.text('94%'), findsOneWidget);
+    expect(find.textContaining('AAC uses ABB rates.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Confirm'));
+    await settle(tester);
     await tester.tap(find.byKey(const ValueKey('combine-lock')));
     await settle(tester);
     expect(find.byKey(const ValueKey('slot-remove-0')), findsNothing);

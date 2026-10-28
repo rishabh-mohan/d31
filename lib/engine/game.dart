@@ -1141,15 +1141,24 @@ class Game {
     // so the card's 0 is the block's 0.
     if (traits.staminaFree(state)) return 0;
 
-    final base = pack.rules.number('staminaCost', 'base', 9.5);
     final perWeight = pack.rules.number('staminaCost', 'perWeight', 6.25);
-
-    num cost;
-    if (action.actionType == 'lesson') {
-      cost = pack.rules.number('staminaCost', 'lesson', base);
-    } else {
-      cost = base + perWeight * action.hpWeight;
+    // What an action with no stamina weight costs. A pack's own
+    // staminaCost.<type> wins, then its shared staminaCost.base (kss16 sets
+    // 9.5 and weights every action), then the engine's default for the type.
+    num typeCost(String type, num fallback) {
+      final own = pack.rules.number('staminaCost', type, double.nan);
+      if (!own.isNaN) return own;
+      final shared = pack.rules.number('staminaCost', 'base', double.nan);
+      return shared.isNaN ? fallback : shared;
     }
+
+    num cost = switch (action.actionType) {
+      'lesson' => pack.rules.number('staminaCost', 'lesson', 9),
+      'study' => typeCost('study', 16) + perWeight * action.hpWeight,
+      'exercise' => typeCost('exercise', 24) + perWeight * action.hpWeight,
+      'partTimeJob' => typeCost('partTimeJob', 29) + perWeight * action.hpWeight,
+      _ => typeCost('base', 9.5) + perWeight * action.hpWeight,
+    };
 
     // hpCost effects are discounts (negative), and may be gated on the tick
     // -- Night Owl is -3 from tick 10, Indestructible a flat -3.

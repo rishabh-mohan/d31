@@ -1,10 +1,10 @@
 /// What belongs to the player rather than to one run: Home's wallet, the
-/// trait collection, puzzles, achievements, the daily quest and settings.
+/// trait collection, puzzles, the daily quest and settings.
 ///
 /// Home's balance pill shows cookies and refresh tokens (MM-01, 53 / 522 in
 /// the capture). Cookies come from what the original rewards with them:
-/// reaching an ending for the first time (its Endings List amount), the
-/// achievements that list one, and the daily quest. Refresh tokens have no
+/// reaching an ending for the first time (its Endings List amount) and the
+/// daily quest. Refresh tokens have no
 /// recovered source yet.
 ///
 /// A run spends from this wallet for every currency its rules mark
@@ -82,51 +82,6 @@ class DailyQuest {
     (j['departmentId'] as num).toInt(),
     claimed: j['claimed'] == true,
   );
-}
-
-/// An "Other" achievement (MM-07).
-class AchievementInfo {
-  final String id;
-  final String title;
-  final String condition;
-  final int target;
-
-  /// Cookies on completion. Only Story Addict's 5 is captured; the others
-  /// were already complete in the capture, so theirs are unknown and none is
-  /// granted.
-  final int cookies;
-
-  const AchievementInfo(
-    this.id,
-    this.title,
-    this.condition,
-    this.target, {
-    this.cookies = 0,
-  });
-
-  static const all = [
-    AchievementInfo(
-      'story_addict',
-      'Story Addict',
-      'Reach Campaign Ending',
-      5,
-      cookies: 5,
-    ),
-    AchievementInfo('enjoyer', 'Enjoyer', 'Clear 31-Day Mode', 5),
-    AchievementInfo('gym_rat', 'Gym Rat', 'Reach Exercise Level 10', 1),
-    AchievementInfo(
-      'work_addict',
-      'Work Addict',
-      'Reach Part-Time Stage 10',
-      1,
-    ),
-    AchievementInfo(
-      'renaissance',
-      'Renaissance Man',
-      'Obtain 20 or more Traits',
-      1,
-    ),
-  ];
 }
 
 /// The daily quest's reward (MM-08 shows 4).
@@ -221,11 +176,6 @@ class Account implements SharedWallet {
 
   /// Finished runs per pack id.
   final Map<String, int> clears;
-  int bestExerciseLevel;
-  int bestPartTimeLevel;
-
-  /// Achievements already paid out.
-  final Set<String> achievementsPaid;
 
   final Map<String, int> packs;
   int mileage;
@@ -249,9 +199,6 @@ class Account implements SharedWallet {
     Set<String>? endingRewardsPaid,
     this.pendingEndingReward,
     Map<String, int>? clears,
-    this.bestExerciseLevel = 0,
-    this.bestPartTimeLevel = 0,
-    Set<String>? achievementsPaid,
     Map<String, int>? packs,
     this.mileage = 0,
     List<OwnedTrait>? traits,
@@ -272,7 +219,6 @@ class Account implements SharedWallet {
        departmentEnrollments = departmentEnrollments ?? {},
        endingRewardsPaid = endingRewardsPaid ?? {},
        clears = clears ?? {},
-       achievementsPaid = achievementsPaid ?? {},
        packs = packs ?? {},
        traits = traits ?? [],
        boughtPuzzles = boughtPuzzles ?? {};
@@ -289,9 +235,6 @@ class Account implements SharedWallet {
     'endingRewardsPaid': endingRewardsPaid.toList(),
     'pendingEndingReward': ?pendingEndingReward?.toJson(),
     'clears': clears,
-    'bestExerciseLevel': bestExerciseLevel,
-    'bestPartTimeLevel': bestPartTimeLevel,
-    'achievementsPaid': achievementsPaid.toList(),
     'packs': packs,
     'mileage': mileage,
     'traits': [for (final t in traits) t.toJson()],
@@ -337,11 +280,6 @@ class Account implements SharedWallet {
     clears: {
       for (final e in ((j['clears'] as Map?) ?? const {}).entries)
         '${e.key}': (e.value as num).toInt(),
-    },
-    bestExerciseLevel: (j['bestExerciseLevel'] as num?)?.toInt() ?? 0,
-    bestPartTimeLevel: (j['bestPartTimeLevel'] as num?)?.toInt() ?? 0,
-    achievementsPaid: {
-      for (final v in j['achievementsPaid'] as List? ?? const []) '$v',
     },
     packs: {
       for (final e in ((j['packs'] as Map?) ?? const {}).entries)
@@ -403,9 +341,8 @@ class Account implements SharedWallet {
 
   // ---- Runs -------------------------------------------------------------
 
-  /// A finished run's account effects: its ending, enrollment, clears and
-  /// best levels, then any achievement it completed. Returns the cookies
-  /// paid out.
+  /// A finished run's account effects: its ending, enrollment and clears.
+  /// Returns the cookies paid out.
   int recordRun(RunRecord record, AccountCatalog catalog) {
     var paid = 0;
     final code = record.endingCode;
@@ -432,10 +369,8 @@ class Account implements SharedWallet {
       );
     }
     clears[record.packId] = (clears[record.packId] ?? 0) + 1;
-    bestExerciseLevel = max(bestExerciseLevel, record.exerciseLevel);
-    bestPartTimeLevel = max(bestPartTimeLevel, record.partTimeLevel);
     cookies += paid;
-    return paid + payAchievements();
+    return paid;
   }
 
   /// The player confirmed the "Ending Reward Obtained!" dialog.
@@ -448,29 +383,6 @@ class Account implements SharedWallet {
   /// The same for one major: "# Enrollments".
   int majorEnrollments(int departmentId) =>
       departmentEnrollments[departmentId] ?? 0;
-
-  int achievementProgress(AchievementInfo a) => switch (a.id) {
-    'story_addict' => endings.length,
-    'enjoyer' => clears['kss16'] ?? 0,
-    'gym_rat' => bestExerciseLevel >= 10 ? 1 : 0,
-    'work_addict' => bestPartTimeLevel >= 10 ? 1 : 0,
-    'renaissance' => traits.length >= 20 ? 1 : 0,
-    _ => 0,
-  };
-
-  bool achievementDone(AchievementInfo a) => achievementProgress(a) >= a.target;
-
-  /// Pays every newly completed achievement once.
-  int payAchievements() {
-    var paid = 0;
-    for (final a in AchievementInfo.all) {
-      if (achievementDone(a) && achievementsPaid.add(a.id)) {
-        paid += a.cookies;
-      }
-    }
-    cookies += paid;
-    return paid;
-  }
 
   // ---- Trait packs ----------------------------------------------------
 
@@ -538,13 +450,35 @@ class Account implements SharedWallet {
     for (final t in drawn) {
       traits.add(OwnedTrait(nextTraitUid++, t.id));
     }
-    payAchievements();
     return drawn;
   }
 
   // ---- Combining ------------------------------------------------------
 
-  static const _rankOrder = ['C', 'B', 'A', 'S'];
+  /// Published rank percentages in the user-supplied Traits Combination
+  /// Probability Information PDF (2026-10-25). Input order is irrelevant.
+  static const combineRates = <String, Map<String, int>>{
+    'AAA': {'S': 6, 'A': 94},
+    'AAB': {'S': 4, 'A': 81, 'B': 15},
+    'ABB': {'S': 2, 'A': 68, 'B': 30},
+    'BBB': {'A': 55, 'B': 45},
+    'BBC': {'A': 37, 'B': 53, 'C': 10},
+    'BCC': {'A': 19, 'B': 61, 'C': 20},
+    'CCC': {'A': 1, 'B': 69, 'C': 30},
+  };
+
+  /// User clarification for mixes omitted by the published PDF.
+  static const combineRateAliases = {'AAC': 'ABB', 'ABC': 'BBB', 'ACC': 'BBC'};
+
+  static Map<String, int>? combineRatesFor(Iterable<String> ranks) {
+    final sorted = ranks.toList()..sort();
+    if (sorted.length != 3) return null;
+    final key = sorted.join();
+    // Preserve the existing S-only result; the PDF covers A/B/C inputs.
+    return key == 'SSS'
+        ? const {'S': 100}
+        : combineRates[combineRateAliases[key] ?? key];
+  }
 
   /// Why three copies cannot combine, or null when they can. Recovered
   /// rules: exactly three, none combine-locked, and "S-Ranks can only be
@@ -558,15 +492,17 @@ class Account implements SharedWallet {
     if (ranks.contains('S') && ranks.length > 1) {
       return 'S-Ranks can only be combined with other S-Ranks.';
     }
+    if (combineRatesFor(
+          picked.map((t) => pack.traits[t.traitId]?.rank ?? ''),
+        ) ==
+        null) {
+      return 'No combination rates are available for these ranks.';
+    }
     return null;
   }
 
-  /// Chance the result steps up one rank. The original's rates were a web
-  /// page ("Combine Rates") that was not recovered; this is provisional.
-  static const combineUpgradeChance = .25;
-
-  /// Consumes three copies and adds one trait: the highest input rank, or
-  /// one above it at [combineUpgradeChance]. Provisional rule.
+  /// Consumes three copies and draws the result rank from the published
+  /// combination table, then draws a card from that campaign's rank pool.
   GameTrait? combine(
     List<OwnedTrait> picked,
     ContentPack pack,
@@ -575,21 +511,27 @@ class Account implements SharedWallet {
   ]) {
     if (combineProblem(picked, pack) != null) return null;
     final rng = random ?? Random();
-    var top = 0;
-    for (final t in picked) {
-      top = max(top, _rankOrder.indexOf(pack.traits[t.traitId]?.rank ?? 'C'));
+    final rates = combineRatesFor(
+      picked.map((t) => pack.traits[t.traitId]!.rank),
+    )!;
+    var roll = rng.nextDouble() * 100;
+    var rank = rates.keys.last;
+    for (final entry in rates.entries) {
+      roll -= entry.value;
+      if (roll < 0) {
+        rank = entry.key;
+        break;
+      }
     }
-    if (top < 3 && rng.nextDouble() < combineUpgradeChance) top++;
     final pool = [
       for (final t in poolFor(pack, campaign))
-        if (t.rank == _rankOrder[top]) t,
+        if (t.rank == rank) t,
     ];
     if (pool.isEmpty) return null;
     final result = pool[rng.nextInt(pool.length)];
     final uids = picked.map((t) => t.uid).toSet();
     traits.removeWhere((t) => uids.contains(t.uid));
     traits.add(OwnedTrait(nextTraitUid++, result.id));
-    payAchievements();
     return result;
   }
 
@@ -602,18 +544,18 @@ class Account implements SharedWallet {
   /// Package) count as held: there are no events or purchases to earn them
   /// from, and the user asked for the event-limited puzzles unlocked
   /// (TODO 102).
-  List<bool> piecesOf(Puzzle puzzle, Set<int> installedStories) {
+  List<bool> piecesOf(Puzzle puzzle) {
     if (boughtPuzzles.contains(puzzle.id)) {
       return List.filled(puzzle.pieces.length, true);
     }
-    final runs = clearsOfStory(puzzle.storyId);
+    final runs = clears[puzzle.packId] ?? 0;
     var games = 0;
     return [
       for (final p in puzzle.pieces)
         switch (p.type) {
           'fixed' => true,
           'ending' => endings.contains(p.endingCode),
-          'purchaseStory' => installedStories.contains(puzzle.storyId),
+          'purchaseStory' => puzzle.packId != null,
           'gameCount' => runs >= ++games,
           'eventPackage' => true,
           _ => false,
@@ -621,13 +563,10 @@ class Account implements SharedWallet {
     ];
   }
 
-  /// Finished runs of a story, read from the pack ids that carry it.
-  int clearsOfStory(int storyId) => clears['kss$storyId'] ?? 0;
-
   /// Share of the puzzle held, weighted by piece cookies where it has them
   /// (MM-13 is 2/4 yet 52%).
-  double puzzleProgress(Puzzle puzzle, Set<int> installedStories) {
-    final held = piecesOf(puzzle, installedStories);
+  double puzzleProgress(Puzzle puzzle) {
+    final held = piecesOf(puzzle);
     final total = puzzle.totalCookies;
     if (total == 0) {
       return held.where((h) => h).length / max(1, held.length);
@@ -641,8 +580,8 @@ class Account implements SharedWallet {
 
   /// Complete Now's price: the missing pieces' cookies. Null when a missing
   /// piece has no price (event-only pieces cannot be bought).
-  int? completeNowPrice(Puzzle puzzle, Set<int> installedStories) {
-    final held = piecesOf(puzzle, installedStories);
+  int? completeNowPrice(Puzzle puzzle) {
+    final held = piecesOf(puzzle);
     var price = 0;
     for (var i = 0; i < held.length; i++) {
       if (held[i]) continue;
@@ -652,8 +591,8 @@ class Account implements SharedWallet {
     return price;
   }
 
-  bool completeNow(Puzzle puzzle, Set<int> installedStories) {
-    final price = completeNowPrice(puzzle, installedStories);
+  bool completeNow(Puzzle puzzle) {
+    final price = completeNowPrice(puzzle);
     if (price == null || price == 0 || cookies < price) return false;
     cookies -= price;
     boughtPuzzles.add(puzzle.id);
@@ -662,15 +601,15 @@ class Account implements SharedWallet {
 
   /// Makes a finished puzzle the Home background (MM-11's green check).
   /// An unfinished one is refused.
-  bool useAsBackground(Puzzle puzzle, Set<int> installedStories) {
-    if (!piecesOf(puzzle, installedStories).every((h) => h)) return false;
+  bool useAsBackground(Puzzle puzzle) {
+    if (!piecesOf(puzzle).every((h) => h)) return false;
     background = puzzle.id;
     return true;
   }
 
   /// The selected background, or null when its id is not in [catalog].
   Puzzle? backgroundIn(AccountCatalog catalog) {
-    for (final p in catalog.puzzles) {
+    for (final p in catalog.allPuzzles) {
       if (p.id == background) return p;
     }
     return null;

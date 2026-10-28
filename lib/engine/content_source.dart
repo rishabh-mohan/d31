@@ -1,55 +1,37 @@
-/// Where a pack is read from, and how it becomes editable.
+/// Where a pack is read from.
 ///
-/// The bundled pack ships read-only inside the app. On first run it is copied
-/// to a writable directory and loaded from there instead, so the JSON can be
-/// edited and reloaded without rebuilding:
+/// The app ships no content. Packs are directories (made with the sister
+/// app) found under these roots, loaded straight from disk, and reloadable
+/// from the dev panel without rebuilding:
 ///
-///   desktop             (the repo's own packs/ dir)
+///   desktop             packs/ beside the app (or its parent)
 ///   Android             app external-storage packs/ or documents packs/
 ///
-/// Bundled updates use APK bundle-stamp reseeding. Independent pack IDs load
-/// directly from editable roots; see docs/MODULAR-PACKS.md.
-///
-/// Reload is live: the dev panel re-reads the directory and rebuilds the
-/// ContentPack, so a JSON edit is one button away from being in the run.
+/// See docs/MODULAR-PACKS.md.
 library;
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import 'package:path_provider/path_provider.dart';
 
 import 'pack.dart';
 
 class PackLocation {
   final String id;
-  final Directory? directory; // null when loaded straight from assets
-  final bool editable;
-  PackLocation(this.id, this.directory, this.editable);
+  final Directory? directory; // null only for packs built in memory
+  PackLocation(this.id, this.directory);
 
-  String get describe =>
-      directory == null ? 'bundled assets (read-only)' : directory!.path;
+  String get describe => directory?.path ?? 'in-memory pack';
 }
 
 class ContentSource {
-  static const defaultPackId = 'kss16';
-
-  /// Bundled packs plus editable packs. The selector is derived from
-  /// pack manifests, so adding another generated pack does not require a card.
+  /// Pack roots to search instead of the platform defaults.
   @visibleForTesting
   static List<Directory>? rootsOverride;
 
-  static Future<Set<String>> _bundledIds() async {
-    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-    return {
-      for (final asset in manifest.listAssets())
-        if (RegExp(r'^packs/([A-Za-z0-9_-]+)/pack\.json$').firstMatch(asset)
-            case final match?)
-          match[1]!,
-    };
-  }
+  static final _validId = RegExp(r'^[A-Za-z0-9_-]+$');
 
   static Future<List<Directory>> _packRoots() async {
     if (rootsOverride != null) return rootsOverride!;
@@ -61,7 +43,18 @@ class ContentSource {
     try {
       if (!kIsWeb && Platform.isAndroid) {
         final dir = await getExternalStorageDirectory();
-        if (dir != null) roots.add(Directory('${dir.path}/packs'));
+        if (dir != null) {
+          roots.add(Directory('${dir.path}/packs'));
+          // Pack Studio writes here: Android/media is reachable by an app with
+          // "All files access", unlike Android/data.
+          roots.add(
+            Directory(
+              dir.path
+                  .replaceFirst('/Android/data/', '/Android/media/')
+                  .replaceFirst(RegExp(r'/files$'), '/packs'),
+            ),
+          );
+        }
       }
     } catch (_) {
       /* Optional platform storage. */
@@ -70,156 +63,45 @@ class ContentSource {
       final dir = await getApplicationDocumentsDirectory();
       roots.add(Directory('${dir.path}/packs'));
     } catch (_) {
-      /* Asset-only host. */
+      /* No documents directory on this host. */
     }
     return roots;
   }
 
+  /// Pack IDs found on disk, sorted by name.
   static Future<List<String>> availablePackIds() async {
-    final ids = await _bundledIds();
+    final ids = <String>{};
     for (final root in await _packRoots()) {
       if (!await root.exists()) continue;
       await for (final entry in root.list(followLinks: false)) {
         if (entry is Directory &&
             await File('${entry.path}/pack.json').exists()) {
           final id = entry.uri.pathSegments.where((s) => s.isNotEmpty).last;
-          if (RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(id)) ids.add(id);
+          if (_validId.hasMatch(id)) ids.add(id);
         }
       }
     }
-    return ids.toList()..sort(
-      (a, b) => a == b
-          ? 0
-          : a == defaultPackId
-          ? -1
-          : b == defaultPackId
-          ? 1
-          : a.compareTo(b),
-    );
+    return ids.toList()..sort();
   }
 
-  static const _stampName = '.bundle-stamp';
-
-  /// A fingerprint of the bundled pack files, recorded beside an editable
-  /// copy when it is seeded. FNV-1a over each name and length, every
-  /// character of small files and every 61st of the multi-megabyte event
-  /// scripts, so a launch does not hash ~12 MB of text.
-  static String bundleStamp(Map<String, String> files) {
-    var hash = 0xcbf29ce484222325;
-    const prime = 0x100000001b3;
-    void add(int unit) => hash = (hash ^ unit) * prime;
-    for (final name in files.keys.toList()..sort()) {
-      final text = files[name]!;
-      name.codeUnits.forEach(add);
-      add(text.length);
-      final step = text.length > 65536 ? 61 : 1;
-      for (var i = 0; i < text.length; i += step) {
-        add(text.codeUnitAt(i));
-      }
-    }
-    return hash.toUnsigned(64).toRadixString(16);
-  }
-
-  /// Where an editable copy lives. Checked in order; the first that exists
-  /// and holds a pack.json wins.
-  static Future<Directory?> _findWritableDir(String packId) async {
-    final candidates = [
-      for (final root in await _packRoots()) Directory('${root.path}/$packId'),
-    ];
-
-    for (final dir in candidates) {
-      if (await File('${dir.path}/pack.json').exists()) return dir;
-    }
-    return null;
-  }
-
-  /// Preferred destination for the editable copy.
-  static Future<Directory?> _writableTarget(String packId) async {
-    try {
-      if (!kIsWeb && Platform.isAndroid) {
-        final ext = await getExternalStorageDirectory();
-        if (ext != null) return Directory('${ext.path}/packs/$packId');
-      }
-      final docs = await getApplicationDocumentsDirectory();
-      return Directory('${docs.path}/packs/$packId');
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Loads a pack, preferring an editable on-disk copy and seeding one from
-  /// the bundled assets if none exists yet.
-  static Future<(ContentPack, PackLocation)> load({
-    String? packId,
-    bool seedIfMissing = true,
-  }) async {
+  /// Loads a pack from the first root that holds it; the first available
+  /// pack when [packId] is null.
+  static Future<(ContentPack, PackLocation)> load({String? packId}) async {
     if (packId == null) {
       final ids = await availablePackIds();
       if (ids.isEmpty) throw const FormatException('No content packs found');
       packId = ids.first;
     }
-    if (!RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(packId)) {
+    if (!_validId.hasMatch(packId)) {
       throw const FormatException('Invalid pack ID');
     }
-    final existing = await _findWritableDir(packId);
-    // The repo's own packs/ folder (desktop) is the source being edited.
-    if (existing != null &&
-        (!existing.isAbsolute || !(await _bundledIds()).contains(packId))) {
-      return (
-        await loadFromDirectory(existing),
-        PackLocation(packId, existing, true),
-      );
-    }
-
-    final files = await _readAssets(packId);
-    final stamp = bundleStamp(files);
-    if (existing != null) {
-      // An editable copy seeded from an older APK would otherwise shadow
-      // every pack update for good (the gender page, character events and
-      // admissions never reached the phone). Re-seed when the bundled pack
-      // changed; edits made to the copy since are replaced.
-      final stampFile = File('${existing.path}/$_stampName');
-      final seeded = await stampFile.exists()
-          ? await stampFile.readAsString()
-          : null;
-      if (seeded == stamp) {
-        return (
-          await loadFromDirectory(existing),
-          PackLocation(packId, existing, true),
-        );
-      }
-      try {
-        await _writeFiles(existing, files);
-        await stampFile.writeAsString(stamp);
-        return (
-          ContentPack.fromFiles(files),
-          PackLocation(packId, existing, true),
-        );
-      } catch (_) {
-        return (
-          ContentPack.fromFiles(files),
-          PackLocation(packId, null, false),
-        );
+    for (final root in await _packRoots()) {
+      final dir = Directory('${root.path}/$packId');
+      if (await File('${dir.path}/pack.json').exists()) {
+        return (await loadFromDirectory(dir), PackLocation(packId, dir));
       }
     }
-
-    if (seedIfMissing) {
-      final target = await _writableTarget(packId);
-      if (target != null) {
-        try {
-          await _writeFiles(target, files);
-          await File('${target.path}/$_stampName').writeAsString(stamp);
-          return (
-            ContentPack.fromFiles(files),
-            PackLocation(packId, target, true),
-          );
-        } catch (_) {
-          // Read-only filesystem: fall back to the bundled copy.
-        }
-      }
-    }
-
-    return (ContentPack.fromFiles(files), PackLocation(packId, null, false));
+    throw FormatException('Pack "$packId" not found');
   }
 
   static Future<ContentPack> loadFromDirectory(Directory dir) async {
@@ -233,30 +115,6 @@ class ContentSource {
     return ContentPack.fromFiles(files);
   }
 
-  static Future<Map<String, String>> _readAssets(String packId) async {
-    final files = <String, String>{};
-    for (final name in ContentPack.allFiles) {
-      try {
-        files[name] = await rootBundle.loadString('packs/$packId/$name');
-      } on FlutterError {
-        // Optional files legitimately absent.
-        if (ContentPack.requiredFiles.contains(name)) rethrow;
-      }
-    }
-    return files;
-  }
-
-  static Future<void> _writeFiles(
-    Directory dir,
-    Map<String, String> files,
-  ) async {
-    for (final entry in files.entries) {
-      final file = File('${dir.path}/${entry.key}');
-      await file.parent.create(recursive: true);
-      await file.writeAsString(entry.value);
-    }
-  }
-
   /// Rewrites one pack file in place. Used by the dev panel's rules editor.
   static Future<void> writeFile(
     Directory dir,
@@ -268,11 +126,5 @@ class ContentSource {
     await file.writeAsString(
       const JsonEncoder.withIndent(' ').convert(content),
     );
-  }
-
-  /// Restores a pack directory from the bundled assets, discarding edits.
-  static Future<void> resetToBundled(Directory dir, String packId) async {
-    final files = await _readAssets(packId);
-    await _writeFiles(dir, files);
   }
 }

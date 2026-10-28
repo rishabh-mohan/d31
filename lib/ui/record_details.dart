@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/record_store.dart';
 import 'home_screen.dart';
+import 'missing_icon.dart';
 import 'pack_image.dart';
 import 'score_card.dart';
 import 'stationery_card.dart';
@@ -206,10 +207,7 @@ class _RecordDetailsState extends State<RecordDetails> {
               child: PackImage(
                 path: record.portrait,
                 alignment: Alignment.bottomCenter,
-                placeholder: const PackImage(
-                  path: genericPortrait,
-                  alignment: Alignment.bottomCenter,
-                ),
+                placeholder: const MissingIcon(),
               ),
             ),
             SizedBox(width: 10 * u),
@@ -551,7 +549,7 @@ class _RecordDetailsState extends State<RecordDetails> {
                           height: 100 * u,
                           child: PackImage(
                             path: record.portrait,
-                            placeholder: const PackImage(path: genericPortrait),
+                            placeholder: const MissingIcon(),
                           ),
                         ),
                       ],

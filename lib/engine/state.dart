@@ -47,7 +47,7 @@ class GameState {
   final List<int> initialTraitIds = [];
 
   String get portrait =>
-      pack.characters[characterId]?.portrait ?? 'character/portrait.png';
+      pack.characters[characterId]?.portrait ?? '';
 
   /// The campaign as Select Game and History title it.
   String get modeTitle => difficulty == 'elite'

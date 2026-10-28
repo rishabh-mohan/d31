@@ -22,28 +22,45 @@ import 'home_pages.dart';
 import 'home_screen.dart';
 import 'pack_image.dart';
 
-/// Banner art for each category: the story's own banner, or the event one.
-const _categories = [
-  (3, 'Amnesia', 'kss/stories/3/img'),
-  (18, 'Endless Winter', 'kss/stories/18/img'),
-  (20, 'The Year I Retook', 'kss/stories/20/img'),
-  (0, 'Event Limited', 'kss/images/event'),
-];
+/// Event Limited is the app's own category; every other tile is a pack.
+const _eventIcon = 'kss/images/event_banner_background_img.png';
 
 class PuzzlesPage extends StatefulWidget {
-  /// Stories with an installed pack (their story pieces are held).
-  final Set<int> installedStories;
-  const PuzzlesPage({super.key, required this.installedStories});
+  const PuzzlesPage({super.key});
 
   @override
   State<PuzzlesPage> createState() => _PuzzlesPageState();
 }
 
 class _PuzzlesPageState extends State<PuzzlesPage> {
-  Set<int> get installedStories => widget.installedStories;
+  Future<void> _open(String title, List<Puzzle> puzzles) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PuzzleCollectionPage(title: title, puzzles: puzzles),
+      ),
+    );
+    // The page is drawn over the background just chosen.
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final catalog = AccountStore.catalog;
+    final tiles = [
+      for (final s in catalog.shelves)
+        (key: s.packId, name: s.name, icon: s.icon, puzzles: s.puzzles),
+      (
+        key: 'event',
+        name: 'Event Limited',
+        icon: _eventIcon,
+        // Only puzzles with full-screen art; the rest wait until their art
+        // is captured (TODO 102, user decision 2026-10-25).
+        puzzles: [
+          for (final p in catalog.puzzles)
+            if (p.fullImage != null) p,
+        ],
+      ),
+    ];
     return MenuPage(
       title: 'Puzzles',
       body: (context, u) => ListView(
@@ -52,7 +69,7 @@ class _PuzzlesPageState extends State<PuzzlesPage> {
           Text(
             'Collect pieces to finish puzzles\n'
             'Use finished puzzles as background images\n'
-            'Obtain 1 complete puzzle per purchased Expansion.',
+            'Each installed campaign brings its own puzzles.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 9.5 * u,
@@ -61,97 +78,82 @@ class _PuzzlesPageState extends State<PuzzlesPage> {
             ),
           ),
           SizedBox(height: 22 * u),
-          for (final (story, name, art) in _categories) ...[
-            _Banner(
-              key: ValueKey('puzzle-category-$story'),
-              u: u,
-              name: name,
-              background: art.endsWith('event')
-                  ? 'kss/images/event_banner_background_img.png'
-                  : '$art/banner_background_img.png',
-              title: art.endsWith('event')
-                  ? 'kss/images/event_banner_title_img.png'
-                  : '$art/banner_title_img.png',
-              onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PuzzleCollectionPage(
-                      title: name,
-                      storyId: story,
-                      installedStories: installedStories,
-                    ),
-                  ),
-                );
-                // The page is drawn over the background just chosen.
-                if (mounted) setState(() {});
-              },
-            ),
-            SizedBox(height: 26 * u),
-          ],
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 22 * u,
+            runSpacing: 22 * u,
+            children: [
+              for (final t in tiles)
+                _Tile(
+                  key: ValueKey('puzzle-category-${t.key}'),
+                  u: u,
+                  name: t.name,
+                  icon: t.icon,
+                  onTap: () => _open(t.name, t.puzzles),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _Banner extends StatelessWidget {
+/// A pack's icon over its name: tap to open its puzzles.
+class _Tile extends StatelessWidget {
   final double u;
   final String name;
-  final String background;
-  final String title;
+  final String? icon;
   final VoidCallback onTap;
 
-  const _Banner({
+  const _Tile({
     super.key,
     required this.u,
     required this.name,
-    required this.background,
-    required this.title,
+    required this.icon,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(30 * u);
+    final radius = BorderRadius.circular(22 * u);
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 74 * u,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(color: const Color(0xFFFFF4DE), width: 3 * u),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0x334A2B10),
-              blurRadius: 5 * u,
-              offset: Offset(0, 3 * u),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              PackImage(path: background),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 40 * u,
-                  vertical: 12 * u,
+      child: SizedBox(
+        width: 150 * u,
+        child: Column(
+          children: [
+            Container(
+              height: 150 * u,
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: const Color(0xFFFFF4DE),
+                  width: 3 * u,
                 ),
-                child: PackImage(
-                  path: title,
-                  fit: BoxFit.contain,
-                  placeholder: Center(
-                    child: Text(
-                      name,
-                      style: TextStyle(fontSize: 26 * u, color: HomeColors.ink),
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0x334A2B10),
+                    blurRadius: 5 * u,
+                    offset: Offset(0, 3 * u),
                   ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: radius,
+                child: PackImage(
+                  path: icon,
+                  placeholder: ColoredBox(color: HomeColors.cardFill),
                 ),
               ),
-            ],
-          ),
+            ),
+            SizedBox(height: 8 * u),
+            Text(
+              name,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15 * u, color: HomeColors.ink),
+            ),
+          ],
         ),
       ),
     );
@@ -160,14 +162,12 @@ class _Banner extends StatelessWidget {
 
 class PuzzleCollectionPage extends StatefulWidget {
   final String title;
-  final int storyId;
-  final Set<int> installedStories;
+  final List<Puzzle> puzzles;
 
   const PuzzleCollectionPage({
     super.key,
     required this.title,
-    required this.storyId,
-    required this.installedStories,
+    required this.puzzles,
   });
 
   @override
@@ -178,14 +178,7 @@ class _PuzzleCollectionPageState extends State<PuzzleCollectionPage> {
   @override
   Widget build(BuildContext context) {
     final account = AccountStore.current;
-    // Event Limited lists only puzzles with full-screen art; the rest wait
-    // until their art is captured (TODO 102, user decision 2026-10-25).
-    final puzzles = [
-      for (final p in AccountStore.catalog.puzzles)
-        if (p.storyId == widget.storyId &&
-            (p.storyId != 0 || p.fullImage != null))
-          p,
-    ];
+    final puzzles = widget.puzzles;
     return MenuPage(
       title: widget.title,
       body: (context, u) {
@@ -208,24 +201,12 @@ class _PuzzleCollectionPageState extends State<PuzzleCollectionPage> {
           itemCount: puzzles.length,
           itemBuilder: (context, i) {
             final puzzle = puzzles[i];
-            final held = account.piecesOf(puzzle, widget.installedStories);
+            final held = account.piecesOf(puzzle);
             final complete = held.every((h) => h);
-            final price = account.completeNowPrice(
-              puzzle,
-              widget.installedStories,
-            );
-            final progress = account.puzzleProgress(
-              puzzle,
-              widget.installedStories,
-            );
+            final price = account.completeNowPrice(puzzle);
+            final progress = account.puzzleProgress(puzzle);
             Future<void> open() async {
-              await pushOverlay<void>(
-                context,
-                PuzzleDetail(
-                  puzzle: puzzle,
-                  installedStories: widget.installedStories,
-                ),
-              );
+              await pushOverlay<void>(context, PuzzleDetail(puzzle: puzzle));
               if (mounted) setState(() {});
             }
 
@@ -259,7 +240,7 @@ class _PuzzleCollectionPageState extends State<PuzzleCollectionPage> {
                     u: u,
                     equipped: account.background == puzzle.id,
                     onTap: () {
-                      account.useAsBackground(puzzle, widget.installedStories);
+                      account.useAsBackground(puzzle);
                       unawaited(AccountStore.save());
                       setState(() {});
                     },
@@ -475,12 +456,7 @@ class _Discount extends StatelessWidget {
 /// MM-12/13: the picture, each piece's condition, and Complete Now.
 class PuzzleDetail extends StatefulWidget {
   final Puzzle puzzle;
-  final Set<int> installedStories;
-  const PuzzleDetail({
-    super.key,
-    required this.puzzle,
-    required this.installedStories,
-  });
+  const PuzzleDetail({super.key, required this.puzzle});
 
   @override
   State<PuzzleDetail> createState() => _PuzzleDetailState();
@@ -492,9 +468,8 @@ class _PuzzleDetailState extends State<PuzzleDetail> {
     return switch (p.type) {
       'ending' => 'Watch ${catalog.endings[p.endingCode]?.name ?? 'an ending'}',
       'gameCount' =>
-        'Finish runs of ${catalog.stories[widget.puzzle.storyId] ?? 'this campaign'}',
-      'purchaseStory' =>
-        'Own ${catalog.stories[widget.puzzle.storyId] ?? 'the expansion'}',
+        'Finish runs of ${widget.puzzle.packName ?? 'this campaign'}',
+      'purchaseStory' => 'Own ${widget.puzzle.packName ?? 'the expansion'}',
       'friendInvite' => 'Invite a friend',
       'eventPackage' => 'Event package',
       _ => 'Owned',
@@ -503,7 +478,7 @@ class _PuzzleDetailState extends State<PuzzleDetail> {
 
   Future<void> _completeNow() async {
     final account = AccountStore.current;
-    if (!account.completeNow(widget.puzzle, widget.installedStories)) {
+    if (!account.completeNow(widget.puzzle)) {
       ScaffoldMessenger.maybeOf(context)
           ?.showSnackBar(const SnackBar(content: Text('Not enough cookies.')));
       return;
@@ -516,10 +491,10 @@ class _PuzzleDetailState extends State<PuzzleDetail> {
   Widget build(BuildContext context) {
     final account = AccountStore.current;
     final puzzle = widget.puzzle;
-    final held = account.piecesOf(puzzle, widget.installedStories);
+    final held = account.piecesOf(puzzle);
     final count = held.where((h) => h).length;
-    final progress = account.puzzleProgress(puzzle, widget.installedStories);
-    final price = account.completeNowPrice(puzzle, widget.installedStories);
+    final progress = account.puzzleProgress(puzzle);
+    final price = account.completeNowPrice(puzzle);
     final percent = (progress * 100).round();
     return LayoutBuilder(
       builder: (context, box) {
@@ -604,7 +579,7 @@ class _PuzzleDetailState extends State<PuzzleDetail> {
                     u: u,
                     current: account.background == puzzle.id,
                     onTap: () {
-                      account.useAsBackground(puzzle, widget.installedStories);
+                      account.useAsBackground(puzzle);
                       unawaited(AccountStore.save());
                       setState(() {});
                     },

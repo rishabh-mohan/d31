@@ -64,7 +64,7 @@ void main() {
       MaterialApp(
         home: GameScreen(
           game: game,
-          packLocation: PackLocation(id, null, false),
+          packLocation: PackLocation(id, null),
         ),
       ),
     );
