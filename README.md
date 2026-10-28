@@ -45,8 +45,7 @@ What works:
 Not done yet: audio, some original rules that couldn't be recovered (exam
 scoring and admission odds are fitted approximations, and some trait rates
 are configurable stand-ins), sudden missions, and parts of the original
-event dispatcher. [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) is the
-detailed checkpoint.
+event dispatcher.
 
 ## Content packs
 
@@ -67,13 +66,6 @@ my-pack/
   self-contained pack made for this project. It has custom subjects, a
   location, a crafting block, a trait and a character. Start new packs from
   it.
-- **[docs/PACK-FORMAT.md](docs/PACK-FORMAT.md)** describes every file.
-- **[docs/MODULAR-PACKS.md](docs/MODULAR-PACKS.md)** covers `mechanics.json`:
-  predicates, callbacks, abilities, persistent blocks and hooks.
-- **[../pack-studio/](../pack-studio/README.md)** (a sibling folder) holds the
-  field-level engine contract, event-authoring and art guides, validation
-  rules and starter JSON Schemas: groundwork for a planned companion pack
-  editor.
 
 Installed packs are discovered from a `packs/` folder: next to the app on
 desktop, or the app's external files folder on Android. The folder name is
@@ -96,7 +88,7 @@ flutter build apk --profile   # Android
 **Packs are not part of the app.** `pubspec.yaml` bundles only account data and
 placeholder art (`assets/images/`, gitignored, generated locally from reference
 data not in the repository). Put pack folders where the app looks for them
-(see docs/PACK-FORMAT.md). With none installed, the home screen reports that no
+(see the Workshop example). With none installed, the home screen reports that no
 pack was found.
 
 The generators that build those packs from locally held reference data are
@@ -120,7 +112,6 @@ lib/ui/            Flutter screens: home, setup, gameplay, events, menus, dev pa
 examples/packs/    standalone example packs
 tools/             build helpers (asset-directory placeholders, app icon)
 test/              engine, pack and widget tests, including seeded full-run simulations
-docs/              format docs, design notes, research and reference specs
 ```
 
 ## Tests
@@ -130,25 +121,6 @@ that must all reach the end of the calendar. Static checks confirm the engine
 implements every effect verb and condition the bundled packs use, and pack
 tests check the Workshop example and the `mechanics.json` validator. Several
 tests read the generated packs, so they need those packs present.
-
-## Documentation
-
-New to the codebase? [The project study and interview guide](docs/PROJECT-STUDY-GUIDE.md)
-explains the architecture, reverse engineering, tooling and testing with Java
-comparisons, practical exercises and accurate AI-assisted project framing.
-
-| | |
-|---|---|
-| [docs/CURRENT-STATE.md](docs/CURRENT-STATE.md) | What is implemented and verified right now |
-| [docs/PACK-FORMAT.md](docs/PACK-FORMAT.md), [docs/MODULAR-PACKS.md](docs/MODULAR-PACKS.md) | Content pack format |
-| [../pack-studio/](../pack-studio/README.md) | Sibling project: engine contract and pack-editor groundwork |
-| [docs/EFFECTS-REFERENCE.md](docs/EFFECTS-REFERENCE.md) | How item, trait and event effects are applied, including provisional values |
-| [docs/EVENT-PRESENTATION.md](docs/EVENT-PRESENTATION.md) | Dialogue tokens, markup and portraits |
-| [docs/D30-MODE-SPEC.md](docs/D30-MODE-SPEC.md) | Design spec for the recreated mode |
-
-Research notes keep three kinds of evidence apart: what was observed in the
-original, what was recovered from its data, and what this project chose as a
-stand-in. Values the project chose are labeled provisional.
 
 ## License
 
