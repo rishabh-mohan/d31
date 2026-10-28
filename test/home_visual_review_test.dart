@@ -51,7 +51,7 @@ void main() {
       'charging': const ChargingSheet(),
       'mail': const MailBoxSheet(),
       'store': StoreSheet(pack: pack),
-      'puzzles': const PuzzlesPage(installedStories: {16, 20}),
+      'puzzles': const PuzzlesPage(),
     };
     for (final entry in screens.entries) {
       AccountStore.current = Account(cookies: 53, refreshTokens: 522);

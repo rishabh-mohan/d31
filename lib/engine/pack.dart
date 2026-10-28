@@ -9,6 +9,7 @@ import 'pack_mechanics.dart';
 
 import 'dart:convert';
 
+import 'account_catalog.dart';
 import 'admissions.dart';
 import 'game_date.dart';
 import 'quiz.dart';
@@ -160,18 +161,18 @@ class Rules {
   num get hpMin => number('hp', 'min', 0);
   num get moneyInitial => number('money', 'initial', 0);
   num get moneyMin => number('money', 'min', 0);
-  num get sleepRestoresHp => number('day', 'sleepRestoresHp', 60);
-  num get sleepLocationBonusHp => number('day', 'sleepLocationBonusHp', 10);
-  num get studyWeight => number('study', 'studyWeight', 10);
+  num get sleepRestoresHp => number('day', 'sleepRestoresHp', 10);
+  num get sleepLocationBonusHp => number('day', 'sleepLocationBonusHp', 3);
+  num get studyWeight => number('study', 'studyWeight', 3);
   num get studyExp => number('study', 'expPerStudy', 25);
   num get comboBonusPercent => number('study', 'comboBonusPercent', 0.05);
   int get comboMaxStacks => number('study', 'comboMaxStacks', 5).toInt();
-  num get partTimeBaseMoney => number('partTimeJob', 'baseMoney', 1000);
+  num get partTimeBaseMoney => number('partTimeJob', 'baseMoney', 500);
   num get partTimeExp => number('partTimeJob', 'expPerShift', 60);
   num get exerciseExp => number('exercise', 'expPerSession', 80);
   num get randomEventChance =>
-      number('events', 'randomEventChancePerTick', 0.12);
-  int get maxEventsPerDay => number('events', 'maxEventsPerDay', 3).toInt();
+      number('events', 'randomEventChancePerTick', 0.06);
+  int get maxEventsPerDay => number('events', 'maxEventsPerDay', 1).toInt();
   Map<String, num> get rankWeights => numberMap('events', 'rankWeights');
   num get exhaustedPenaltyStat => number('hp', 'exhaustedPenaltyStat', -5);
 }
@@ -254,7 +255,7 @@ class GameLocation {
   final String? imgPath;
 
   /// Pack-relative art path, e.g. "backgrounds/park.png". Resolved against
-  /// the pack directory first, then the bundled assets.
+  /// the pack directory first, then the placeholder art under assets/images.
   final String? image;
   final List<LocationAction> actions;
 
@@ -852,6 +853,32 @@ class ContentPack {
   bool get examEnabled =>
       rules.flag('exam', 'enabled', true) && !admissions.isEmpty;
 
+  /// This pack's `puzzles.json` (`{"icon": ..., "puzzles": [...]}`) as a
+  /// shelf of the Puzzles menu, or null when it ships none. Art sits in
+  /// `<dir>/images/puzzles`: `<id>_thumbnail.png`, `<id>.png` and the icon.
+  PuzzleShelf? puzzleShelf(String dir) {
+    final text = sourceFiles['puzzles.json'];
+    if (text == null) return null;
+    final j = _obj('puzzles.json', text);
+    final art = '$dir/images/puzzles';
+    final icon = j['icon'] as String?;
+    return PuzzleShelf(
+      manifest.id,
+      manifest.name,
+      icon == null ? null : '$dir/images/$icon',
+      [
+        for (final w in _list('puzzles.json', j, 'puzzles'))
+          Puzzle.fromJson(
+            w,
+            storyId: manifest.storyId ?? 0,
+            packId: manifest.id,
+            packName: manifest.name,
+            artDir: art,
+          ),
+      ],
+    );
+  }
+
   /// A pack without a college catalog borrows [donor]'s (both university
   /// sets), so its runs still end on the CSAT. Packs with their own keep
   /// them.
@@ -1189,6 +1216,7 @@ class ContentPack {
     'colleges_us.json',
     'events/events_female.json',
     'quizzes.json',
+    'puzzles.json',
   ];
   static List<String> get allFiles => [...requiredFiles, ...optionalFiles];
 

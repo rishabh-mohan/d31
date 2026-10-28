@@ -161,7 +161,6 @@ void main() {
       expect(await ContentSource.availablePackIds(), contains('workshop'));
       final (loaded, location) = await ContentSource.load(packId: 'workshop');
       expect(loaded.manifest.id, 'workshop');
-      expect(location.editable, isTrue);
       expect(location.directory!.isAbsolute, isTrue);
     },
   );

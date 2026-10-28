@@ -6,7 +6,7 @@
 ///   Content  switches, items, locations -- grant, set, unlock
 ///   Traits   what the held traits are doing right now, and grant any of 244
 ///   Rules    live edit of rules.json, saved back to the pack directory
-///   Pack     where the pack came from, reload from disk, reset to bundled,
+///   Pack     where the pack came from, reload from disk,
 ///            and the list of verbs the pack used that the engine lacks
 library;
 
@@ -1023,9 +1023,8 @@ class _RulesTabState extends State<_RulesTab> {
       setState(() {
         _error = true;
         _message =
-            'This pack is read-only (loaded from bundled assets), so '
-            'there is nowhere to save. Run on desktop from the repo, or push '
-            'a pack directory to the device.';
+            'This pack has no directory, so '
+            'there is nowhere to save.';
       });
       return;
     }
@@ -1133,8 +1132,7 @@ class _PackTabState extends State<_PackTab> {
     if (dir == null) {
       setState(
         () => _message =
-            'Nothing to reload: this pack came from the '
-            'bundled assets.',
+            'Nothing to reload: this pack has no directory.',
       );
       return;
     }
@@ -1147,44 +1145,6 @@ class _PackTabState extends State<_PackTab> {
       );
     } catch (e) {
       setState(() => _message = 'Reload failed: $e');
-    }
-  }
-
-  Future<void> _reset() async {
-    final dir = widget.location.directory;
-    if (dir == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Reset pack?'),
-        content: Text(
-          'This overwrites every file in\n${dir.path}\nwith the bundled copy. '
-          'Edits you have made there will be lost.',
-        ),
-        actions: [
-          PressFeedback(
-            child: TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-          ),
-          PressFeedback(
-            child: FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Reset'),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      await ContentSource.resetToBundled(dir, widget.location.id);
-      final pack = await ContentSource.loadFromDirectory(dir);
-      widget.onReloaded?.call(pack, widget.location);
-      setState(() => _message = 'Pack reset to the bundled copy.');
-    } catch (e) {
-      setState(() => _message = 'Reset failed: $e');
     }
   }
 
@@ -1222,13 +1182,6 @@ class _PackTabState extends State<_PackTab> {
               onPressed: _reload,
               icon: const Icon(Icons.refresh),
               label: const Text('Reload from disk'),
-            ),
-            PressFeedback(
-              child: OutlinedButton.icon(
-                onPressed: widget.location.directory == null ? null : _reset,
-                icon: const Icon(Icons.restore),
-                label: const Text('Reset to bundled'),
-              ),
             ),
           ],
         ),

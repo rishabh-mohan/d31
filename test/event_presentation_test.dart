@@ -89,13 +89,6 @@ void main() {
       expect(run.current!.text, '<b>Goodbye, Greg Fiasco.</b>');
       final restored = GameState.fromJson(pack, game.state.toJson());
       expect(restored.fullName, 'Greg Fiasco');
-      final legacy = game.state.toJson()
-        ..remove('firstName')
-        ..remove('lastName');
-      expect(
-        GameState.fromJson(pack, legacy).firstName,
-        pack.manifest.firstName,
-      );
     },
   );
 

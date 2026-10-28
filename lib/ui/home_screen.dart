@@ -110,6 +110,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _campaigns[id] = (other.withCollegesFrom(pack), where);
         }
       }
+      // Each pack brings its own puzzles; the Puzzles menu lists them.
+      AccountStore.catalog = AccountStore.catalog.withShelves([
+        for (final (campaign, where) in _campaigns.values)
+          if (where.directory != null)
+            ?campaign.puzzleShelf(where.directory!.absolute.path),
+      ]);
       if (!mounted) return;
       setState(() {
         _pack = pack;
@@ -248,17 +254,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final pack = _pack;
     if (pack == null) return;
     final campaigns = _campaignPacks;
-    final installed = {for (final p in campaigns) ?p.manifest.storyId};
     switch (label) {
       case 'Records':
         await Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const HistoryPage()));
       case 'Puzzles':
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => PuzzlesPage(installedStories: installed),
-          ),
-        );
+        await Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const PuzzlesPage()));
       case 'Missions':
         await pushOverlay<void>(
           context,

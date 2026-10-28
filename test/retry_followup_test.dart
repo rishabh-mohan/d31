@@ -94,7 +94,7 @@ void main() {
   }
 
   test(
-    'stamina caps at 100 across levels, direct edits, recovery and old saves',
+    'stamina caps at 100 across levels, direct edits, recovery and loading a save',
     () {
       for (final pack in [standard, retry]) {
         final game = Game.newRun(pack);
@@ -184,7 +184,7 @@ void main() {
         MaterialApp(
           home: GameScreen(
             game: game,
-            packLocation: PackLocation('kss20', null, false),
+            packLocation: PackLocation('kss20', null),
           ),
         ),
       );

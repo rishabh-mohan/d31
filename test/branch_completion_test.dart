@@ -252,7 +252,7 @@ void main() {
       MaterialApp(
         home: GameScreen(
           game: game,
-          packLocation: PackLocation('kss16', null, false),
+          packLocation: PackLocation('kss16', null),
         ),
       ),
     );

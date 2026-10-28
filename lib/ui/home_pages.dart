@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import '../engine/record_store.dart';
 import '../engine/save_store.dart';
 import 'home_screen.dart';
+import 'missing_icon.dart';
 import 'pack_image.dart';
 import 'record_details.dart';
 
@@ -354,11 +355,7 @@ class _SaveCard extends StatelessWidget {
                   path: save.portrait.isEmpty ? null : save.portrait,
                   fit: BoxFit.cover,
                   alignment: Alignment.topCenter,
-                  placeholder: const PackImage(
-                    path: genericPortrait,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                  ),
+                  placeholder: const MissingIcon(),
                 ),
               ),
             ),
@@ -546,11 +543,7 @@ class _RecordCard extends StatelessWidget {
                               : record.portrait,
                           fit: BoxFit.contain,
                           alignment: Alignment.bottomCenter,
-                          placeholder: const PackImage(
-                            path: genericPortrait,
-                            fit: BoxFit.contain,
-                            alignment: Alignment.bottomCenter,
-                          ),
+                          placeholder: const MissingIcon(),
                         ),
                       ),
                       SizedBox(height: 10 * u),

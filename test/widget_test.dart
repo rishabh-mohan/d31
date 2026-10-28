@@ -146,7 +146,7 @@ Future<void> main() async {
         MaterialApp(
           home: GameScreen(
             game: game,
-            packLocation: PackLocation('kss16', null, false),
+            packLocation: PackLocation('kss16', null),
           ),
         ),
       );
@@ -177,7 +177,7 @@ Future<void> main() async {
         MaterialApp(
           home: GameScreen(
             game: game,
-            packLocation: PackLocation('kss16', null, false),
+            packLocation: PackLocation('kss16', null),
           ),
         ),
       );
@@ -229,7 +229,7 @@ Future<void> main() async {
         host(
           DevPanel(
             game: game,
-            packLocation: PackLocation('kss16', null, false),
+            packLocation: PackLocation('kss16', null),
             onStateChanged: () {},
             playEvent: (run) async {},
           ),

@@ -1,11 +1,10 @@
-/// Achievements (MM-03..07): University, Campaign and Other tabs over one
+/// Achievements (MM-03..07): University and Campaign tabs over one
 /// All / Incomplete / Complete filter.
 ///
 /// University counts are this account's own enrollments (the original's
 /// were online totals). A university is complete once enrolled in.
 /// Campaigns are the installed packs, with their endings from the account
-/// catalog; Other is the five achievements the capture shows that d30mode
-/// can track (Baby Steps needs the Tutorial, which is not ported).
+/// catalog.
 ///
 /// A full page under the Home menu header, like Records and Puzzles (TODO
 /// 94); it used to be a sheet over Home.
@@ -19,6 +18,7 @@ import '../engine/pack.dart';
 import 'account_widgets.dart';
 import 'home_pages.dart';
 import 'home_screen.dart';
+import 'missing_icon.dart';
 import 'pack_image.dart';
 
 enum _Filter {
@@ -76,8 +76,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               Expanded(
                 child: switch (_tab) {
                   0 => _universities(u),
-                  1 => _campaigns(u),
-                  _ => _others(u),
+                  _ => _campaigns(u),
                 },
               ),
             ],
@@ -103,7 +102,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
 
   Widget _tabs(double u) => Row(
     children: [
-      for (final (i, label) in ['University', 'Campaign', 'Other'].indexed)
+      for (final (i, label) in ['University', 'Campaign'].indexed)
         Expanded(
           child: InkWell(
             key: ValueKey('ach-tab-$label'),
@@ -343,25 +342,6 @@ class _AchievementsPageState extends State<AchievementsPage> {
       children: cards,
     );
   }
-
-  // ---- Other -----------------------------------------------------------
-
-  Widget _others(double u) {
-    final list = [
-      for (final a in AchievementInfo.all)
-        if (_filter.keeps(account.achievementDone(a))) a,
-    ];
-    return ListView(
-      padding: EdgeInsets.fromLTRB(8 * u, 4 * u, 8 * u, 24 * u),
-      children: [
-        for (final a in list)
-          Padding(
-            padding: EdgeInsets.only(bottom: 17 * u),
-            child: _AchievementCard(u: u, info: a, account: account),
-          ),
-      ],
-    );
-  }
 }
 
 Color _hex(String? code, Color fallback) {
@@ -515,6 +495,7 @@ class _CampaignCard extends StatelessWidget {
                 path: portrait,
                 fit: BoxFit.contain,
                 alignment: Alignment.bottomCenter,
+                placeholder: const MissingIcon(),
               ),
             ),
             SizedBox(height: 6 * u),
@@ -648,74 +629,6 @@ class _EndingsList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _AchievementCard extends StatelessWidget {
-  final double u;
-  final AchievementInfo info;
-  final Account account;
-  const _AchievementCard({
-    required this.u,
-    required this.info,
-    required this.account,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final done = account.achievementDone(info);
-    final progress = account.achievementProgress(info).clamp(0, info.target);
-    const green = Color(0xFF4CA846);
-    return Container(
-      height: 96 * u,
-      padding: EdgeInsets.symmetric(horizontal: 10 * u),
-      decoration: BoxDecoration(
-        color: HomeColors.cardFill,
-        borderRadius: BorderRadius.circular(8 * u),
-        border: Border.all(color: HomeColors.outline, width: 2 * u),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x334A2B10),
-            blurRadius: 3 * u,
-            offset: Offset(0, 2 * u),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (done) ...[
-                      DoneCheck(size: 17 * u),
-                      SizedBox(width: 6 * u),
-                    ],
-                    Text(
-                      info.title,
-                      style: TextStyle(fontSize: 19 * u, color: HomeColors.ink),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8 * u),
-                Text(
-                  '${info.condition} $progress/${info.target}',
-                  style: TextStyle(
-                    fontSize: 14.5 * u,
-                    color: done ? green : HomeColors.ink,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!done && info.cookies > 0)
-            CookieAmount(u: u, amount: info.cookies, size: 15),
-        ],
-      ),
     );
   }
 }

@@ -163,7 +163,7 @@ void main() {
         MaterialApp(
           home: GameScreen(
             game: game,
-            packLocation: PackLocation('kss16', null, false),
+            packLocation: PackLocation('kss16', null),
           ),
         ),
       );
@@ -270,7 +270,7 @@ void main() {
     final sleep = pack.locations[2000]!.actions.firstWhere(
       (a) => a.actionType == 'sleep',
     );
-    expect(game.preview(sleep).gain, 15);
+    expect(game.preview(sleep).gain, 13); // 10 base + the +3 Rest bonus (kss16's old 5 was a typo)
   });
 
   test('store stat descriptions agree with their reference-scaled effects', () {
@@ -449,7 +449,7 @@ void main() {
       MaterialApp(
         home: GameScreen(
           game: game,
-          packLocation: PackLocation('kss16', null, false),
+          packLocation: PackLocation('kss16', null),
         ),
       ),
     );

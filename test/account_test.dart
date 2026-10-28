@@ -16,11 +16,17 @@ void main() {
   late ContentPack pack;
   late AccountCatalog catalog;
 
+  Puzzle retryPuzzle(String id) =>
+      catalog.allPuzzles.firstWhere((p) => p.id == id);
+
   setUpAll(() async {
     pack = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
+    final retry = await ContentSource.loadFromDirectory(
+      Directory('packs/kss20'),
+    );
     catalog = AccountCatalog.parse(
       await File('assets/account/catalog.json').readAsString(),
-    );
+    ).withShelves([retry.puzzleShelf(Directory('packs/kss20').absolute.path)!]);
   });
 
   RunRecord record({
@@ -49,8 +55,7 @@ void main() {
     expect(catalog.endings[30003]!.cookies, 3);
     expect(catalog.endings[30003]!.storyId, 3);
     expect(catalog.endingsOf(20), hasLength(13));
-    final ihyeon = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper1');
-    expect(ihyeon.totalCookies, 99);
+    expect(retryPuzzle('wallpaper201').totalCookies, 69);
     expect(catalog.universities.where((u) => u.region == 'taiwan'), isNotEmpty);
     expect(catalog.universities.firstWhere((u) => u.id == 2).stars, 5);
     expect(catalog.universities.firstWhere((u) => u.id == 1).stars, 4.5);
@@ -65,24 +70,12 @@ void main() {
     expect(a.endings, {200004});
   });
 
-  test('achievements complete and Story Addict pays its 5', () {
+  test('first-time endings pay their Endings List cookies', () {
     final a = Account();
     for (final code in [200001, 200002, 200003, 200005, 200006]) {
       a.recordRun(record(ending: code), catalog);
     }
-    final addict = AchievementInfo.all.first;
-    expect(a.achievementDone(addict), isTrue);
-    // 1 + 2 + 2 + 1 + 1 for the endings, 5 for the achievement.
-    expect(a.cookies, 7 + 5);
-    a.payAchievements();
-    expect(a.cookies, 12);
-    a.recordRun(record(exercise: 10), catalog);
-    expect(
-      a.achievementDone(
-        AchievementInfo.all.firstWhere((x) => x.id == 'gym_rat'),
-      ),
-      isTrue,
-    );
+    expect(a.cookies, 1 + 2 + 2 + 1 + 1);
   });
 
   test('packs cost cookies and open into owned copies', () {
@@ -147,44 +140,67 @@ void main() {
   });
 
   test('puzzle progress is weighted by piece cookies', () {
-    final a = Account(endings: {30009, 30010});
-    final seoA = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper3');
-    expect(a.piecesOf(seoA, const {}), [false, false, true, true]);
-    final weight = seoA.pieces[0].cookies + seoA.pieces[1].cookies;
-    expect(a.completeNowPrice(seoA, const {}), weight);
-    expect(
-      a.puzzleProgress(seoA, const {}),
-      closeTo(1 - weight / seoA.totalCookies, 1e-9),
+    final a = Account(endings: {200009});
+    final suin = retryPuzzle('wallpaper201');
+    expect(a.piecesOf(suin), [true, false, false, false]);
+    expect(a.puzzleProgress(suin), closeTo(30 / 69, 1e-9));
+    // Game-count pieces carry no price, so the rest cannot be bought.
+    expect(a.completeNowPrice(suin), isNull);
+    // A finished run of the owning pack fills them one by one.
+    a.clears['kss20'] = 1;
+    expect(a.piecesOf(suin), [true, false, true, false]);
+    a.clears['kss20'] = 2;
+    a.endings.add(200010);
+    expect(a.piecesOf(suin).every((h) => h), isTrue);
+
+    // Complete Now charges the missing pieces' cookies.
+    const priced = Puzzle(
+      id: 'p',
+      name: '',
+      description: '',
+      storyId: 0,
+      pieces: [
+        PuzzlePiece('ending', endingCode: 1, cookies: 40),
+        PuzzlePiece('ending', endingCode: 2, cookies: 60),
+      ],
     );
-    a.cookies = 200;
-    expect(a.completeNow(seoA, const {}), isTrue);
-    expect(a.piecesOf(seoA, const {}).every((h) => h), isTrue);
-    expect(a.cookies, 200 - weight);
+    final b = Account(endings: {2}, cookies: 200);
+    expect(b.completeNowPrice(priced), 40);
+    expect(b.completeNow(priced), isTrue);
+    expect(b.cookies, 160);
+    expect(b.piecesOf(priced).every((h) => h), isTrue);
     // Event-limited puzzles are unlocked: nothing here can earn their
     // Cookie Parade or package pieces (TODO 102).
-    for (final event in catalog.puzzles.where((p) => p.storyId == 0)) {
-      expect(a.piecesOf(event, const {}).every((h) => h), isTrue);
-      expect(a.completeNowPrice(event, const {}), 0, reason: event.id);
+    for (final event in catalog.puzzles) {
+      expect(b.piecesOf(event).every((h) => h), isTrue);
+      expect(b.completeNowPrice(event), 0, reason: event.id);
     }
   });
 
   test('only a finished puzzle can become the background', () {
     final a = Account();
+    // The built-in desk is no puzzle.
     expect(a.background, 'wallpaper0');
-    expect(a.backgroundIn(catalog)!.wallpaper, contains('wallpaper_image'));
-    final ihyeon = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper1');
-    expect(a.useAsBackground(ihyeon, const {}), isFalse);
+    expect(a.backgroundIn(catalog), isNull);
+    final suin = retryPuzzle('wallpaper201');
+    expect(a.useAsBackground(suin), isFalse);
     expect(a.background, 'wallpaper0');
     final event = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper1011');
-    expect(a.useAsBackground(event, const {}), isTrue);
-    // No full-screen art ships for it, so Home fills from the thumbnail.
-    expect(a.backgroundIn(catalog)!.wallpaper, event.thumbnail);
-    // Art captured from a real install's cache is drawn full-screen.
-    final pino = catalog.puzzles.firstWhere((p) => p.id == 'wallpaper180');
-    expect(pino.wallpaper, 'kss/images/wallpaper_image/wallpaper180.png');
-    expect(File('assets/images/${pino.wallpaper}').existsSync(), isTrue);
-    expect(Account.fromJson(a.toJson()).background, 'wallpaper1011');
-    // An id the catalog no longer has falls back to the desk.
+    expect(a.useAsBackground(event), isTrue);
+    expect(
+      a.backgroundIn(catalog)!.wallpaper,
+      'kss/images/wallpaper_image/wallpaper1011.png',
+    );
+    // A pack's puzzle draws its own full-screen art.
+    final academy = retryPuzzle('wallpaper200');
+    expect(a.useAsBackground(academy), isTrue);
+    expect(
+      a.backgroundIn(catalog)!.wallpaper,
+      endsWith('puzzles/wallpaper200.png'),
+    );
+    expect(File(academy.wallpaper).existsSync(), isTrue);
+    expect(Account.fromJson(a.toJson()).background, 'wallpaper200');
+    // An id no pack or catalog has falls back to the desk.
     a.background = 'wallpaper9999';
     expect(a.backgroundIn(catalog), isNull);
   });

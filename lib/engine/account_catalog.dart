@@ -46,6 +46,15 @@ class Puzzle {
   final int storyId;
   final List<PuzzlePiece> pieces;
 
+  /// The pack that owns this puzzle, or null for the app's own event-limited
+  /// ones. A `gameCount` piece counts finished runs of this pack.
+  final String? packId;
+  final String? packName;
+
+  /// Where a pack puzzle's art lives (`<id>_thumbnail.png`, `<id>.png`):
+  /// the pack's `images/puzzles` folder. Null for the app's own art.
+  final String? artDir;
+
   /// Whether full-screen art is bundled. The original ships only the
   /// Amnesia desk and downloads the rest from Firebase Storage `wallpapers/`
   /// (sub_aa702c); tools/import_wallpapers.py bundles the ones captured
@@ -58,13 +67,46 @@ class Puzzle {
     required this.description,
     required this.storyId,
     required this.pieces,
+    this.packId,
+    this.packName,
+    this.artDir,
     this.hasFullImage = false,
   });
 
-  String get thumbnail => 'kss/images/wallpaper_thumbnail/$id.png';
+  /// One puzzle from a catalog or pack `puzzles.json` entry.
+  factory Puzzle.fromJson(
+    Map w, {
+    int storyId = 0,
+    String? packId,
+    String? packName,
+    String? artDir,
+  }) => Puzzle(
+    id: w['id'] as String,
+    name: w['name'] as String? ?? '',
+    description: w['description'] as String? ?? '',
+    storyId: storyId,
+    packId: packId,
+    packName: packName,
+    artDir: artDir,
+    pieces: [
+      for (final p in (w['pieces'] as List? ?? const []).cast<Map>())
+        PuzzlePiece(
+          p['type'] as String? ?? 'fixed',
+          endingCode: (p['endingCode'] as num?)?.toInt(),
+          cookies: (p['cookieCount'] as num?)?.toInt() ?? 0,
+        ),
+    ],
+    hasFullImage: w['fullImage'] == true,
+  );
 
-  /// Full-screen art, where the app ships it. The Amnesia desk always does.
-  String? get fullImage => hasFullImage || id == 'wallpaper0'
+  String get thumbnail => artDir == null
+      ? 'kss/images/wallpaper_thumbnail/$id.png'
+      : '$artDir/${id}_thumbnail.png';
+
+  /// Full-screen art, where there is any.
+  String? get fullImage => artDir != null
+      ? (hasFullImage ? '$artDir/$id.png' : null)
+      : hasFullImage
       ? 'kss/images/wallpaper_image/$id.png'
       : null;
 
@@ -73,6 +115,18 @@ class Puzzle {
   String get wallpaper => fullImage ?? thumbnail;
 
   int get totalCookies => pieces.fold(0, (sum, p) => sum + p.cookies);
+}
+
+/// One pack's puzzles and the icon its tile shows in the Puzzles menu.
+class PuzzleShelf {
+  final String packId;
+  final String name;
+
+  /// Absolute path of the pack's icon, or null to show the name.
+  final String? icon;
+  final List<Puzzle> puzzles;
+
+  const PuzzleShelf(this.packId, this.name, this.icon, this.puzzles);
 }
 
 class CatalogUniversity {
@@ -296,7 +350,10 @@ class TraitPackKind {
 
 class AccountCatalog {
   final Map<int, EndingInfo> endings;
+
+  /// The app's own (event-limited) puzzles; each pack's are in [shelves].
   final List<Puzzle> puzzles;
+  final List<PuzzleShelf> shelves;
   final Map<int, String> stories;
   final List<CatalogUniversity> universities;
   final int firstUniversityEnrollmentCookies;
@@ -308,6 +365,7 @@ class AccountCatalog {
   const AccountCatalog({
     this.endings = const {},
     this.puzzles = const [],
+    this.shelves = const [],
     this.stories = const {},
     this.universities = const [],
     this.firstUniversityEnrollmentCookies = 0,
@@ -334,21 +392,7 @@ class AccountCatalog {
     },
     puzzles: [
       for (final w in (j['wallpapers'] as List? ?? const []).cast<Map>())
-        Puzzle(
-          id: w['id'] as String,
-          name: w['name'] as String? ?? '',
-          description: w['description'] as String? ?? '',
-          storyId: (w['storyId'] as num?)?.toInt() ?? 0,
-          pieces: [
-            for (final p in (w['pieces'] as List? ?? const []).cast<Map>())
-              PuzzlePiece(
-                p['type'] as String? ?? 'fixed',
-                endingCode: (p['endingCode'] as num?)?.toInt(),
-                cookies: (p['cookieCount'] as num?)?.toInt() ?? 0,
-              ),
-          ],
-          hasFullImage: w['fullImage'] == true,
-        ),
+        Puzzle.fromJson(w),
     ],
     stories: {
       for (final e in ((j['stories'] as Map?) ?? const {}).entries)
@@ -365,6 +409,22 @@ class AccountCatalog {
         ),
     ],
   );
+
+  /// This catalog with the installed packs' puzzles listed.
+  AccountCatalog withShelves(List<PuzzleShelf> shelves) => AccountCatalog(
+    endings: endings,
+    puzzles: puzzles,
+    shelves: shelves,
+    stories: stories,
+    universities: universities,
+    firstUniversityEnrollmentCookies: firstUniversityEnrollmentCookies,
+    setupRequiresOwnership: setupRequiresOwnership,
+  );
+
+  List<Puzzle> get allPuzzles => [
+    ...puzzles,
+    for (final s in shelves) ...s.puzzles,
+  ];
 
   factory AccountCatalog.parse(String text) =>
       AccountCatalog.fromJson(jsonDecode(text) as Map<String, dynamic>);

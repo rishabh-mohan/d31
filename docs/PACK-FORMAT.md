@@ -27,31 +27,32 @@ empty.
 
 ## Where the pack lives, and how to edit it
 
-The pack is bundled read-only in the app, and copied to a writable directory
-on first run. The app then loads the copy, so edits survive and need no
-rebuild.
+The app ships no packs. It loads each pack directory straight from disk, so
+edits need no rebuild.
 
-| Platform | Editable copy |
+| Platform | Pack folder |
 |---|---|
-| Windows desktop | `packs/<id>/` in the repo, loaded directly |
+| Windows desktop | `packs/<id>/` in the repo |
 | Android | `/sdcard/Android/data/dev.d30mode.d30mode/files/packs/<id>/` |
 
-On the phone, push an edited file and reload:
+On the phone, Android 13+ refuses `adb push` straight into that folder. Stage
+the pack in normal storage, then move it in (an existing `<id>` folder must be
+moved away first):
 
 ```bash
 # PowerShell, not Git Bash -- MSYS2 rewrites /sdcard/... into a Windows path
 # and adb push then reports success while nothing lands.
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
-& $adb -s <serial> push rules.json `
-  /sdcard/Android/data/dev.d30mode.d30mode/files/packs/kss16/rules.json
+& $adb -s <serial> push packs/kss16 /sdcard/d30-stage/
+& $adb -s <serial> shell "mv /sdcard/d30-stage/kss16 /sdcard/Android/data/dev.d30mode.d30mode/files/packs/"
 ```
 
 Then open the dev panel (the slider icon) → **Pack** → **Reload from disk**,
 and start a new run. A run in progress keeps the rules it began with.
 
 The dev panel's **Rules** tab edits `rules.json` in place and writes it back,
-which is the quickest way to tune without leaving the app. **Reset to
-bundled** restores the whole directory from the copy inside the app.
+which is the quickest way to tune without leaving the app. Files moved in
+with adb are shell-owned, so Save may fail on the phone.
 
 ## Rebuilding the pack from source
 
@@ -130,12 +131,15 @@ exercise exp = exercise.expPerSession
                + Σ exerciseEfficiency  (then × percent)
                × levels.exercise.locationEfficiency[here]
 
-stamina cost = action.hpWeight + Σ hpCost effects   (clamped at 0)
+stamina cost = type base + staminaCost.perWeight × action.hpWeight + Σ hpCost effects
+               (clamped at 0, minus the exercise level). Type base: staminaCost.<type>,
+               else staminaCost.base, else the default (study 16, exercise 24,
+               partTimeJob 29, lesson 9, anything else 9.5)
 
 study gain does NOT include action.weight -- see locations.json.
 
-sleep        = day.sleepRestoresHp
-               + day.sleepLocationBonusHp if the location's type is "sleep"
+sleep        = day.sleepRestoresHp (default 10)
+               + day.sleepLocationBonusHp if the location's type is "sleep" (default 3)
                + Σ sleepEfficiency
 ```
 
@@ -199,7 +203,7 @@ content.
   Reading Room carries study 12 / sleep 0.3 — you go there to be *offered*
   study, not to be paid more for it. Payout comes from the level tables and
   the location efficiency lists.
-- `hpWeight` is the stamina cost.
+- `hpWeight` is the stamina weight: cost = the type's base + `staminaCost.perWeight` × `hpWeight`.
 - `image` is a pack-relative art path for the location backdrop
   ("backgrounds/park.png"); see **Art** below.
 - `conditionFuncCode` names an event switch that must be non-zero for the
@@ -467,6 +471,42 @@ CSAT save state includes `csatPending`, results, applications, admitted
 departments and enrollment. Exam day offers no ordinary action blocks. Task
 state includes deadlines/titles; ADD_TODO and ADD_TODO_2 schedule absolute and
 relative deadlines, and REMOVE_TODO removes them. These remain pack-controlled.
+
+## Optional puzzles.json
+
+A pack brings its own Home-background puzzles. The Puzzles menu shows one icon
+tile per installed pack that has this file; tapping it lists the pack's
+puzzles. The app's own event-limited puzzles stay beside them.
+
+```json
+{
+ "icon": "puzzles/icon.png",
+ "puzzles": [
+  {
+   "id": "wallpaper200",
+   "name": "KSS Retake Academy",
+   "description": "The exterior already creeps me out.",
+   "fullImage": true,
+   "pieces": [
+    {"type": "ending", "endingCode": 200009, "cookieCount": 30},
+    {"type": "gameCount"},
+    {"type": "purchaseStory"}
+   ]
+  }
+ ]
+}
+```
+
+- `icon` is under the pack's `images/` folder; without one the tile is blank.
+- Art sits in `images/puzzles/`: `<id>_thumbnail.png` (square) and, when
+  `fullImage` is true, `<id>.png` (full screen). A puzzle without full art
+  fills the screen from its thumbnail.
+- Piece types: `ending` (that ending reached), `gameCount` (the nth finished
+  run of this pack), `purchaseStory` and `fixed` (held once the pack is
+  installed), `eventPackage` (held). `cookieCount` weights progress and sets
+  the Complete Now price; a piece without one cannot be bought.
+- Puzzle ids are global (the chosen background is saved by id): keep them
+  unique across packs.
 
 ## Art
 

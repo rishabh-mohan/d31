@@ -123,7 +123,7 @@ Future<void> main() async {
       game.state.date = GameDate(eve, game.actionTicksPerDay - 1);
       final goal = Goals.issue(game.state);
       game.state.weeklyGoal = goal;
-      goal.met = true; // Met before mid-day payment existed (old save).
+      goal.met = true; // Met, but the mid-day payment has not happened yet.
       final before = game.state.stats[goal.rewardSubject] ?? 0;
       game.state.eventsFiredToday = 99;
       final sleep = game.state.location!.actions.firstWhere(
