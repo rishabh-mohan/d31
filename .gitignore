@@ -111,3 +111,24 @@ app.*.map.json
 /docs/original-game-*.json
 /docs/D-DAY-COMPARISON-*.md
 /docs/D-DAY-APPLICATIONS-REFERENCE-*.md
+
+# Material written for coding agents or kept as working notes: never shared.
+# (Instructions, design and research docs, references, task lists, tool configs.)
+/docs/
+/references/
+/screenshots/
+/CLAUDE.md
+/AGENTS.md
+/GEMINI.md
+**/CLAUDE.md
+**/AGENTS.md
+**/GEMINI.md
+/RE-BRIEF.md
+/TODO.md
+/TODO-DONE.md
+.claude/
+.cursor/
+.cursorrules
+.gemini/
+.aider*
+/graphify-out/
