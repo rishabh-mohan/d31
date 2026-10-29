@@ -185,8 +185,6 @@ class Rules {
 
   /// What each book tier above E adds (D is 200, S is 600 at the defaults).
   num get studyExpPerTier => number('study', 'expPerTier', 100);
-  num get comboBonusPercent => number('study', 'comboBonusPercent', 0.05);
-  int get comboMaxStacks => number('study', 'comboMaxStacks', 5).toInt();
   num get partTimeBaseMoney => number('partTimeJob', 'baseMoney', 500);
   num get partTimeExp => number('partTimeJob', 'expPerShift', 60);
   num get exerciseExp => number('exercise', 'expPerSession', 80);
