@@ -1274,6 +1274,15 @@ class Game {
     return max(0, cost.round() - state.exerciseLevel.level);
   }
 
+  /// Student XP for one study block: an E-tier book gives `study.expPerStudy`,
+  /// and each tier above adds `study.expPerTier` (a class block gives the E
+  /// amount). No book counts as E.
+  num _studyExpFor(GameBook? book) {
+    final rank = int.tryParse(book?.bookRank ?? '') ?? 1;
+    return pack.rules.studyExp +
+        (rank - 1).clamp(0, 5) * pack.rules.studyExpPerTier;
+  }
+
   String _study(LocationAction action, GameBook? book) {
     final subject =
         book?.subject ??
@@ -1294,7 +1303,7 @@ class Game {
     for (final bonus in bonuses) {
       state.addStat(bonus.subject, bonus.value);
     }
-    state.studyExp += pack.rules.studyExp;
+    state.studyExp += _studyExpFor(book);
     Goals.recordStudyBlock(state);
     _spendHp(action);
     var finished = '';
