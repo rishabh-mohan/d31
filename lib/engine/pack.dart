@@ -180,7 +180,11 @@ class Rules {
   num get sleepRestoresHp => number('day', 'sleepRestoresHp', 10);
   num get sleepLocationBonusHp => number('day', 'sleepLocationBonusHp', 3);
   num get studyWeight => number('study', 'studyWeight', 3);
-  num get studyExp => number('study', 'expPerStudy', 25);
+  /// Student XP of an E-tier book and of a class block.
+  num get studyExp => number('study', 'expPerStudy', 100);
+
+  /// What each book tier above E adds (D is 200, S is 600 at the defaults).
+  num get studyExpPerTier => number('study', 'expPerTier', 100);
   num get comboBonusPercent => number('study', 'comboBonusPercent', 0.05);
   int get comboMaxStacks => number('study', 'comboMaxStacks', 5).toInt();
   num get partTimeBaseMoney => number('partTimeJob', 'baseMoney', 500);
