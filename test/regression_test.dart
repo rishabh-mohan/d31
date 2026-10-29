@@ -76,7 +76,7 @@ void main() {
           'text': 'Selected branch',
           'nextNodeId': 5,
         },
-        {'id': 5, 'boxId': 2, 'type': 'last'},
+        {'id': 5, 'boxId': 2, 'type': 'last', 'text': 'The end.'},
       ],
     });
     dialogue = ContentPack.fromFiles(files);

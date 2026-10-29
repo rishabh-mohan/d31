@@ -1057,6 +1057,8 @@ class Game {
     final exerciseBefore = state.exerciseLevel.level;
     final partTimeBefore = state.partTimeLevel.level;
 
+    // COMBO_STUDY counts study blocks in a row: any other block starts it over.
+    if (action.actionType != 'study') state.studyCombo = 0;
     switch (action.actionType) {
       case 'study':
         parts.add(_study(action, book));
@@ -1194,10 +1196,9 @@ class Game {
     gain += state.passiveSum('studyEfficiency', subject: subject);
     gain += traits.studyBonus(state, subject: subject);
     if (subject != null) gain += state.stationeryBonus(subject);
-    if (subject != null && state.lastStudySubject == subject) {
-      final stacks = min(state.studyCombo, pack.rules.comboMaxStacks);
-      gain *= 1 + stacks * pack.rules.comboBonusPercent;
-    }
+    // No built-in bonus for repeating a subject: that is a trait's job (Digging
+    // Deep adds a flat +3, Hemorrhoids takes 2 away) through COMBO_STUDY and
+    // PREV_STUDY_SUBJECT. The old stacking 5% was invented, not recovered.
     return gain;
   }
 
@@ -1290,11 +1291,8 @@ class Game {
         state.randomOf(pack.manifest.subjects);
     final gain = _studyGain(action, book, subject);
 
-    if (state.lastStudySubject == subject) {
-      state.studyCombo++;
-    } else {
-      state.studyCombo = 1;
-    }
+    // Study blocks in a row, of any subject (Hemorrhoids reads this counter).
+    state.studyCombo++;
     state.lastStudySubject = subject;
 
     final amount = gain.round();

@@ -75,7 +75,7 @@ ContentPack scripted(ContentPack base, List<int> ticks) {
           'text': 'Tick $t',
           'nextNodeId': 1001 + t * 2,
         },
-        {'id': 1001 + t * 2, 'type': 'last'},
+        {'id': 1001 + t * 2, 'type': 'last', 'text': 'Done $t'},
       ],
     ],
   });

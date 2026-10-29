@@ -137,12 +137,10 @@ class _EventScreenState extends State<EventScreen> {
     _announcing = true;
     try {
       final ending = run.endingCard;
-      var cardShown = false;
       if (ending != null && mounted) {
         run.endingCard = null;
         _stopFastForward();
         await showEndingCard(context, ending);
-        cardShown = true;
         final itemsPending = run.acquiredItems.entries.any(
           (e) => (_announced[e.key] ?? 0) < e.value,
         );
@@ -163,7 +161,9 @@ class _EventScreenState extends State<EventScreen> {
           },
         );
       }
-      if (cardShown) _leaveIfEmptyEnd();
+      // A closing scene with no text and no ending card has nothing to show: leave
+      // rather than stranding the player on an empty dialogue window.
+      _leaveIfEmptyEnd();
     } finally {
       _announcing = false;
     }
