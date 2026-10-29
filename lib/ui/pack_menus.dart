@@ -16,6 +16,12 @@ Future<void> showItemReports(BuildContext context, Game game) =>
 /// "Use" for a consumable, "Check" for a kept tool that is not one.
 String useLabel(GameItem item) => item.isConsumable ? 'Use' : 'Check';
 
+/// Authored pack artwork takes precedence over the original catalog's paths.
+String itemArtPath(GameItem item) =>
+    item.imgPath != null && !item.imgPath!.startsWith('assets/')
+    ? item.imgPath!
+    : 'items/${item.id}.png';
+
 /// The acquisition popup from the reference: large artwork, "Got a X!", the
 /// description and the effect on separate lines, then a narrow Use (for a
 /// usable item) above a wider Confirm. Shared by the store and by events
@@ -27,81 +33,90 @@ Future<void> showItemAcquired(
   ItemUseOutcome Function()? onUse,
 }) async {
   ItemUseOutcome? outcome;
-  await showDialog<void>(
+  final receipt = DialogRoute<void>(
     context: context,
     barrierColor: Colors.black54,
     builder: (context) => Dialog(
-      backgroundColor: D30Colors.panel,
+      backgroundColor: context.packColors.panel,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: D30Colors.accent, width: 5),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: context.packColors.accent, width: 4),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 120,
-                width: 120,
-                child: PackImage(
-                  path: 'items/${item.id}.png',
-                  fit: BoxFit.contain,
-                  placeholder: const Icon(
-                    Icons.card_giftcard,
-                    size: 72,
-                    color: D30Colors.accent,
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: SizedBox(
+          width: double.infinity,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 112,
+                  width: 112,
+                  child: PackImage(
+                    path: itemArtPath(item),
+                    fit: BoxFit.contain,
+                    placeholder: Icon(
+                      Icons.card_giftcard,
+                      size: 72,
+                      color: context.packColors.accent,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Got a ${item.name}!',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, color: D30Colors.ink),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                item.description,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: D30Colors.ink),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.effectText,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 15, color: D30Colors.ink),
-              ),
-              const SizedBox(height: 20),
-              if (item.canUse && onUse != null)
+                const SizedBox(height: 18),
+                Text(
+                  'Got a ${item.name}!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, color: context.packColors.ink),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  item.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: context.packColors.ink),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  item.effectText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 17, color: context.packColors.ink),
+                ),
+                const SizedBox(height: 22),
+                if (item.canUse && onUse != null)
+                  SizedBox(
+                    width: 120,
+                    child: D30RaisedButton(
+                      depth: 3,
+                      onPressed: () {
+                        outcome = onUse();
+                        Navigator.pop(context);
+                      },
+                      child: Text(useLabel(item)),
+                    ),
+                  ),
+                if (item.canUse && onUse != null) const SizedBox(height: 10),
                 SizedBox(
-                  width: 120,
+                  width: 144,
                   child: D30RaisedButton(
                     depth: 3,
-                    onPressed: () {
-                      outcome = onUse();
-                      Navigator.pop(context);
-                    },
-                    child: Text(useLabel(item)),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Confirm',
+                      style: TextStyle(fontSize: 17),
+                    ),
                   ),
                 ),
-              if (item.canUse && onUse != null) const SizedBox(height: 10),
-              SizedBox(
-                width: 200,
-                child: D30RaisedButton(
-                  depth: 3,
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Confirm', style: TextStyle(fontSize: 17)),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     ),
   );
+  await Navigator.of(context, rootNavigator: true).push(receipt);
+  await receipt.completed;
   if (outcome != null && context.mounted) {
     await showItemOutcome(context, outcome!);
   }
@@ -112,11 +127,11 @@ Future<void> showReportLines(BuildContext context, List<String> reports) async {
   await showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      backgroundColor: D30Colors.panel,
+      backgroundColor: context.packColors.panel,
       content: Text(
         reports.join('\n'),
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 18, color: D30Colors.ink),
+        style: TextStyle(fontSize: 18, color: context.packColors.ink),
       ),
       actions: [
         D30RaisedButton(
@@ -188,7 +203,7 @@ class _BooksMenuState extends State<BooksMenu> {
                               height: 5,
                               decoration: BoxDecoration(
                                 color: selected == subject
-                                    ? D30Colors.accent
+                                    ? context.packColors.accent
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -216,7 +231,7 @@ class _BooksMenuState extends State<BooksMenu> {
               final rankColor = switch (rank) {
                 'E' => const Color(0xFFBFBFBF),
                 'D' => const Color(0xFF927D78),
-                _ => D30Colors.accent,
+                _ => context.packColors.accent,
               };
               return Container(
                 key: ValueKey('book-menu-${book.id}'),
@@ -296,7 +311,7 @@ class _BooksMenuState extends State<BooksMenu> {
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color: D30Colors.ink,
+                                          color: context.packColors.ink,
                                           width: 1.5,
                                         ),
                                       ),
@@ -308,8 +323,8 @@ class _BooksMenuState extends State<BooksMenu> {
                                                   .clamp(0, 1)
                                                   .toDouble()
                                             : 1,
-                                        child: const ColoredBox(
-                                          color: D30Colors.accent,
+                                        child: ColoredBox(
+                                          color: context.packColors.accent,
                                         ),
                                       ),
                                     ),
@@ -373,8 +388,8 @@ class _BagsMenuState extends State<BagsMenu> {
           child: OutlinedButton(
             onPressed: onTap,
             style: OutlinedButton.styleFrom(
-              foregroundColor: D30Colors.ink,
-              side: const BorderSide(color: D30Colors.accent, width: 2),
+              foregroundColor: context.packColors.ink,
+              side: BorderSide(color: context.packColors.accent, width: 2),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -393,8 +408,10 @@ class _BagsMenuState extends State<BagsMenu> {
                   width: 12,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: selected ? D30Colors.accent : Colors.transparent,
-                    border: Border.all(color: D30Colors.accent),
+                    color: selected
+                        ? context.packColors.accent
+                        : Colors.transparent,
+                    border: Border.all(color: context.packColors.accent),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -442,8 +459,8 @@ class _BagsMenuState extends State<BagsMenu> {
             child: PressFeedback(
               child: TextButton.icon(
                 style: TextButton.styleFrom(
-                  backgroundColor: D30Colors.accent,
-                  foregroundColor: D30Colors.panel,
+                  backgroundColor: context.packColors.accent,
+                  foregroundColor: context.packColors.panel,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(9),
                   ),
@@ -476,7 +493,10 @@ class _BagsMenuState extends State<BagsMenu> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFEEDB),
-                        border: Border.all(color: D30Colors.accent, width: 2),
+                        border: Border.all(
+                          color: context.packColors.accent,
+                          width: 2,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(

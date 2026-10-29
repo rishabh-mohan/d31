@@ -138,20 +138,20 @@ class DayTransition extends StatelessWidget {
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
+                                Text(
                                   'Weekly Goals',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: D30Colors.ink,
+                                    color: context.packColors.ink,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 if (goal == null)
-                                  const Text(
+                                  Text(
                                     '-',
                                     style: TextStyle(
                                       fontSize: 18,
-                                      color: D30Colors.ink,
+                                      color: context.packColors.ink,
                                     ),
                                   )
                                 else ...[
@@ -163,14 +163,14 @@ class DayTransition extends StatelessWidget {
                                     ),
                                     fontSize: 13,
                                   ),
-                                  const Padding(
+                                  Padding(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 6,
                                     ),
                                     child: Icon(
                                       Icons.arrow_right_alt,
                                       size: 20,
-                                      color: D30Colors.accent,
+                                      color: context.packColors.accent,
                                     ),
                                   ),
                                   D30Chip(
@@ -285,15 +285,15 @@ class _StatColumn extends StatelessWidget {
               FittedBox(
                 child: Text(
                   subjectLabel(subject),
-                  style: const TextStyle(fontSize: 11, color: D30Colors.ink),
+                  style: TextStyle(fontSize: 11, color: context.packColors.ink),
                 ),
               ),
               Text(
                 '${value.round()}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: D30Colors.ink,
+                  color: context.packColors.ink,
                 ),
               ),
             ],
@@ -303,10 +303,10 @@ class _StatColumn extends StatelessWidget {
         // Only gains are shown, as in the reference; a flat day shows nothing.
         Text(
           delta > 0 ? '+${delta.round()}' : '',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: D30Colors.ink,
+            color: context.packColors.ink,
           ),
         ),
       ],

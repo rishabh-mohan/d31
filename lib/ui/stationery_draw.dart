@@ -204,7 +204,7 @@ class _StationeryDrawState extends State<StationeryDraw> {
                                 child: FilledButton(
                                   key: const ValueKey('stop-all-stationery'),
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: D30Colors.accent,
+                                    backgroundColor: context.packColors.accent,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
@@ -223,10 +223,10 @@ class _StationeryDrawState extends State<StationeryDraw> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: D30Colors.panel,
+                                color: context.packColors.panel,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: D30Colors.accent,
+                                  color: context.packColors.accent,
                                   width: 3,
                                 ),
                               ),
@@ -264,7 +264,7 @@ class _StationeryDrawState extends State<StationeryDraw> {
                               child: PressFeedback(
                                 child: FilledButton(
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: D30Colors.accent,
+                                    backgroundColor: context.packColors.accent,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
@@ -286,8 +286,8 @@ class _StationeryDrawState extends State<StationeryDraw> {
                               child: PressFeedback(
                                 child: FilledButton(
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: D30Colors.panel,
-                                    foregroundColor: D30Colors.accent,
+                                    backgroundColor: context.packColors.panel,
+                                    foregroundColor: context.packColors.accent,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
                                     ),

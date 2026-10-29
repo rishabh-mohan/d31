@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import 'engine/base_content.dart';
 import 'ui/home_screen.dart';
 import 'ui/theme.dart';
 
@@ -40,9 +41,11 @@ void _logJankyFrames() {
   });
 }
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _logJankyFrames();
+  // kss16's events, traits and items, merged under every pack (docs below).
+  await BaseContent.loadFromAssets();
   // Every screen is laid out against the 1080x2340 portrait reference, and
   // several of them fit a fixed canvas to the viewport; there is no landscape
   // form to rotate into. The Android manifest locks this too.
@@ -58,33 +61,15 @@ class D30App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '30 Days',
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.light,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: D30Colors.accent,
-          surface: D30Colors.panel,
-          primary: D30Colors.accentDark,
-          onSurface: D30Colors.ink,
-        ),
-        scaffoldBackgroundColor: D30Colors.page,
-        dividerTheme: const DividerThemeData(
-          color: D30Colors.ink,
-          thickness: 1.5,
-        ),
-        dialogTheme: DialogThemeData(
-          backgroundColor: D30Colors.panel,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: D30Colors.accent, width: 3),
-          ),
-        ),
-        useMaterial3: true,
+    return ValueListenableBuilder(
+      valueListenable: PackThemes.current,
+      builder: (context, scheme, child) => MaterialApp(
+        title: '30 Days',
+        debugShowCheckedModeBanner: false,
+        themeMode: ThemeMode.light,
+        theme: buildPackTheme(scheme),
+        home: const HomeScreen(),
       ),
-      home: const HomeScreen(),
     );
   }
 }
-

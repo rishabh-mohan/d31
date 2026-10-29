@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:d30mode/engine/account_store.dart';
 import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/pack.dart';
+import 'package:d30mode/engine/setup.dart';
 import 'package:d30mode/ui/account_menus.dart';
 import 'package:d30mode/ui/home_screen.dart';
 
@@ -57,7 +58,11 @@ void main() {
       'Chinese give the notice; universities still switch', (tester) async {
     await pumpPhone(
       tester,
-      SettingsSheet(campaigns: const [], onReload: () async {}),
+      SettingsSheet(
+        campaigns: const [],
+        onReload: () async {},
+        onPackReloaded: (_, _) {},
+      ),
     );
     expect(find.text('Type of Music'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);
@@ -79,6 +84,36 @@ void main() {
     await tester.tap(us);
     await tester.pump();
     expect(AccountStore.current.universities, UniversitySet.us);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Settings opens the dev panel, whose Setup tab gates ownership', (
+    tester,
+  ) async {
+    addTearDown(() => SetupOwnership.debugRequireOwnership = null);
+    await pumpPhone(
+      tester,
+      SettingsSheet(
+        campaigns: [(pack, PackLocation('kss16', null))],
+        onReload: () async {},
+        onPackReloaded: (_, _) {},
+      ),
+    );
+    final advanced = find.text('Game settings');
+    await tester.scrollUntilVisible(advanced, 200);
+    await tester.tap(advanced);
+    await settle(tester);
+    final open = find.byKey(const ValueKey('settings-dev-panel'));
+    await tester.scrollUntilVisible(open, 200);
+    await tester.tap(open);
+    await settle(tester);
+    expect(find.text('Rules'), findsOneWidget);
+    expect(find.text('Pack'), findsOneWidget);
+    final before = SetupOwnership.debugRequireOwnership ??
+        AccountStore.catalog.setupRequiresOwnership;
+    await tester.tap(find.byKey(const ValueKey('dev-setup-ownership')));
+    await tester.pump();
+    expect(SetupOwnership.debugRequireOwnership, !before);
     expect(tester.takeException(), isNull);
   });
 

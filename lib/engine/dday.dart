@@ -489,7 +489,9 @@ extension DDayFlow on Game {
   /// best displayed rate among those between [autoFillMinRate] and
   /// [autoFillMaxRate] (so neither hopeless nor a sure thing), from a
   /// university not already drafted. If that band is empty it relaxes to any
-  /// rate of at least 1, then to anything eligible. Deterministic.
+  /// rate of at least 1, then to anything eligible. Ranking uses the unrounded
+  /// chance, so a hopeless run (all 0%) takes the likeliest majors instead of
+  /// the hardest cutoffs (Taiwan/Global medicine). Deterministic.
   List<int> autoFill({int autoFillMinRate = 5, int autoFillMaxRate = 90}) {
     if (state.applicationsCommitted) return const [];
     _ensureDraft();
@@ -498,7 +500,7 @@ extension DDayFlow on Game {
     for (var slot = 0; slot < state.draft.length; slot++) {
       if (state.draft[slot] != null) continue;
       Department? pick;
-      var pickRate = -1;
+      var pickChance = -1.0;
       for (final band in [
         (autoFillMinRate, autoFillMaxRate),
         (1, 100),
@@ -508,9 +510,10 @@ extension DDayFlow on Game {
           if (draftProblem(d) != null) continue;
           final r = displayedRate(d);
           if (r < band.$1 || r > band.$2) continue;
-          if (r > pickRate) {
+          final c = admissionChance(d);
+          if (c > pickChance) {
             pick = d;
-            pickRate = r;
+            pickChance = c;
           }
         }
         if (pick != null) break;

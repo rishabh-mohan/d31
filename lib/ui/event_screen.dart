@@ -236,10 +236,10 @@ class _EventScreenState extends State<EventScreen> {
       context: context,
       isScrollControlled: true,
       barrierColor: Colors.black54,
-      backgroundColor: D30Colors.panel,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.packColors.panel,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        side: BorderSide(color: D30Colors.accent, width: 3),
+        side: BorderSide(color: context.packColors.accent, width: 3),
       ),
       // The reference's history window: the event's own name as the heading,
       // a coloured speaker chip above each turn, a rule under every message,
@@ -253,7 +253,7 @@ class _EventScreenState extends State<EventScreen> {
               child: Text(
                 run.event.name.isEmpty ? 'Log' : run.event.name,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, color: D30Colors.ink),
+                style: TextStyle(fontSize: 24, color: context.packColors.ink),
               ),
             ),
             Expanded(
@@ -272,7 +272,7 @@ class _EventScreenState extends State<EventScreen> {
                               color: line.speaker == '???'
                                   ? const Color(0xFF3C3C3C)
                                   : line.speaker == 'Me'
-                                  ? D30Colors.accent
+                                  ? context.packColors.accent
                                   : const Color(0xFF4FA55A),
                               textColor: Colors.white,
                               fontSize: 13,
@@ -280,9 +280,9 @@ class _EventScreenState extends State<EventScreen> {
                           ),
                         EventText(
                           line.text,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
-                            color: D30Colors.ink,
+                            color: context.packColors.ink,
                           ),
                         ),
                         const Padding(
@@ -299,7 +299,7 @@ class _EventScreenState extends State<EventScreen> {
               ),
             ),
             Material(
-              color: D30Colors.panel,
+              color: context.packColors.panel,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
                 child: SizedBox(
@@ -359,9 +359,12 @@ class _EventScreenState extends State<EventScreen> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: D30Colors.panel,
+                    color: context.packColors.panel,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: D30Colors.accent, width: 2.5),
+                    border: Border.all(
+                      color: context.packColors.accent,
+                      width: 2.5,
+                    ),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
@@ -369,7 +372,7 @@ class _EventScreenState extends State<EventScreen> {
                       // Title bar
                       Container(
                         width: double.infinity,
-                        color: D30Colors.accent,
+                        color: context.packColors.accent,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Text(
                           run.event.name.isEmpty
@@ -459,13 +462,13 @@ class _EventScreenState extends State<EventScreen> {
                                         20,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: D30Colors.panel,
+                                        color: context.packColors.panel,
                                         borderRadius:
                                             const BorderRadius.vertical(
                                               top: Radius.circular(16),
                                             ),
                                         border: Border.all(
-                                          color: D30Colors.accent,
+                                          color: context.packColors.accent,
                                           width: 3,
                                         ),
                                       ),
@@ -503,7 +506,9 @@ class _EventScreenState extends State<EventScreen> {
                                                           TextAlign.center,
                                                       style: TextStyle(
                                                         fontSize: 22,
-                                                        color: D30Colors.ink,
+                                                        color: context
+                                                            .packColors
+                                                            .ink,
                                                       ),
                                                     ),
                                                   ),
@@ -534,9 +539,10 @@ class _EventScreenState extends State<EventScreen> {
                                                   key: const ValueKey(
                                                     'choice-question',
                                                   ),
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 15,
-                                                    color: D30Colors.ink,
+                                                    color:
+                                                        context.packColors.ink,
                                                   ),
                                                 ),
                                               ),
@@ -633,9 +639,9 @@ class _DialogueBox extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
         decoration: BoxDecoration(
-          color: D30Colors.panel,
+          color: context.packColors.panel,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: D30Colors.accent, width: 2),
+          border: Border.all(color: context.packColors.accent, width: 2),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -646,7 +652,7 @@ class _DialogueBox extends StatelessWidget {
                 text: speaker!,
                 color: speaker == '???'
                     ? const Color(0xFF3C3C3C)
-                    : D30Colors.accent,
+                    : context.packColors.accent,
                 textColor: Colors.white,
                 fontSize: 12,
               ),
@@ -656,10 +662,10 @@ class _DialogueBox extends StatelessWidget {
               child: SingleChildScrollView(
                 child: EventText(
                   text,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     height: 1.45,
-                    color: D30Colors.ink,
+                    color: context.packColors.ink,
                   ),
                 ),
               ),
@@ -674,9 +680,9 @@ class _DialogueBox extends StatelessWidget {
                     child: PressFeedback(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: D30Colors.ink,
-                          side: const BorderSide(
-                            color: D30Colors.accent,
+                          foregroundColor: context.packColors.ink,
+                          side: BorderSide(
+                            color: context.packColors.accent,
                             width: 1.5,
                           ),
                           shape: RoundedRectangleBorder(
@@ -722,7 +728,7 @@ class _DialogueBox extends StatelessWidget {
                 const Spacer(),
                 _RoundButton(
                   icon: Icons.format_list_bulleted,
-                  color: D30Colors.ink,
+                  color: context.packColors.ink,
                   onTap: onLog,
                   filled: true,
                   tooltip: 'Log',

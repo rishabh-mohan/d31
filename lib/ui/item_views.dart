@@ -53,11 +53,11 @@ class ItemViewDialog extends StatelessWidget {
   const ItemViewDialog({super.key, required this.child});
   @override
   Widget build(BuildContext context) => Dialog(
-    backgroundColor: D30Colors.panel,
+    backgroundColor: context.packColors.panel,
     insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: D30Colors.accent, width: 5),
+      side: BorderSide(color: context.packColors.accent, width: 5),
     ),
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 420),
@@ -93,13 +93,13 @@ class _Title extends StatelessWidget {
       Text(
         title,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 22, color: D30Colors.ink),
+        style: TextStyle(fontSize: 22, color: context.packColors.ink),
       ),
       const SizedBox(height: 6),
       Text(
         subtitle,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 13, color: D30Colors.inkSoft),
+        style: TextStyle(fontSize: 13, color: context.packColors.inkSoft),
       ),
       const SizedBox(height: 14),
     ],
@@ -133,14 +133,16 @@ Widget _table(
   ],
 );
 
-Widget _cell(String text, {bool header = false}) => FittedBox(
-  fit: BoxFit.scaleDown,
-  child: Text(
-    text,
-    textAlign: TextAlign.center,
-    style: TextStyle(
-      color: D30Colors.ink,
-      fontWeight: header ? FontWeight.bold : FontWeight.normal,
+Widget _cell(String text, {bool header = false}) => Builder(
+  builder: (context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: context.packColors.ink,
+        fontWeight: header ? FontWeight.bold : FontWeight.normal,
+      ),
     ),
   ),
 );
@@ -190,12 +192,12 @@ class PredictedGradesView extends StatelessWidget {
           'Standard score ${forecast.standardScore.toStringAsFixed(1)}'
           ' (top ${top.toStringAsFixed(1)}%)',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, color: D30Colors.ink),
+          style: TextStyle(fontSize: 16, color: context.packColors.ink),
         ),
         const SizedBox(height: 4),
         Text(
           'Overall grade ${Admissions.gradeFor(forecast.standardScore)}',
-          style: const TextStyle(fontSize: 16, color: D30Colors.ink),
+          style: TextStyle(fontSize: 16, color: context.packColors.ink),
         ),
       ],
     );
@@ -272,7 +274,7 @@ class RecipeView extends StatelessWidget {
   final Map<String, dynamic> view;
   const RecipeView({super.key, required this.state, required this.view});
 
-  Widget _ingredient(GameItem item) {
+  Widget _ingredient(BuildContext context, GameItem item) {
     final held = state.itemCount(item.id);
     return Container(
       key: ValueKey('recipe-input-${item.id}'),
@@ -280,7 +282,7 @@ class RecipeView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
-          color: held > 0 ? D30Colors.hpGreen : D30Colors.panelBorder,
+          color: held > 0 ? D30Colors.hpGreen : context.packColors.panelBorder,
           width: 2,
         ),
         borderRadius: BorderRadius.circular(10),
@@ -296,7 +298,7 @@ class RecipeView extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '${item.name} ×$held',
-            style: const TextStyle(fontSize: 13, color: D30Colors.ink),
+            style: TextStyle(fontSize: 13, color: context.packColors.ink),
           ),
           if (held > 0) ...[
             const SizedBox(width: 2),
@@ -336,7 +338,10 @@ class RecipeView extends StatelessWidget {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEEDB),
-                  border: Border.all(color: D30Colors.accent, width: 2),
+                  border: Border.all(
+                    color: context.packColors.accent,
+                    width: 2,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -359,16 +364,16 @@ class RecipeView extends StatelessWidget {
                             children: [
                               Text(
                                 output.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 17,
-                                  color: D30Colors.ink,
+                                  color: context.packColors.ink,
                                 ),
                               ),
                               Text(
                                 output.effectText,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: D30Colors.inkSoft,
+                                  color: context.packColors.inkSoft,
                                 ),
                               ),
                             ],
@@ -389,7 +394,9 @@ class RecipeView extends StatelessWidget {
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: [for (final i in inputs) _ingredient(i)],
+                      children: [
+                        for (final i in inputs) _ingredient(context, i),
+                      ],
                     ),
                   ],
                 ),
@@ -401,7 +408,7 @@ class RecipeView extends StatelessWidget {
         if (fee != null)
           Text(
             'Cooking fee: $fee Gold each',
-            style: const TextStyle(fontSize: 14, color: D30Colors.ink),
+            style: TextStyle(fontSize: 14, color: context.packColors.ink),
           ),
       ],
     );

@@ -9,6 +9,81 @@ import 'press_feedback.dart';
 
 import 'package:flutter/material.dart';
 
+import '../engine/pack_colors.dart';
+
+/// The active run's palette is a Theme extension, so routes and dialogs update
+/// together without mutating the reference constants or resetting navigation.
+class PackPalette extends ThemeExtension<PackPalette> {
+  final Map<String, Color> colors;
+  const PackPalette(this.colors);
+  factory PackPalette.fromScheme(PackColorScheme scheme) => PackPalette({
+    for (final role in PackColorScheme.roles.keys)
+      role: Color(scheme.color(role)),
+  });
+  static final defaults = PackPalette.fromScheme(const PackColorScheme());
+  Color get page => colors['page']!;
+  Color get panel => colors['panel']!;
+  Color get panelBorder => colors['panelBorder']!;
+  Color get accent => colors['accent']!;
+  Color get accentDark => colors['accentDark']!;
+  Color get onAccent => colors['onAccent']!;
+  Color get ink => colors['ink']!;
+  Color get inkSoft => colors['inkSoft']!;
+  @override
+  PackPalette copyWith({Map<String, Color>? colors}) =>
+      PackPalette(colors ?? this.colors);
+  @override
+  PackPalette lerp(covariant PackPalette? other, double t) => other == null
+      ? this
+      : PackPalette({
+          for (final key in colors.keys)
+            key: Color.lerp(colors[key], other.colors[key], t)!,
+        });
+}
+
+extension PackPaletteContext on BuildContext {
+  PackPalette get packColors =>
+      Theme.of(this).extension<PackPalette>() ?? PackPalette.defaults;
+}
+
+class PackThemes {
+  static final current = ValueNotifier<PackColorScheme>(
+    const PackColorScheme(),
+  );
+  static void use(PackColorScheme scheme) {
+    if (PackColorScheme.roles.keys.every(
+      (key) => current.value.color(key) == scheme.color(key),
+    )) {
+      return;
+    }
+    current.value = scheme;
+  }
+}
+
+ThemeData buildPackTheme(PackColorScheme scheme) {
+  final colors = PackPalette.fromScheme(scheme);
+  return ThemeData(
+    useMaterial3: true,
+    extensions: [colors],
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: colors.accent,
+      surface: colors.panel,
+      primary: colors.accentDark,
+      onSurface: colors.ink,
+      onPrimary: colors.onAccent,
+    ),
+    scaffoldBackgroundColor: colors.page,
+    dividerTheme: DividerThemeData(color: colors.ink, thickness: 1.5),
+    dialogTheme: DialogThemeData(
+      backgroundColor: colors.panel,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.accent, width: 3),
+      ),
+    ),
+  );
+}
+
 class D30Colors {
   // Page and panels
   static const page = Color(0xFFFFF3E2);
@@ -60,7 +135,7 @@ class D30Colors {
 class D30RaisedButton extends StatelessWidget {
   final Widget child;
   final VoidCallback? onPressed;
-  final Color color;
+  final Color? color;
   final Color? edgeColor;
 
   /// Height of the lower face, and how far a press sinks into it.
@@ -73,7 +148,7 @@ class D30RaisedButton extends StatelessWidget {
     super.key,
     required this.child,
     required this.onPressed,
-    this.color = D30Colors.accent,
+    this.color,
     this.edgeColor,
     this.depth = 6,
     this.flat = false,
@@ -83,11 +158,12 @@ class D30RaisedButton extends StatelessWidget {
   /// Material's own disabled face over a coloured lower face looked broken.
   static const disabledColor = Color(0xFFB9B1A8);
 
-  Color get _face => onPressed == null ? disabledColor : color;
+  Color _face(Color fallback) =>
+      onPressed == null ? disabledColor : color ?? fallback;
 
-  Color get _edge => onPressed == null
+  Color _edge(Color fallback) => onPressed == null
       ? Color.lerp(disabledColor, Colors.black, .22)!
-      : edgeColor ?? Color.lerp(color, Colors.black, .22)!;
+      : edgeColor ?? Color.lerp(color ?? fallback, Colors.black, .22)!;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -98,7 +174,10 @@ class D30RaisedButton extends StatelessWidget {
         boxShadow: flat
             ? const []
             : [
-                BoxShadow(color: _edge, offset: Offset(0, depth)),
+                BoxShadow(
+                  color: _edge(context.packColors.accent),
+                  offset: Offset(0, depth),
+                ),
                 BoxShadow(
                   color: const Color(0x264A2B10),
                   blurRadius: 8,
@@ -111,9 +190,9 @@ class D30RaisedButton extends StatelessWidget {
         child: FilledButton(
           onPressed: onPressed,
           style: FilledButton.styleFrom(
-            backgroundColor: _face,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: _face,
+            backgroundColor: _face(context.packColors.accent),
+            foregroundColor: context.packColors.onAccent,
+            disabledBackgroundColor: _face(context.packColors.accent),
             disabledForegroundColor: Colors.white,
             // The lower face is drawn under this box, so the button must be
             // exactly its painted face. Material's 48px tap-target padding
@@ -126,7 +205,7 @@ class D30RaisedButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
-                color: _edge,
+                color: _edge(context.packColors.accent),
                 width: 2,
               ),
             ),
@@ -211,9 +290,12 @@ class D30Panel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? D30Colors.panel,
+        color: color ?? context.packColors.panel,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: border ?? D30Colors.panelBorder, width: 1.5),
+        border: Border.all(
+          color: border ?? context.packColors.panelBorder,
+          width: 1.5,
+        ),
       ),
       child: child,
     );
@@ -252,7 +334,7 @@ class D30Chip extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: weight,
-          color: textColor ?? D30Colors.ink,
+          color: textColor ?? context.packColors.ink,
         ),
       ),
     );

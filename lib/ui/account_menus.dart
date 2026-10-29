@@ -20,6 +20,8 @@ import '../engine/account_store.dart';
 import '../engine/content_source.dart';
 import '../engine/pack.dart';
 import 'account_widgets.dart';
+import 'dev_panel.dart';
+import 'game_screen.dart' show PackReloaded;
 import 'home_screen.dart';
 import 'pack_image.dart';
 import 'traits_page.dart';
@@ -304,11 +306,13 @@ class _PeachSegments<T> extends StatelessWidget {
 class SettingsSheet extends StatefulWidget {
   final List<(ContentPack, PackLocation)> campaigns;
   final Future<void> Function() onReload;
+  final PackReloaded onPackReloaded;
 
   const SettingsSheet({
     super.key,
     required this.campaigns,
     required this.onReload,
+    required this.onPackReloaded,
   });
 
   @override
@@ -480,6 +484,20 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         },
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Reload packs'),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('settings-dev-panel'),
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    showDragHandle: true,
+                    builder: (_) => MenuDevPanel(
+                      campaigns: widget.campaigns,
+                      onPackReloaded: widget.onPackReloaded,
+                    ),
+                  ),
+                  icon: const Icon(Icons.tune, size: 18),
+                  label: const Text('Dev panel'),
                 ),
               ],
             ),

@@ -105,14 +105,14 @@ class StationeryCard extends StatelessWidget {
             // scaling must not let a stat fill erase the rounded outline.
             foregroundDecoration: BoxDecoration(
               border: Border.all(
-                color: selected ? D30Colors.accent : Colors.black87,
+                color: selected ? context.packColors.accent : Colors.black87,
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(9),
             ),
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
-              color: selected ? D30Colors.accent : Colors.black87,
+              color: selected ? context.packColors.accent : Colors.black87,
               borderRadius: BorderRadius.circular(9),
             ),
             // A real inset reserves the border: no image/blank placeholder or
@@ -120,7 +120,7 @@ class StationeryCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7),
               child: ColoredBox(
-                color: D30Colors.panel,
+                color: context.packColors.panel,
                 child: Column(
                   children: [
                     Container(

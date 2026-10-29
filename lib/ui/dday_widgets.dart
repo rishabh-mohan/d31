@@ -36,12 +36,12 @@ Color onColor(Color color) =>
 
 /// The Korea Retry Academy's mark: an outlined and a filled pill, orange.
 class AcademyLogo extends StatelessWidget {
-  final Color color;
-  const AcademyLogo({super.key, this.color = D30Colors.accent});
+  final Color? color;
+  const AcademyLogo({super.key, this.color});
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-    painter: _AcademyLogoPainter(color),
+    painter: _AcademyLogoPainter(color ?? context.packColors.accent),
     child: const SizedBox.expand(),
   );
 }
@@ -758,7 +758,7 @@ class StudentIdCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10 * u,
                       fontWeight: FontWeight.w800,
-                      color: D30Colors.ink,
+                      color: context.packColors.ink,
                     ),
                   ),
                   SizedBox(height: 6 * u),
@@ -783,7 +783,7 @@ class StudentIdCard extends StatelessWidget {
                                         'Student ID: $studentId',
                                         style: TextStyle(
                                           fontSize: 9.5 * u,
-                                          color: D30Colors.ink,
+                                          color: context.packColors.ink,
                                         ),
                                       ),
                                       SizedBox(height: 3 * u),
@@ -801,7 +801,7 @@ class StudentIdCard extends StatelessWidget {
                                         ),
                                         style: TextStyle(
                                           fontSize: 10.5 * u,
-                                          color: D30Colors.ink,
+                                          color: context.packColors.ink,
                                         ),
                                       ),
                                       SizedBox(height: 3 * u),
@@ -810,7 +810,7 @@ class StudentIdCard extends StatelessWidget {
                                         style: TextStyle(
                                           fontSize: 10 * u,
                                           fontWeight: FontWeight.w800,
-                                          color: D30Colors.ink,
+                                          color: context.packColors.ink,
                                         ),
                                       ),
                                       SizedBox(height: 3 * u),
@@ -820,7 +820,7 @@ class StudentIdCard extends StatelessWidget {
                                         style: TextStyle(
                                           fontSize: 7.5 * u,
                                           height: 1.15,
-                                          color: D30Colors.ink,
+                                          color: context.packColors.ink,
                                         ),
                                       ),
                                     ],
@@ -853,7 +853,7 @@ class StudentIdCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 8.5 * u,
                               fontWeight: FontWeight.w700,
-                              color: D30Colors.ink,
+                              color: context.packColors.ink,
                             ),
                           ),
                         ),

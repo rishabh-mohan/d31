@@ -12,6 +12,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,7 @@ import 'puzzles_page.dart';
 import 'traits_page.dart';
 import 'pack_image.dart';
 import 'setup_screen.dart';
+import 'theme.dart';
 
 /// Home's palette, read off MM-01 and the wallpaper block SVGs.
 class HomeColors {
@@ -69,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
   ContentPack? _pack;
   PackLocation? _location;
   Object? _error;
+  bool _noPacks = false;
+  List<String> _roots = const [];
   bool _loading = true;
   RunSetup? _setup;
   final Map<String, (ContentPack, PackLocation)> _campaigns = {};
@@ -124,9 +128,19 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     } catch (e) {
+      var none = false;
+      var roots = <String>[];
+      try {
+        none = (await ContentSource.availablePackIds()).isEmpty;
+        roots = await ContentSource.rootPaths();
+      } catch (_) {
+        /* Report the original error. */
+      }
       if (!mounted) return;
       setState(() {
         _error = e;
+        _noPacks = none;
+        _roots = roots;
         _loading = false;
       });
     }
@@ -174,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // stays with the run.
     final colleges = AccountStore.current.universities.name;
     final pack = base.withColleges(colleges);
+    PackThemes.use(pack.manifest.colorScheme);
     final game = await Navigator.of(context).push<Game>(
       MaterialPageRoute(
         builder: (_) => SetupScreen(
@@ -192,6 +207,10 @@ class _HomeScreenState extends State<HomeScreen> {
             for (final (campaign, _) in _campaigns.values)
               campaign.withColleges(colleges),
           ],
+          campaignLocations: {
+            for (final (campaign, where) in _campaigns.values)
+              campaign.manifest.id: where,
+          },
         ),
       ),
     );
@@ -219,12 +238,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _play(Game game, PackLocation location) async {
+    PackThemes.use(game.pack.manifest.colorScheme);
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => GameScreen(
           game: game,
           packLocation: location,
           onPackReloaded: (p, l) => setState(() {
+            PackThemes.use(p.manifest.colorScheme);
             _campaigns[p.manifest.id] = (p, l);
             if (_pack?.manifest.id == p.manifest.id) {
               _pack = p;
@@ -292,6 +313,15 @@ class _HomeScreenState extends State<HomeScreen> {
     SettingsSheet(
       campaigns: [for (final c in _campaigns.values) c],
       onReload: _load,
+      onPackReloaded: (p, l) => setState(() {
+        PackThemes.use(p.manifest.colorScheme);
+        _campaigns[p.manifest.id] = (p, l);
+        if (_pack?.manifest.id == p.manifest.id) {
+          _pack = p;
+          _location = l;
+          _setup = RunSetup(p);
+        }
+      }),
     ),
   );
 
@@ -309,7 +339,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: HomeColors.paper,
       body: LayoutBuilder(
         builder: (context, box) {
-          final u = box.maxWidth / 390;
+          // The 390x844 capture scaled to fit both ways, so a shorter phone
+          // keeps Charging and Store on screen.
+          final u = math.min(box.maxWidth / 390, box.maxHeight / 844);
           // The canvas is the whole screen, status bar included, as in the
           // capture: the status bar sits over the top paper strip.
           double y(double v) => v * u;
@@ -516,14 +548,25 @@ class _HomeScreenState extends State<HomeScreen> {
               alignment: Alignment.centerLeft,
               child: CircularProgressIndicator(),
             )
-          : _error != null
-          ? _LoadError(error: _error!, onRetry: _load)
           : _AccountName(
               u: u,
               name: AccountStore.current.username,
               onTap: () => _openSheet(ProfileSheet(pack: _pack)),
             ),
     ),
+    if (!_loading && _error != null)
+      Positioned(
+        left: 10 * u,
+        width: 280 * u,
+        top: y(90),
+        height: 430 * u,
+        child: _LoadError(
+          error: _error!,
+          noPacks: _noPacks,
+          roots: _roots,
+          onRetry: _load,
+        ),
+      ),
     for (final (i, (label, key, icon, sheet)) in [
       (
         'Charging',
@@ -863,46 +906,64 @@ class _BalancePill extends StatelessWidget {
   }
 }
 
+/// No packs is the normal first-run state, so it reads as guidance; a pack
+/// that is installed but broken shows its whole error, scrollable.
 class _LoadError extends StatelessWidget {
   final Object error;
+  final bool noPacks;
+  final List<String> roots;
   final VoidCallback onRetry;
-  const _LoadError({required this.error, required this.onRetry});
+  const _LoadError({
+    required this.error,
+    required this.noPacks,
+    required this.roots,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'The pack did not load',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: scheme.onErrorContainer,
+    const ink = TextStyle(color: HomeColors.ink, fontSize: 13);
+    final mono = ink.copyWith(fontFamily: 'monospace', fontSize: 11);
+    return Container(
+      key: const ValueKey('home-load-error'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: HomeColors.paper,
+        border: Border.all(color: HomeColors.outline, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            noPacks ? 'No packs installed yet' : 'A pack could not be read',
+            style: ink.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (noPacks) ...[
+                    const Text(
+                      'Put a content pack folder (one containing pack.json) '
+                      'in any of these locations, then tap Retry:',
+                      style: ink,
+                    ),
+                    const SizedBox(height: 6),
+                    for (final r in roots) Text(r, style: mono),
+                  ] else
+                    Text('$error', style: mono),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '$error',
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: scheme.onErrorContainer,
-                fontFamily: 'monospace',
-                fontSize: 11,
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(onPressed: onRetry, child: const Text('Retry')),
-            ),
-          ],
-        ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ),
+        ],
       ),
     );
   }

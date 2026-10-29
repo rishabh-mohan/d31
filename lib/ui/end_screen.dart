@@ -57,7 +57,7 @@ class _EndScreenState extends State<EndScreen> {
     final w = MediaQuery.sizeOf(context).width;
     final csat = state.csat;
     return Scaffold(
-      backgroundColor: D30Colors.page,
+      backgroundColor: context.packColors.page,
       body: SafeArea(
         child: Column(
           children: [
@@ -74,12 +74,12 @@ class _EndScreenState extends State<EndScreen> {
                   ),
                 ],
               ),
-              child: const Text(
+              child: Text(
                 'Korean Student Simulator',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26,
-                  color: D30Colors.accent,
+                  color: context.packColors.accent,
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -120,9 +120,9 @@ class _EndScreenState extends State<EndScreen> {
                             widget.outcome,
                             key: const ValueKey('completion-title'),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 25,
-                              color: D30Colors.ink,
+                              color: context.packColors.ink,
                             ),
                           ),
                           const SizedBox(height: 18),
@@ -198,15 +198,15 @@ class _StatChip extends StatelessWidget {
         children: [
           Text(
             subjectLabel(subject),
-            style: const TextStyle(fontSize: 11.5, color: D30Colors.ink),
+            style: TextStyle(fontSize: 11.5, color: context.packColors.ink),
           ),
           Text(
             '$value',
             key: ValueKey('stat-$subject'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: D30Colors.ink,
+              color: context.packColors.ink,
             ),
           ),
         ],
@@ -289,17 +289,23 @@ class _ReturnDialogState extends State<_ReturnDialog> {
                   width: MediaQuery.sizeOf(context).width * .8,
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                   decoration: BoxDecoration(
-                    color: D30Colors.page,
+                    color: context.packColors.page,
                     borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: D30Colors.accent, width: 3),
+                    border: Border.all(
+                      color: context.packColors.accent,
+                      width: 3,
+                    ),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'Ending Reward Obtained!',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 22, color: D30Colors.ink),
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: context.packColors.ink,
+                        ),
                       ),
                       const SizedBox(height: 14),
                       SizedBox(
@@ -316,9 +322,9 @@ class _ReturnDialogState extends State<_ReturnDialog> {
                         '${reward.count} ${_packName(reward.packId)} '
                         'Trait Pack(s)',
                         key: const ValueKey('ending-reward-count'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
-                          color: D30Colors.ink,
+                          color: context.packColors.ink,
                         ),
                       ),
                       const SizedBox(height: 14),

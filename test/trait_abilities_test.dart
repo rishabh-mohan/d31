@@ -11,6 +11,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:d30mode/engine/base_content.dart';
 import 'package:d30mode/engine/content_source.dart';
 import 'package:d30mode/engine/game.dart';
 import 'package:d30mode/engine/game_date.dart';
@@ -78,8 +79,13 @@ int traitOf(ContentPack pack, String type, {Set<int> except = const {}}) => pack
 
 Future<void> main() async {
   setUpAll(() async {
+    // Book rewards come from the base layer, not the pack.
+    BaseContent.use({
+      'book_rewards.json': File('assets/base/book_rewards.json').readAsStringSync(),
+    });
     kss16 = await ContentSource.loadFromDirectory(Directory('packs/kss16'));
     kss20 = await ContentSource.loadFromDirectory(Directory('packs/kss20'));
+    BaseContent.use({});
   });
 
   group('Master of Notes 8 (T01)', () {
@@ -94,47 +100,58 @@ Future<void> main() async {
     test('finishing a book hands over one Weird Workbook with a receipt', () {
       final (game, book, study) = nearlyRead([KssIds.masterOfNotes]);
       expect(game.state.itemCount(KssIds.weirdWorkbook), 0);
-      final outcome = game.act(study, book: book);
+      final outcome = game.act(study, book: book, deferBookCompletion: true);
       expect(game.isBookComplete(book), isTrue);
       expect(game.state.itemCount(KssIds.weirdWorkbook), 1);
       // The host shows it in the acquisition popup (Use / Confirm, F21).
-      expect(outcome.acquiredItems, {KssIds.weirdWorkbook: 1});
+      expect(game.state.pendingBookRewards.single.beforeItems, [
+        KssIds.weirdWorkbook,
+      ]);
+      expect(outcome.acquiredItems, isEmpty);
       expect(outcome.summary, contains('Finished ${book.name}.'));
+
+      game.awardBookReward(game.state.pendingBookRewards.single);
+      game.state.pendingBookRewards.clear();
+      game.finishBookCompletionAction();
+      final heldAfterReward = game.state.itemCount(KssIds.weirdWorkbook);
 
       // Re-reading the finished book is not finishing it again.
       game.state.date = GameDate(game.state.date.day, 7);
       game.state.hp = game.state.hpMax;
       final again = game.act(study, book: book);
-      expect(game.state.itemCount(KssIds.weirdWorkbook), 1);
+      expect(game.state.itemCount(KssIds.weirdWorkbook), heldAfterReward);
       expect(again.acquiredItems, isEmpty);
     });
 
     test('the workbook is the ordinary +90 consumable, usable at once', () {
       final (game, book, study) = nearlyRead([KssIds.masterOfNotes]);
-      game.act(study, book: book);
+      game.act(study, book: book, deferBookCompletion: true);
       final before = game.state.totalStat;
       expect(game.useItem(KssIds.weirdWorkbook), isTrue);
       expect(game.state.totalStat - before, 90);
       expect(game.state.itemCount(KssIds.weirdWorkbook), 0);
     });
 
-    test('without the trait a finished book gives nothing', () {
+    test('without the trait no workbook precedes the completion reward', () {
       final (game, book, study) = nearlyRead(const []);
-      final outcome = game.act(study, book: book);
+      final outcome = game.act(study, book: book, deferBookCompletion: true);
       expect(game.isBookComplete(book), isTrue);
       expect(game.state.itemCount(KssIds.weirdWorkbook), 0);
       expect(outcome.acquiredItems, isEmpty);
+      expect(game.state.pendingBookRewards.single.beforeItems, isEmpty);
     });
 
-    test('no completion gacha is implemented beside it (TODO 39)', () {
+    test('completion gacha waits behind the workbook receipt', () {
       final (game, book, study) = nearlyRead([KssIds.masterOfNotes]);
       final before = Map<int, int>.of(game.state.inventory);
-      game.act(study, book: book);
+      game.act(study, book: book, deferBookCompletion: true);
       final gained = {
         for (final e in game.state.inventory.entries)
           if (e.value > (before[e.key] ?? 0)) e.key: e.value,
       };
       expect(gained.keys, [KssIds.weirdWorkbook]);
+      expect(game.state.pendingBookRewards.single.stage, 'before');
+      expect(game.state.pendingBookRewards.single.awarded, isFalse);
     });
   });
 

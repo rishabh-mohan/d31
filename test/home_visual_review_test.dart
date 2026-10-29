@@ -46,7 +46,11 @@ void main() {
     );
     final screens = <String, Widget>{
       'home': const HomeScreen(),
-      'settings': SettingsSheet(campaigns: const [], onReload: () async {}),
+      'settings': SettingsSheet(
+        campaigns: const [],
+        onReload: () async {},
+        onPackReloaded: (_, _) {},
+      ),
       'profile': ProfileSheet(pack: pack),
       'charging': const ChargingSheet(),
       'mail': const MailBoxSheet(),

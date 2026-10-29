@@ -50,7 +50,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
           : priceOf(b).compareTo(priceOf(a)),
     );
   ButtonStyle get orangeButton => FilledButton.styleFrom(
-    backgroundColor: D30Colors.accent,
+    backgroundColor: context.packColors.accent,
     foregroundColor: Colors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
   );
@@ -65,7 +65,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
     decoration: BoxDecoration(
       color: const Color(0xFFFFEEDB),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: D30Colors.accent, width: 2),
+      border: Border.all(color: context.packColors.accent, width: 2),
     ),
     child: child,
   );
@@ -211,9 +211,12 @@ class _CommerceScreenState extends State<CommerceScreen> {
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: D30Colors.panel,
+                  color: context.packColors.panel,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: D30Colors.accent, width: 2),
+                  border: Border.all(
+                    color: context.packColors.accent,
+                    width: 2,
+                  ),
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -227,7 +230,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
             const SizedBox(width: 8),
             PressFeedback(
               child: Material(
-                color: D30Colors.accent,
+                color: context.packColors.accent,
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
@@ -356,9 +359,9 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                     item.isConsumable
                                         ? 'Consumables'
                                         : 'Others',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: D30Colors.inkSoft,
+                                      color: context.packColors.inkSoft,
                                     ),
                                   ),
                                 ],
@@ -632,9 +635,9 @@ class _CommerceScreenState extends State<CommerceScreen> {
                     child: PressFeedback(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: D30Colors.ink,
-                          side: const BorderSide(
-                            color: D30Colors.accent,
+                          foregroundColor: context.packColors.ink,
+                          side: BorderSide(
+                            color: context.packColors.accent,
                             width: 2,
                           ),
                           shape: RoundedRectangleBorder(
@@ -660,11 +663,11 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                 height: 10,
                                 decoration: BoxDecoration(
                                   color: filter == type
-                                      ? D30Colors.accent
+                                      ? context.packColors.accent
                                       : Colors.transparent,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: D30Colors.accent,
+                                    color: context.packColors.accent,
                                     width: 1.5,
                                   ),
                                 ),
@@ -770,8 +773,11 @@ class _CommerceScreenState extends State<CommerceScreen> {
               constraints: const BoxConstraints(maxWidth: 600),
               child: Container(
                 decoration: BoxDecoration(
-                  color: D30Colors.panel,
-                  border: Border.all(color: D30Colors.accent, width: 3),
+                  color: context.packColors.panel,
+                  border: Border.all(
+                    color: context.packColors.accent,
+                    width: 3,
+                  ),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
@@ -786,9 +792,9 @@ class _CommerceScreenState extends State<CommerceScreen> {
                             child: Text(
                               title,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 26,
-                                color: D30Colors.ink,
+                                color: context.packColors.ink,
                               ),
                             ),
                           ),
@@ -800,8 +806,8 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                 tooltip: 'Close',
                                 onPressed: closeMenu,
                                 style: IconButton.styleFrom(
-                                  backgroundColor: D30Colors.accent,
-                                  foregroundColor: D30Colors.panel,
+                                  backgroundColor: context.packColors.accent,
+                                  foregroundColor: context.packColors.panel,
                                   shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.only(
                                       bottomLeft: Radius.circular(10),
@@ -817,7 +823,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                     ),
                     Expanded(
                       child: DefaultTextStyle.merge(
-                        style: const TextStyle(color: D30Colors.ink),
+                        style: TextStyle(color: context.packColors.ink),
                         child: menuBody,
                       ),
                     ),
@@ -834,7 +840,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                             child: FilledButton(
                               style: FilledButton.styleFrom(
                                 backgroundColor: D30Colors.alert,
-                                foregroundColor: D30Colors.panel,
+                                foregroundColor: context.packColors.panel,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -849,7 +855,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                         ),
                       ),
                       Container(
-                        color: D30Colors.accent,
+                        color: context.packColors.accent,
                         height: 54,
                         child: Row(
                           children: [
@@ -877,7 +883,7 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                               PackMenu.shop => Icons.storefront,
                                               PackMenu.stationery => Icons.edit,
                                             },
-                                            color: D30Colors.panel,
+                                            color: context.packColors.panel,
                                             size: 25,
                                           ),
                                           if (selectedMenu == tab) ...[
@@ -893,8 +899,10 @@ class _CommerceScreenState extends State<CommerceScreen> {
                                                     PackMenu.stationery =>
                                                       'Stationery',
                                                   },
-                                                  style: const TextStyle(
-                                                    color: D30Colors.panel,
+                                                  style: TextStyle(
+                                                    color: context
+                                                        .packColors
+                                                        .panel,
                                                     fontSize: 16,
                                                   ),
                                                 ),
