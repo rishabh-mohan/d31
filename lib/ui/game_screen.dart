@@ -39,6 +39,7 @@ import 'pack_menus.dart';
 import 'portrait.dart';
 import 'stamina_bar.dart';
 import 'theme.dart';
+import 'book_completion.dart';
 
 typedef PackReloaded = void Function(ContentPack pack, PackLocation location);
 
@@ -75,6 +76,19 @@ class _GameScreenState extends State<GameScreen> {
     _dayStartStats = DayTransition.snapshot(state);
     _dayStartDate = state.date.day;
     _dayStartCountdown = state.daysRemaining;
+    if (game.bookCompletionPending) {
+      _preparing = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        _resolving = true;
+        try {
+          await _runOutcome(ActionOutcome(''));
+        } finally {
+          _resolving = false;
+        }
+      });
+      return;
+    }
     if (game.openingPending) {
       _preparing = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => _playOpening());
@@ -195,6 +209,20 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _runOutcome(ActionOutcome outcome) async {
     await _showReceipts(outcome);
     if (!mounted) return;
+    if (game.bookCompletionPending) {
+      await showBookCompletions(
+        context,
+        game,
+        checkpoint: _bookRewardCheckpoint,
+        refresh: () {
+          if (mounted) setState(() {});
+        },
+      );
+      if (!mounted) return;
+      outcome = game.finishBookCompletionAction();
+      await _showReceipts(outcome);
+      if (!mounted) return;
+    }
     for (final event in outcome.beforeEvents) {
       // These level-up runs were already constructed by act(), so draining
       // another pending level here would duplicate a later entry in this list.
@@ -455,6 +483,16 @@ class _GameScreenState extends State<GameScreen> {
     await SaveStore.write(slot, state);
   }
 
+  Future<void> _bookRewardCheckpoint() async {
+    if (state.usesAccountWallet) await AccountStore.save();
+    final slot = state.saveSlot;
+    if (slot != null && !await SaveStore.write(slot, state)) {
+      throw StateError(
+        'Could not save the book reward. Free storage and reopen the run.',
+      );
+    }
+  }
+
   void _refresh() {
     if (game.refreshHand()) {
       setState(() {});
@@ -476,7 +514,14 @@ class _GameScreenState extends State<GameScreen> {
       final book = action.actionType == 'study'
           ? _bookFor(index, action)
           : null;
-      await _runOutcome(game.act(action, book: book, deferExhaustion: true));
+      await _runOutcome(
+        game.act(
+          action,
+          book: book,
+          deferExhaustion: true,
+          deferBookCompletion: true,
+        ),
+      );
       if (!mounted) return;
 
       // The moment class lets out, the original asks where you are going.
@@ -610,7 +655,7 @@ class _GameScreenState extends State<GameScreen> {
         : game.hand();
 
     return Scaffold(
-      backgroundColor: D30Colors.page,
+      backgroundColor: context.packColors.page,
       body: AbsorbPointer(
         absorbing: _exhaustionPresentation || state.exhaustionPending,
         child: SafeArea(
@@ -722,7 +767,7 @@ class _TopBar extends StatelessWidget {
                 child: Text(
                   'D-${state.daysRemaining}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 19, color: D30Colors.ink),
+                  style: TextStyle(fontSize: 19, color: context.packColors.ink),
                 ),
               ),
               _PillCell(
@@ -733,7 +778,7 @@ class _TopBar extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   softWrap: false,
-                  style: const TextStyle(fontSize: 15, color: D30Colors.ink),
+                  style: TextStyle(fontSize: 15, color: context.packColors.ink),
                 ),
               ),
             ],
@@ -752,7 +797,7 @@ class _TopBar extends StatelessWidget {
                 child: Text(
                   '${state.money.round()} Gold',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: D30Colors.ink),
+                  style: TextStyle(fontSize: 14, color: context.packColors.ink),
                 ),
               ),
               _PillCell(
@@ -765,9 +810,9 @@ class _TopBar extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       '${state.cookies}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: D30Colors.ink,
+                        color: context.packColors.ink,
                       ),
                     ),
                   ],
@@ -839,16 +884,16 @@ class _SquareButton extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: const [
-          BoxShadow(color: D30Colors.accentDark, offset: Offset(0, 3)),
+        boxShadow: [
+          BoxShadow(color: context.packColors.accentDark, offset: Offset(0, 3)),
         ],
       ),
       child: PressFeedback(
         child: Material(
-          color: D30Colors.accent,
+          color: context.packColors.accent,
           shape: RoundedRectangleBorder(
             borderRadius: radius,
-            side: const BorderSide(color: D30Colors.accentDark, width: 2),
+            side: BorderSide(color: context.packColors.accentDark, width: 2),
           ),
           child: InkWell(
             borderRadius: radius,
@@ -856,7 +901,7 @@ class _SquareButton extends StatelessWidget {
             child: SizedBox(
               width: 44,
               height: 44,
-              child: Icon(icon, color: D30Colors.onAccent, size: 22),
+              child: Icon(icon, color: context.packColors.onAccent, size: 22),
             ),
           ),
         ),
@@ -883,7 +928,7 @@ class _WhitePill extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: D30Colors.accent, width: 2),
+        border: Border.all(color: context.packColors.accent, width: 2),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 4)),
         ],
@@ -936,14 +981,14 @@ class _PillButton extends StatelessWidget {
   // slid it out of the bar.
   @override
   Widget build(BuildContext context) => Material(
-    color: D30Colors.accent,
+    color: context.packColors.accent,
     child: InkWell(
       onTap: onTap,
       child: Tooltip(
         message: tooltip,
         child: SizedBox(
           width: 44,
-          child: Icon(icon, color: D30Colors.onAccent, size: 24),
+          child: Icon(icon, color: context.packColors.onAccent, size: 24),
         ),
       ),
     ),
@@ -954,7 +999,7 @@ class _PillDivider extends StatelessWidget {
   const _PillDivider();
   @override
   Widget build(BuildContext context) =>
-      Container(width: 2, color: D30Colors.accent);
+      Container(width: 2, color: context.packColors.accent);
 }
 
 // ---------------------------------------------------------------------------
@@ -989,7 +1034,7 @@ class _MainPanel extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => Container(
         decoration: BoxDecoration(
-          color: D30Colors.accent,
+          color: context.packColors.accent,
           borderRadius: BorderRadius.circular(18),
         ),
         padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
@@ -1002,10 +1047,10 @@ class _MainPanel extends StatelessWidget {
               child: Center(
                 child: Text(
                   here?.name ?? '-',
-                  style: const TextStyle(
-                    color: D30Colors.onAccent,
+                  style: TextStyle(
+                    color: context.packColors.onAccent,
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -1023,7 +1068,10 @@ class _MainPanel extends StatelessWidget {
             // lower half rather than below it.
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                // Square top, flush under the tick strip, as in the reference.
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(12),
+                ),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -1046,10 +1094,10 @@ class _MainPanel extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.all(5),
                               decoration: BoxDecoration(
-                                color: D30Colors.panel,
+                                color: context.packColors.panel,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: D30Colors.accent,
+                                  color: context.packColors.accent,
                                   width: 2,
                                 ),
                                 boxShadow: const [
@@ -1119,16 +1167,16 @@ class _TickDots extends StatelessWidget {
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: D30Colors.panel,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: Colors.white, width: 2),
+        color: context.packColors.panel,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Shrink the dots rather than overflow when ticksPerDay is raised.
-          final gap = 3.0;
+          // Narrow capsules with room between them, as in the reference.
+          // Shrink them rather than overflow when ticksPerDay is raised.
+          const gap = 6.0;
           final size = ((constraints.maxWidth - gap * (total - 1)) / total)
-              .clamp(4.0, 18.0);
+              .clamp(4.0, 14.0);
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1140,7 +1188,7 @@ class _TickDots extends StatelessWidget {
                   margin: EdgeInsets.only(right: i == total - 1 ? 0 : gap),
                   decoration: BoxDecoration(
                     color: i < used
-                        ? D30Colors.accent.withValues(alpha: 0.45)
+                        ? context.packColors.accent.withValues(alpha: 0.45)
                         : const Color(0xFFF6E4CF),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1166,8 +1214,7 @@ class _Portrait extends StatelessWidget {
       state.studyExp,
     );
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
+    return ClipRect(
       child: SizedBox.expand(
         child: Stack(
           fit: StackFit.expand,
@@ -1224,7 +1271,7 @@ class _Portrait extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     Text(
@@ -1260,12 +1307,12 @@ class _GoalStrip extends StatelessWidget {
               const Icon(
                 Icons.track_changes,
                 size: 16,
-                color: D30Colors.accentDark,
+                color: Color(0xFFE8553A),
               ),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'Weekly Goals',
-                style: TextStyle(fontSize: 11, color: D30Colors.ink),
+                style: TextStyle(fontSize: 11, color: context.packColors.ink),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -1280,12 +1327,13 @@ class _GoalStrip extends StatelessWidget {
                             '${subjectLabel(goal.targetSubject)} Reach ${goal.targetValue}',
                         color: D30Colors.subject(goal.targetSubject),
                         fontSize: 11,
+                        weight: FontWeight.w400,
                       ),
                       const SizedBox(width: 6),
-                      const Icon(
+                      Icon(
                         Icons.arrow_right_alt,
-                        size: 16,
-                        color: D30Colors.inkSoft,
+                        size: 18,
+                        color: context.packColors.accent,
                       ),
                       const SizedBox(width: 6),
                       D30Chip(
@@ -1293,6 +1341,7 @@ class _GoalStrip extends StatelessWidget {
                             '${subjectLabel(goal.rewardSubject)} Reward ${goal.rewardValue}',
                         color: D30Colors.subject(goal.rewardSubject),
                         fontSize: 11,
+                        weight: FontWeight.w400,
                       ),
                     ],
                   ),
@@ -1328,7 +1377,7 @@ class _SubjectChips extends StatelessWidget {
     return Row(
       children: [
         for (var i = 0; i < subjects.length; i++) ...[
-          if (i > 0) const SizedBox(width: 4),
+          if (i > 0) const SizedBox(width: 8),
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 7),
@@ -1348,19 +1397,19 @@ class _SubjectChips extends StatelessWidget {
                   FittedBox(
                     child: Text(
                       subjectLabel(subjects[i]),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: D30Colors.ink,
+                        fontWeight: FontWeight.w500,
+                        color: context.packColors.ink,
                       ),
                     ),
                   ),
                   Text(
                     '${(state.stats[subjects[i]] ?? 0).round()}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: D30Colors.ink,
+                      fontWeight: FontWeight.w500,
+                      color: context.packColors.ink,
                     ),
                   ),
                 ],
@@ -1394,9 +1443,9 @@ class _StatusBar extends StatelessWidget {
     return Container(
       height: 34,
       decoration: BoxDecoration(
-        color: D30Colors.panel,
+        color: context.packColors.panel,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: D30Colors.panelBorder, width: 1.5),
+        border: Border.all(color: context.packColors.panelBorder, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
@@ -1405,20 +1454,24 @@ class _StatusBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                const Icon(Icons.schedule, size: 14, color: D30Colors.ink),
+                Icon(Icons.watch_later, size: 14, color: context.packColors.ink),
                 const SizedBox(width: 4),
                 Text(
                   '$ticksLeft',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: D30Colors.ink,
+                    fontWeight: FontWeight.w500,
+                    color: context.packColors.ink,
                   ),
                 ),
               ],
             ),
           ),
-          Container(width: 1.5, height: 34, color: D30Colors.panelBorder),
+          Container(
+            width: 1.5,
+            height: 34,
+            color: context.packColors.panelBorder,
+          ),
           const SizedBox(width: 8),
           const Icon(Icons.favorite, size: 15, color: Color(0xFF3A2E24)),
           const SizedBox(width: 6),
@@ -1428,7 +1481,7 @@ class _StatusBar extends StatelessWidget {
           PressFeedback(
             travel: 0,
             child: Material(
-              color: D30Colors.accent,
+              color: context.packColors.accent,
               child: InkWell(
                 onTap: state.rerolls > 0 ? onRefresh : null,
                 child: Container(
@@ -1449,7 +1502,7 @@ class _StatusBar extends StatelessWidget {
                         '${state.rerolls}',
                         style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w500,
                           color: Colors.white,
                         ),
                       ),
@@ -1493,7 +1546,7 @@ class _ActionGrid extends StatelessWidget {
           key: const ValueKey('exhausted-blocks'),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: D30Colors.panel,
+            color: context.packColors.panel,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -1513,7 +1566,7 @@ class _ActionGrid extends StatelessWidget {
                                 color: const Color(0xFFF2DFC6),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: D30Colors.panelBorder,
+                                  color: context.packColors.panelBorder,
                                 ),
                               ),
                             ),
@@ -1528,12 +1581,12 @@ class _ActionGrid extends StatelessWidget {
       );
     }
     if (actions.isEmpty) {
-      return const D30Panel(
+      return D30Panel(
         padding: EdgeInsets.all(18),
         child: Center(
           child: Text(
             'Nothing available here right now.',
-            style: TextStyle(fontSize: 12, color: D30Colors.ink),
+            style: TextStyle(fontSize: 12, color: context.packColors.ink),
           ),
         ),
       );
@@ -1542,9 +1595,9 @@ class _ActionGrid extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(38, 8, 38, 10),
       decoration: BoxDecoration(
-        color: D30Colors.panel,
+        color: context.packColors.panel,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: D30Colors.panelBorder, width: 1.5),
+        border: Border.all(color: context.packColors.panelBorder, width: 1.5),
       ),
       child: Column(
         children: [
@@ -1584,6 +1637,44 @@ class _ActionGrid extends StatelessWidget {
       onTap: () => onAct(index, action),
     );
   }
+}
+
+/// The workout card's level dumbbell, drawn as the reference draws it: rounded
+/// white outlines, two plates a side, a bar between. Material's glyph is a
+/// filled diagonal one and does not match the rest of the game's icons.
+class _DumbbellIcon extends StatelessWidget {
+  const _DumbbellIcon();
+
+  @override
+  Widget build(BuildContext context) =>
+      const CustomPaint(size: Size(32, 22), painter: _DumbbellPainter());
+}
+
+class _DumbbellPainter extends CustomPainter {
+  const _DumbbellPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Drawn on a 32 x 22 grid and scaled to fit.
+    canvas.scale(size.width / 32, size.height / 22);
+    final line = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    RRect plate(double l, double t, double r, double b, double radius) =>
+        RRect.fromLTRBR(l, t, r, b, Radius.circular(radius));
+    canvas
+      ..drawRRect(plate(1.5, 3.5, 6.5, 18.5, 2), line)
+      ..drawRRect(plate(6.5, 6.5, 10.5, 15.5, 1.5), line)
+      ..drawRRect(plate(21.5, 6.5, 25.5, 15.5, 1.5), line)
+      ..drawRRect(plate(25.5, 3.5, 30.5, 18.5, 2), line)
+      ..drawLine(const Offset(10.5, 11), const Offset(21.5, 11), line);
+  }
+
+  @override
+  bool shouldRepaint(_DumbbellPainter oldDelegate) => false;
 }
 
 class _ActionCard extends StatelessWidget {
@@ -1634,7 +1725,7 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onFill = _filled ? Colors.white : D30Colors.ink;
+    final onFill = _filled ? Colors.white : context.packColors.ink;
 
     return _PressDown(
       onTap: onTap,
@@ -1654,7 +1745,7 @@ class _ActionCard extends StatelessWidget {
               border: Border.all(
                 color: _filled
                     ? Colors.black.withValues(alpha: 0.12)
-                    : D30Colors.panelBorder,
+                    : context.packColors.panelBorder,
                 width: 1.5,
               ),
             ),
@@ -1662,8 +1753,8 @@ class _ActionCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _title(onFill),
-                if (_hasBodyRow) _body(onFill),
+                _title(context, onFill),
+                if (_hasBodyRow) _body(context, onFill),
                 for (final bonus in preview.bonuses)
                   Text(
                     '${subjectLabel(bonus.subject)} +${bonus.value}',
@@ -1672,7 +1763,7 @@ class _ActionCard extends StatelessWidget {
                 if (preview.bookComplete)
                   _readingComplete()
                 else if (_showsProgress)
-                  _progressBar(),
+                  _progressBar(context),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1688,7 +1779,7 @@ class _ActionCard extends StatelessWidget {
                           : '-${_trim(preview.hpCost)}',
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w500,
                         color: onFill,
                       ),
                     ),
@@ -1702,7 +1793,7 @@ class _ActionCard extends StatelessWidget {
     );
   }
 
-  Widget _title(Color color) {
+  Widget _title(BuildContext context, Color color) {
     switch (preview.kind) {
       case ActionKind.partTimeJob:
         return Column(
@@ -1714,7 +1805,7 @@ class _ActionCard extends StatelessWidget {
                 maxLines: 1,
                 style: TextStyle(
                   fontSize: 21,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: color,
                 ),
               ),
@@ -1732,14 +1823,14 @@ class _ActionCard extends StatelessWidget {
       case ActionKind.exercise:
         return Column(
           children: [
-            const Icon(Icons.fitness_center, size: 22, color: Colors.white),
+            const _DumbbellIcon(),
             const SizedBox(height: 4),
             Text(
               preview.title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: color,
               ),
             ),
@@ -1756,7 +1847,7 @@ class _ActionCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: color,
               ),
             ),
@@ -1766,7 +1857,11 @@ class _ActionCard extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.co_present, size: 16, color: D30Colors.ink),
+            Icon(
+              Icons.cast_for_education,
+              size: 18,
+              color: context.packColors.ink,
+            ),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
@@ -1776,7 +1871,7 @@ class _ActionCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w500,
                   color: color,
                 ),
               ),
@@ -1792,14 +1887,14 @@ class _ActionCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
             color: color,
           ),
         );
     }
   }
 
-  Widget _body(Color color) {
+  Widget _body(BuildContext context, Color color) {
     final gain = preview.gain;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -1809,6 +1904,7 @@ class _ActionCard extends StatelessWidget {
             text: subjectLabel(preview.subject!),
             color: D30Colors.subject(preview.subject!),
             fontSize: 11,
+            weight: FontWeight.w400,
           ),
           const SizedBox(width: 4),
         ],
@@ -1823,10 +1919,10 @@ class _ActionCard extends StatelessWidget {
             ),
             child: Text(
               preview.rank!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: D30Colors.ink,
+                fontWeight: FontWeight.w500,
+                color: context.packColors.ink,
               ),
             ),
           ),
@@ -1842,7 +1938,7 @@ class _ActionCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w500,
                 color: color,
               ),
             ),
@@ -1864,7 +1960,15 @@ class _ActionCard extends StatelessWidget {
     ),
   );
 
-  Widget _progressBar() {
+  Widget _progressBar(BuildContext context) {
+    // The level cards' bar is about half the card, inset from both sides.
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: _filled ? 22 : 0),
+      child: _progressRow(context),
+    );
+  }
+
+  Widget _progressRow(BuildContext context) {
     return Row(
       children: [
         Expanded(
@@ -1876,7 +1980,7 @@ class _ActionCard extends StatelessWidget {
               color: _filled ? Colors.black26 : Colors.white,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: _filled ? Colors.white : D30Colors.panelBorder,
+                color: _filled ? Colors.white : context.packColors.panelBorder,
               ),
             ),
             clipBehavior: Clip.antiAlias,
@@ -2000,10 +2104,10 @@ class _MenuSheetState extends State<_MenuSheet> {
         Padding(
           padding: const EdgeInsets.only(top: 14, left: 14),
           child: Material(
-            color: D30Colors.panel,
+            color: context.packColors.panel,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: D30Colors.accent, width: 3),
+              side: BorderSide(color: context.packColors.accent, width: 3),
             ),
             clipBehavior: Clip.antiAlias,
             child: ListView(
@@ -2046,10 +2150,13 @@ class _MenuSheetState extends State<_MenuSheet> {
                     color: const Color(0xFFFFEEDB),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Text(
+                  child: Text(
                     '30 Days — clean-room rebuild',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: D30Colors.inkSoft),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.packColors.inkSoft,
+                    ),
                   ),
                 ),
               ],
@@ -2112,7 +2219,9 @@ class _MenuSheetState extends State<_MenuSheet> {
                 maxLines: 1,
                 style: TextStyle(
                   fontSize: 17,
-                  color: blocked ? D30Colors.inkSoft : D30Colors.ink,
+                  color: blocked
+                      ? context.packColors.inkSoft
+                      : context.packColors.ink,
                 ),
               ),
               const SizedBox(width: 10),
@@ -2138,7 +2247,7 @@ class _MenuSheetState extends State<_MenuSheet> {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 17, color: D30Colors.ink),
+            style: TextStyle(fontSize: 17, color: context.packColors.ink),
           ),
         ),
         for (final on in [true, false]) ...[
@@ -2164,7 +2273,7 @@ class _MenuSheetState extends State<_MenuSheet> {
         onTap: onTap,
         child: Row(
           children: [
-            Icon(icon, size: 22, color: D30Colors.accentDark),
+            Icon(icon, size: 22, color: context.packColors.accentDark),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -2173,7 +2282,9 @@ class _MenuSheetState extends State<_MenuSheet> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 17,
-                  color: onTap == null ? D30Colors.inkSoft : D30Colors.ink,
+                  color: onTap == null
+                      ? context.packColors.inkSoft
+                      : context.packColors.ink,
                 ),
               ),
             ),
@@ -2214,16 +2325,18 @@ class _ToggleCircle extends StatelessWidget {
         height: 42,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? D30Colors.accent : D30Colors.panel,
+          color: selected
+              ? context.packColors.accent
+              : context.packColors.panel,
           shape: BoxShape.circle,
-          border: Border.all(color: D30Colors.accent, width: 2),
+          border: Border.all(color: context.packColors.accent, width: 2),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: selected ? Colors.white : D30Colors.accent,
+            color: selected ? Colors.white : context.packColors.accent,
           ),
         ),
       ),
@@ -2313,9 +2426,9 @@ class _ExamHand extends StatelessWidget {
     key: const ValueKey('exam-hand'),
     padding: const EdgeInsets.fromLTRB(26, 10, 26, 8),
     decoration: BoxDecoration(
-      color: D30Colors.panel,
+      color: context.packColors.panel,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: D30Colors.panelBorder, width: 1.5),
+      border: Border.all(color: context.packColors.panelBorder, width: 1.5),
     ),
     child: ExamCardButton(label: label, onTap: onTap, height: 290),
   );

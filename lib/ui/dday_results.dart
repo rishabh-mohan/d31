@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
 import 'haptics.dart';
 
 import '../engine/game.dart';
@@ -408,14 +409,22 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
     final rankStep = h * .058;
 
     // Browse timeline.
-    final move = Curves.easeInOut.transform(_seg(o, _stageMove.$1, _stageMove.$2));
+    final move = Curves.easeInOut.transform(
+      _seg(o, _stageMove.$1, _stageMove.$2),
+    );
     final wobble = _seg(o, _stageTilt.$1, _stageTilt.$2);
-    final flap = Curves.easeInOut.transform(_seg(o, _stageFlap.$1, _stageFlap.$2));
-    final rise = Curves.easeOut.transform(_seg(o, _stageLetter.$1, _stageLetter.$2));
-    final glowGrow = Curves.easeOut.transform(_seg(o, _stageGlow.$1, _stageGlow.$2));
+    final flap = Curves.easeInOut.transform(
+      _seg(o, _stageFlap.$1, _stageFlap.$2),
+    );
+    final rise = Curves.easeOut.transform(
+      _seg(o, _stageLetter.$1, _stageLetter.$2),
+    );
+    final glowGrow = Curves.easeOut.transform(
+      _seg(o, _stageGlow.$1, _stageGlow.$2),
+    );
     final fade = Curves.easeIn.transform(_seg(o, _stageCard.$1, _stageCard.$2));
     final angle = .085 * math.sin(wobble * math.pi * 3) * (1 - wobble * .4);
-    final glowColor = shown?.color ?? D30Colors.accent;
+    final glowColor = shown?.color ?? context.packColors.accent;
     final glowing = (opening || cardStep) && shown != null;
 
     // Remaining (unopened) envelopes; the front one is `_revealed` (or the
@@ -613,7 +622,8 @@ class _EnvelopeStageState extends State<_EnvelopeStage>
     }
 
     // --- confetti in the school's colours (both verdicts) ----------------------
-    if (shown != null && ((opening && o > _confettiFrom) || cardStep || stashing)) {
+    if (shown != null &&
+        ((opening && o > _confettiFrom) || cardStep || stashing)) {
       final idx = stashing ? _revealed - 1 : active;
       children.add(
         Positioned.fill(
@@ -1156,17 +1166,20 @@ class _ConfirmEnrollmentDialogState extends State<_ConfirmEnrollmentDialog> {
                   width: 84,
                   height: 84,
                   decoration: BoxDecoration(
-                    color: D30Colors.page,
+                    color: context.packColors.page,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: D30Colors.accent, width: 3),
+                    border: Border.all(
+                      color: context.packColors.accent,
+                      width: 3,
+                    ),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: SizedBox(
                       width: 34,
                       height: 34,
                       child: CircularProgressIndicator(
                         strokeWidth: 4,
-                        color: D30Colors.accent,
+                        color: context.packColors.accent,
                       ),
                     ),
                   ),
@@ -1181,9 +1194,12 @@ class _ConfirmEnrollmentDialogState extends State<_ConfirmEnrollmentDialog> {
                         width: math.min(w * .8, 340),
                         padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
                         decoration: BoxDecoration(
-                          color: D30Colors.page,
+                          color: context.packColors.page,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: D30Colors.accent, width: 3),
+                          border: Border.all(
+                            color: context.packColors.accent,
+                            width: 3,
+                          ),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x66000000),
@@ -1194,11 +1210,11 @@ class _ConfirmEnrollmentDialogState extends State<_ConfirmEnrollmentDialog> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
+                            Text(
                               'Confirm Enrollment',
                               style: TextStyle(
                                 fontSize: 21,
-                                color: D30Colors.accent,
+                                color: context.packColors.accent,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -1207,18 +1223,18 @@ class _ConfirmEnrollmentDialogState extends State<_ConfirmEnrollmentDialog> {
                             Text(
                               o.university?.name ?? '',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 20,
-                                color: D30Colors.accentDark,
+                                color: context.packColors.accentDark,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               o.department.name,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 17,
-                                color: D30Colors.accentDark,
+                                color: context.packColors.accentDark,
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -1247,7 +1263,7 @@ class _ConfirmEnrollmentDialogState extends State<_ConfirmEnrollmentDialog> {
                             child: Container(
                               width: 40,
                               height: 40,
-                              color: D30Colors.accent,
+                              color: context.packColors.accent,
                               child: const Icon(
                                 Icons.close,
                                 color: Colors.white,
@@ -1326,7 +1342,11 @@ class _ShareSceneState extends State<_ShareScene> {
         : state.pack.admissions.departments[state.enrolledDepartment];
     final university =
         state.pack.admissions.universities[department?.universityId ?? 0];
-    final tint = Color.lerp(D30Colors.accent, schoolColor(university), .35)!;
+    final tint = Color.lerp(
+      context.packColors.accent,
+      schoolColor(university),
+      .35,
+    )!;
 
     return LayoutBuilder(
       builder: (context, box) {
@@ -1509,7 +1529,7 @@ class _SharePanel extends StatelessWidget {
             _icon(
               const ValueKey('share-download'),
               const Icon(Icons.download, color: Colors.white, size: 28),
-              D30Colors.accent,
+              context.packColors.accent,
               onDownload,
             ),
           ],

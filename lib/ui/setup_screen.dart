@@ -3,6 +3,7 @@ import 'press_feedback.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/game.dart';
+import '../engine/content_source.dart';
 import '../engine/pack.dart';
 import '../engine/setup.dart';
 import '../engine/traits.dart';
@@ -15,11 +16,13 @@ class SetupScreen extends StatefulWidget {
   final ContentPack pack;
   final RunSetup draft;
   final List<ContentPack>? campaigns;
+  final Map<String, PackLocation> campaignLocations;
   const SetupScreen({
     super.key,
     required this.pack,
     required this.draft,
     this.campaigns,
+    this.campaignLocations = const {},
   });
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -88,6 +91,10 @@ class _SetupScreenState extends State<SetupScreen> {
                           borderRadius: BorderRadius.circular(18),
                           onTap: () => setState(() {
                             _pack = campaign;
+                            final location =
+                                widget.campaignLocations[campaign.manifest.id];
+                            if (location != null) PackImages.use(location);
+                            PackThemes.use(campaign.manifest.colorScheme);
                             _draft = _drafts.putIfAbsent(
                               campaign.manifest.id,
                               () => RunSetup(campaign),
@@ -107,22 +114,18 @@ class _SetupScreenState extends State<SetupScreen> {
                             height: 174,
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
-                              color: campaign.manifest.storyId == 16
-                                  ? const Color(0xFFF6C4C3)
-                                  : HSLColor.fromAHSL(
-                                      1,
-                                      (campaign.manifest.id.codeUnits.fold<int>(
-                                                0,
-                                                (a, b) => a * 31 + b,
-                                              ) %
-                                              360)
-                                          .toDouble(),
-                                      .52,
-                                      .72,
-                                    ).toColor(),
+                              color: Color(
+                                campaign.manifest.colorScheme.color(
+                                  'iconBackground',
+                                ),
+                              ),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: setupInk.withValues(alpha: .35),
+                                color: Color(
+                                  campaign.manifest.colorScheme.color(
+                                    'accentDark',
+                                  ),
+                                ),
                                 width: 3,
                               ),
                               boxShadow: const [
@@ -140,12 +143,26 @@ class _SetupScreenState extends State<SetupScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
+                                    Icon(
+                                      Icons.extension,
+                                      size: 28,
+                                      color: Color(
+                                        campaign.manifest.colorScheme.color(
+                                          'iconForeground',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
                                     Text(
                                       campaign.manifest.name,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 28,
-                                        color: setupInk,
+                                        color: Color(
+                                          campaign.manifest.colorScheme.color(
+                                            'iconForeground',
+                                          ),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -156,9 +173,13 @@ class _SetupScreenState extends State<SetupScreen> {
                                           ? 'Prototype - English dialogue'
                                           : 'Standard Mode',
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 16,
-                                        color: setupInk,
+                                        color: Color(
+                                          campaign.manifest.colorScheme.color(
+                                            'iconForeground',
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -216,9 +237,9 @@ class _SetupScreenState extends State<SetupScreen> {
               controller: first,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 26),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 filled: true,
-                fillColor: D30Colors.panel,
+                fillColor: context.packColors.panel,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(10)),
                   borderSide: BorderSide(color: setupInk, width: 2),
@@ -234,9 +255,9 @@ class _SetupScreenState extends State<SetupScreen> {
               controller: last,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 26),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 filled: true,
-                fillColor: D30Colors.panel,
+                fillColor: context.packColors.panel,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(10)),
                   borderSide: BorderSide(color: setupInk, width: 2),
@@ -261,7 +282,7 @@ class _SetupScreenState extends State<SetupScreen> {
         'Select Character (${step + 1} / 5)',
         style: const TextStyle(color: setupOrange, fontSize: 21),
       ),
-      backgroundColor: D30Colors.panel,
+      backgroundColor: context.packColors.panel,
       foregroundColor: setupOrange,
       bottom: const PreferredSize(
         preferredSize: Size.fromHeight(3),
@@ -296,7 +317,7 @@ class _SetupScreenState extends State<SetupScreen> {
           fit: StackFit.expand,
           children: [
             const PackImage(path: 'scene/default_background.jpg'),
-            ColoredBox(color: D30Colors.page.withValues(alpha: .91)),
+            ColoredBox(color: context.packColors.page.withValues(alpha: .91)),
             Column(
               children: [
                 Expanded(

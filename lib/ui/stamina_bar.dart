@@ -4,9 +4,10 @@ import 'theme.dart';
 
 /// The outlined stamina bar.
 ///
-/// The reference prints the percentage *inside* the bar, centred on the filled
-/// part: at 100% it sits in the middle of the bar, at 6% it has slid to the
-/// left edge and turned red. It is never hidden, however little is left.
+/// The reference prints the percentage *inside* the bar, against the right end
+/// of the filled part: at 100% it sits at the bar's right end, at 6% it has
+/// slid to the left edge and turned red. It is never hidden, however little is
+/// left.
 class StaminaBar extends StatelessWidget {
   final double pct;
   const StaminaBar({super.key, required this.pct});
@@ -22,11 +23,11 @@ class StaminaBar extends StatelessWidget {
           ? Duration.zero
           : const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
-      builder: (context, value, _) => _contents(value),
+      builder: (context, value, _) => _contents(context, value),
     );
   }
 
-  Widget _contents(double value) {
+  Widget _contents(BuildContext context, double value) {
     final low = value <= .25;
     // The outline is painted over the fill, not under it: drawn underneath,
     // the fill's square ends covered the inside of the rounded corners and
@@ -39,13 +40,13 @@ class StaminaBar extends StatelessWidget {
       ),
       foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: D30Colors.ink, width: 2),
+        border: Border.all(color: context.packColors.ink, width: 2),
       ),
       clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          final left = (width * value / 2 - _labelWidth / 2).clamp(
+          final left = (width * value - _labelWidth - 4).clamp(
             0.0,
             (width - _labelWidth).clamp(0.0, double.infinity),
           );
@@ -66,8 +67,8 @@ class StaminaBar extends StatelessWidget {
                     key: const ValueKey('hp-percent'),
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: low ? D30Colors.alert : D30Colors.ink,
+                      fontWeight: FontWeight.w500,
+                      color: low ? D30Colors.alert : context.packColors.ink,
                     ),
                   ),
                 ),

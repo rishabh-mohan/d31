@@ -56,8 +56,8 @@ class LocationPicker extends StatelessWidget {
     return FractionallySizedBox(
       heightFactor: 0.92,
       child: Container(
-        decoration: const BoxDecoration(
-          color: D30Colors.panel,
+        decoration: BoxDecoration(
+          color: context.packColors.panel,
           borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         ),
         child: Column(
@@ -67,10 +67,10 @@ class LocationPicker extends StatelessWidget {
               child: Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: D30Colors.ink,
+                  color: context.packColors.ink,
                 ),
               ),
             ),
@@ -153,7 +153,9 @@ class _LocationCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: current ? D30Colors.accentDark : D30Colors.panelBorder,
+                color: current
+                    ? context.packColors.accentDark
+                    : context.packColors.panelBorder,
                 width: current ? 2.5 : 1.5,
               ),
             ),
@@ -172,7 +174,7 @@ class _LocationCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: D30Colors.accent,
+                                color: context.packColors.accent,
                                 width: 1.5,
                               ),
                             ),
@@ -220,10 +222,10 @@ class _LocationCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
-                    color: D30Colors.ink,
+                    color: context.packColors.ink,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -232,7 +234,7 @@ class _LocationCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: D30Colors.ink),
+                  style: TextStyle(fontSize: 10, color: context.packColors.ink),
                 ),
                 const SizedBox(height: 6),
                 Container(
@@ -242,14 +244,17 @@ class _LocationCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: D30Colors.accent, width: 1.5),
+                    border: Border.all(
+                      color: context.packColors.accent,
+                      width: 1.5,
+                    ),
                   ),
                   child: Text(
                     '$relatedEffects Related Effect(s)',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: D30Colors.accentDark,
+                      color: context.packColors.accentDark,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

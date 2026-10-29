@@ -14,6 +14,7 @@ import 'game_date.dart';
 import 'goals.dart';
 import 'quiz.dart';
 import 'pack.dart';
+import 'book_rewards.dart';
 
 /// The account balances a run can draw on instead of its own counters
 /// (TODO 84 M04). `Account` implements it; the engine never loads one.
@@ -46,8 +47,7 @@ class GameState {
   final List<int> badgeIds = [];
   final List<int> initialTraitIds = [];
 
-  String get portrait =>
-      pack.characters[characterId]?.portrait ?? '';
+  String get portrait => pack.characters[characterId]?.portrait ?? '';
 
   /// The campaign as Select Game and History title it.
   String get modeTitle => difficulty == 'elite'
@@ -114,6 +114,12 @@ class GameState {
   final Map<int, int> itemUseCounts = {};
   final Set<int> traits = {};
   final Map<int, int> bookReadCounts = {};
+
+  /// Saved independently of the shop. Identity is fixed before reward UI.
+  int bookRewardSeed = DateTime.now().millisecondsSinceEpoch;
+  final Set<int> processedBookRewards = {};
+  final List<PendingBookReward> pendingBookRewards = [];
+  Map<String, dynamic>? bookCompletionContinuation;
   final Map<String, int> bookChoices = {};
   final Map<String, int> shopPurchases = {};
   int? shopOfferWeek;
@@ -817,6 +823,10 @@ class GameState {
     'traits': traits.toList(),
     'traitDaysLeft': traitDaysLeft.map((k, v) => MapEntry(k.toString(), v)),
     'bookReadCounts': bookReadCounts.map((k, v) => MapEntry(k.toString(), v)),
+    'bookRewardSeed': bookRewardSeed,
+    'processedBookRewards': processedBookRewards.toList(),
+    'pendingBookRewards': pendingBookRewards.map((r) => r.toJson()).toList(),
+    'bookCompletionContinuation': bookCompletionContinuation,
     'bookChoices': bookChoices,
     'shopPurchases': shopPurchases,
     'shopOfferWeek': shopOfferWeek,
@@ -941,6 +951,17 @@ class GameState {
     intMap('inventory', state.inventory);
     intMap('itemUseCounts', state.itemUseCounts);
     intMap('bookReadCounts', state.bookReadCounts);
+    state.bookRewardSeed = j['bookRewardSeed'] as int;
+    state.processedBookRewards.addAll(
+      (j['processedBookRewards'] as List).cast<int>(),
+    );
+    state.pendingBookRewards.addAll(
+      (j['pendingBookRewards'] as List).map(
+        (r) => PendingBookReward.fromJson((r as Map).cast<String, dynamic>()),
+      ),
+    );
+    state.bookCompletionContinuation = (j['bookCompletionContinuation'] as Map?)
+        ?.cast<String, dynamic>();
     intMap('stationeryInventory', state.stationeryInventory);
     state.stationeryDrawDay = j['stationeryDrawDay'] as String?;
     state.pendingStationery.addAll(

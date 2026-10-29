@@ -39,12 +39,12 @@ class MyInfoPanel extends StatelessWidget {
           width: 390,
           height: 660,
           child: DefaultTextStyle.merge(
-            style: const TextStyle(color: D30Colors.ink, fontSize: 14),
+            style: TextStyle(color: context.packColors.ink, fontSize: 14),
             child: Container(
               decoration: BoxDecoration(
-                color: D30Colors.panel,
+                color: context.packColors.panel,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: D30Colors.accent, width: 3),
+                border: Border.all(color: context.packColors.accent, width: 3),
               ),
               child: Column(
                 children: [
@@ -65,7 +65,7 @@ class MyInfoPanel extends StatelessWidget {
                             tooltip: 'Close',
                             onPressed: () => Navigator.pop(context),
                             style: IconButton.styleFrom(
-                              backgroundColor: D30Colors.accent,
+                              backgroundColor: context.packColors.accent,
                               foregroundColor: Colors.white,
                             ),
                             icon: const Icon(Icons.close),
@@ -191,7 +191,10 @@ class MyInfoPanel extends StatelessWidget {
                               ids: state.badgeIds,
                             ),
                           ),
-                          const Divider(color: D30Colors.ink, thickness: 1.5),
+                          Divider(
+                            color: context.packColors.ink,
+                            thickness: 1.5,
+                          ),
                           Expanded(
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -243,8 +246,8 @@ class MyInfoPanel extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                const VerticalDivider(
-                                  color: D30Colors.ink,
+                                VerticalDivider(
+                                  color: context.packColors.ink,
                                   width: 14,
                                 ),
                                 Expanded(

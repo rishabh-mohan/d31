@@ -270,7 +270,7 @@ class _CharacterCarouselState extends State<CharacterCarousel> {
                   child: Container(
                     key: ValueKey('character-${c.id}'),
                     decoration: BoxDecoration(
-                      color: D30Colors.panel,
+                      color: context.packColors.panel,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: const Color(0xFFB08E79),
@@ -554,7 +554,7 @@ class SetupTraitList extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: i < selected.length
                                         ? const Color(0xFF3CB52F)
-                                        : D30Colors.panel,
+                                        : context.packColors.panel,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: setupOrange),
                                   ),
@@ -580,7 +580,7 @@ class SetupTraitList extends StatelessWidget {
                 ),
               ],
             ),
-            color: D30Colors.panel,
+            color: context.packColors.panel,
           ),
         ),
         Expanded(
@@ -628,7 +628,7 @@ class SetupTraitList extends StatelessWidget {
                                   child: Container(
                                     clipBehavior: Clip.antiAlias,
                                     decoration: BoxDecoration(
-                                      color: D30Colors.panel,
+                                      color: context.packColors.panel,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: setupInk,

@@ -64,7 +64,7 @@ void main() {
   });
 
   test(
-    'a pack that sets staminaCost.base keeps its own numbers (kss16 style)',
+    'a pack that sets every staminaCost type uses its own numbers (kss16 style)',
     () {
       final game = gameWith(
         [
@@ -74,7 +74,13 @@ void main() {
           action('lesson'),
         ],
         rules: {
-          'staminaCost': {'base': 9.5, 'perWeight': 6.25, 'lesson': 9},
+          'staminaCost': {
+            'study': 9.5,
+            'exercise': 9.5,
+            'partTimeJob': 9.5,
+            'perWeight': 6.25,
+            'lesson': 9,
+          },
           'day': {'sleepRestoresHp': 10, 'sleepLocationBonusHp': 3},
         },
       );
@@ -85,18 +91,15 @@ void main() {
     },
   );
 
-  test('a per-type staminaCost key wins over base and the default', () {
+  test('a per-type staminaCost key wins; other types keep their default', () {
     final game = gameWith(
       [action('study'), action('exercise')],
       rules: {
-        'staminaCost': {'base': 9.5, 'study': 12},
+        'staminaCost': {'study': 12},
       },
     );
     expect(previewOf(game, 'study').hpCost, 12);
-    expect(
-      previewOf(game, 'exercise').hpCost,
-      10,
-    ); // falls back to base 9.5, rounded
+    expect(previewOf(game, 'exercise').hpCost, 24);
   });
 
   test('the default study case gives 15: an E-tier book (power 5) x studyWeight 3 at level 1', () {

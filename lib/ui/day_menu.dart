@@ -834,7 +834,7 @@ class _CornerClose extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PressFeedback(
     child: Material(
-      color: D30Colors.accent,
+      color: context.packColors.accent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12)),
       ),

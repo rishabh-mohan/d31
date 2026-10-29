@@ -27,6 +27,9 @@ flutter:
   # (see docs/MODULAR-PACKS.md). Only account data and placeholder art ship.
   assets:
     - assets/account/
+    # kss16's items and traits, merged under every pack
+    # (lib/engine/base_content.dart). Generated; gitignored.
+    - assets/base/
     # Placeholder art lifted from KSS by tools/copy_assets.py. Local use
     # only; gitignored. A pack may override any of these by shipping its own
     # images/ folder.

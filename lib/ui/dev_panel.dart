@@ -1,6 +1,6 @@
 /// The dev panel: change anything, inspect everything, reload the pack.
 ///
-/// Five tabs:
+/// Seven tabs:
 ///   State    edit stats / stamina / money / levels, jump days and ticks
 ///   Events   search all events, see which are eligible now, fire any of them
 ///   Content  switches, items, locations -- grant, set, unlock
@@ -8,6 +8,10 @@
 ///   Rules    live edit of rules.json, saved back to the pack directory
 ///   Pack     where the pack came from, reload from disk,
 ///            and the list of verbs the pack used that the engine lacks
+///   Setup    whether new-game setup is gated by what the account owns
+///
+/// [MenuDevPanel] is the run-less form opened from the main menu's Settings:
+/// Setup, Rules and Pack only.
 library;
 
 import 'dart:async';
@@ -62,7 +66,7 @@ class _DevPanelState extends State<DevPanel> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: FractionallySizedBox(
         heightFactor: 0.92,
         child: Column(
@@ -76,6 +80,7 @@ class _DevPanelState extends State<DevPanel> {
                 Tab(text: 'Traits'),
                 Tab(text: 'Rules'),
                 Tab(text: 'Pack'),
+                Tab(text: 'Setup'),
               ],
             ),
             Expanded(
@@ -95,12 +100,135 @@ class _DevPanelState extends State<DevPanel> {
                     location: widget.packLocation,
                     onReloaded: widget.onPackReloaded,
                   ),
+                  const _SetupTab(),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The dev panel without a run, opened from the main menu's Settings: the
+/// tabs that need only a pack. They read a scratch [Game] that is never saved.
+class MenuDevPanel extends StatefulWidget {
+  final List<(ContentPack, PackLocation)> campaigns;
+  final PackReloaded onPackReloaded;
+
+  const MenuDevPanel({
+    super.key,
+    required this.campaigns,
+    required this.onPackReloaded,
+  });
+
+  @override
+  State<MenuDevPanel> createState() => _MenuDevPanelState();
+}
+
+class _MenuDevPanelState extends State<MenuDevPanel> {
+  late final List<(ContentPack, PackLocation)> _campaigns = List.of(
+    widget.campaigns,
+  );
+  int _index = 0;
+
+  void _reloaded(ContentPack pack, PackLocation location) {
+    widget.onPackReloaded(pack, location);
+    setState(() {
+      final at = _campaigns.indexWhere(
+        (c) => c.$1.manifest.id == pack.manifest.id,
+      );
+      if (at >= 0) _campaigns[at] = (pack, location);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = <String>['Setup', if (_campaigns.isNotEmpty) ...['Rules', 'Pack']];
+    return DefaultTabController(
+      length: tabs.length,
+      child: FractionallySizedBox(
+        heightFactor: 0.92,
+        child: Column(
+          children: [
+            TabBar(tabs: [for (final t in tabs) Tab(text: t)]),
+            if (_campaigns.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: DropdownButton<int>(
+                  key: const ValueKey('dev-menu-pack'),
+                  isExpanded: true,
+                  value: _index,
+                  items: [
+                    for (var i = 0; i < _campaigns.length; i++)
+                      DropdownMenuItem(
+                        value: i,
+                        child: Text(_campaigns[i].$1.manifest.name),
+                      ),
+                  ],
+                  onChanged: (i) => setState(() => _index = i ?? 0),
+                ),
+              ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  const _SetupTab(),
+                  if (_campaigns.isNotEmpty) ...[
+                    _RulesTab(
+                      key: ValueKey('rules-${_campaigns[_index].$1.manifest.id}'),
+                      game: Game.newRun(_campaigns[_index].$1),
+                      location: _campaigns[_index].$2,
+                      onReloaded: _reloaded,
+                    ),
+                    _PackTab(
+                      key: ValueKey('pack-${_campaigns[_index].$1.manifest.id}'),
+                      game: Game.newRun(_campaigns[_index].$1),
+                      location: _campaigns[_index].$2,
+                      onReloaded: _reloaded,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Setup rules: the account's ownership gate on new-game setup.
+class _SetupTab extends StatefulWidget {
+  const _SetupTab();
+
+  @override
+  State<_SetupTab> createState() => _SetupTabState();
+}
+
+class _SetupTabState extends State<_SetupTab> {
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SwitchListTile(
+          key: const ValueKey('dev-setup-ownership'),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          value:
+              SetupOwnership.debugRequireOwnership ??
+              AccountStore.catalog.setupRequiresOwnership,
+          title: const Text('New-game setup requires ownership'),
+          subtitle: const Text(
+            'On: setup lists only unlocked badges and owned traits. '
+            'Off: every badge and eligible trait. This session only.',
+            style: TextStyle(fontSize: 11),
+          ),
+          onChanged: (v) =>
+              setState(() => SetupOwnership.debugRequireOwnership = v),
+        ),
+      ],
     );
   }
 }
@@ -762,22 +890,6 @@ class _TraitsTabState extends State<_TraitsTab> {
                 : 'Effects off for this session.';
           }),
         ),
-        SwitchListTile(
-          key: const ValueKey('dev-setup-ownership'),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          value:
-              SetupOwnership.debugRequireOwnership ??
-              AccountStore.catalog.setupRequiresOwnership,
-          title: const Text('New-game setup requires ownership'),
-          subtitle: const Text(
-            'On: setup lists only unlocked badges and owned traits. '
-            'Off: every badge and eligible trait. This session only.',
-            style: TextStyle(fontSize: 11),
-          ),
-          onChanged: (v) =>
-              widget.onChange(() => SetupOwnership.debugRequireOwnership = v),
-        ),
         const Divider(height: 24),
         _header(context, 'What they are doing right now'),
         Text(
@@ -995,6 +1107,7 @@ class _RulesTab extends StatefulWidget {
   final PackLocation location;
   final PackReloaded? onReloaded;
   const _RulesTab({
+    super.key,
     required this.game,
     required this.location,
     this.onReloaded,
@@ -1118,7 +1231,12 @@ class _PackTab extends StatefulWidget {
   final Game game;
   final PackLocation location;
   final PackReloaded? onReloaded;
-  const _PackTab({required this.game, required this.location, this.onReloaded});
+  const _PackTab({
+    super.key,
+    required this.game,
+    required this.location,
+    this.onReloaded,
+  });
 
   @override
   State<_PackTab> createState() => _PackTabState();

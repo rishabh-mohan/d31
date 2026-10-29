@@ -68,6 +68,11 @@ class ContentSource {
     return roots;
   }
 
+  /// Where packs are looked for on this platform, for first-run guidance.
+  static Future<List<String>> rootPaths() async => [
+    for (final r in await _packRoots()) r.absolute.path,
+  ];
+
   /// Pack IDs found on disk, sorted by name.
   static Future<List<String>> availablePackIds() async {
     final ids = <String>{};

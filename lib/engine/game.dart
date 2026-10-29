@@ -25,6 +25,8 @@ import 'goals.dart';
 import 'pack.dart';
 import 'state.dart';
 import 'traits.dart';
+import 'book_rewards.dart';
+import 'book_completion.dart';
 
 export 'dday.dart';
 
@@ -527,7 +529,9 @@ class Game {
   /// Every action at the current location that is not blocked right now.
   /// This is the pool the hand is drawn from, not what the player sees.
   List<LocationAction> availableActions() {
-    if (openingPending || state.dayEndPending) return const [];
+    if (openingPending || state.dayEndPending) {
+      return const [];
+    }
     if (examEnabled && isExamDay) return const [];
     final here = state.location;
     if (here == null) return const [];
@@ -706,7 +710,13 @@ class Game {
     return _hand;
   }
 
-  void invalidateHand() => _handValid = false;
+  /// A reward notification locks interaction, not the cards behind the modal.
+  /// Keep both the drawn blocks and their books until the entire action resumes.
+  void invalidateHand() {
+    if (bookCompletionPending && _handValid) return;
+    _handValid = false;
+    _handBooks.clear();
+  }
 
   /// Runs the pack callback bound to engine moment [name] (see
   /// `EffectEngine.runHook`). Items it hands over are kept for the next
@@ -779,10 +789,55 @@ class Game {
   /// a rebuild within the same tick. A Refresh Ticket changes the hand, not
   /// this -- the slot is what moves.
   GameBook? bookForSlot(int slot) {
-    final books = studiableBooks();
-    if (books.isEmpty) return null;
-    final pick = Random(state.date.asInt * 31 + slot + _handSalt);
-    return books[pick.nextInt(books.length)];
+    return _handBooks.putIfAbsent(slot, () {
+      final books = studiableBooks();
+      if (books.isEmpty) return null;
+      final pick = Random(state.date.asInt * 31 + slot + _handSalt);
+      return books[pick.nextInt(books.length)];
+    });
+  }
+
+  final Map<int, GameBook?> _handBooks = {};
+
+  bool get bookCompletionPending =>
+      state.pendingBookRewards.isNotEmpty ||
+      state.bookCompletionContinuation != null;
+
+  /// An idempotent award, saved before its acquisition receipt is presented.
+  void awardBookReward(PendingBookReward pending) {
+    if (pending.awarded || !state.pendingBookRewards.contains(pending)) return;
+    final reward = pending.selected;
+    switch (reward.type) {
+      case 'item':
+        state.addItem(reward.id!);
+      case 'trait':
+        pending.traitGranted = effects.acquireTrait(state, reward.id!);
+      case 'stat':
+        state.addStat(reward.subject!, reward.amount);
+    }
+    pending.awarded = true;
+    pending.stage = 'receipt';
+    invalidateHand();
+  }
+
+  /// Finish the interrupted block only after all saved reward stages close.
+  ActionOutcome finishBookCompletionAction() {
+    if (state.pendingBookRewards.isNotEmpty) {
+      return ActionOutcome('Finish the book reward first.');
+    }
+    final saved = state.bookCompletionContinuation;
+    if (saved == null) return ActionOutcome('');
+    state.bookCompletionContinuation = null;
+    effects.pulsedSwitches.addAll((saved['pulses'] as List).cast<String>());
+    return _receipts(
+      _finishAction(
+        (saved['parts'] as List).cast<String>(),
+        saved['exerciseBefore'] as int,
+        saved['partTimeBefore'] as int,
+        (saved['goalMet'] as bool) || settleWeeklyGoal(),
+        saved['deferExhaustion'] as bool,
+      ),
+    );
   }
 
   /// How many times this book has been read.
@@ -827,7 +882,9 @@ class Game {
   /// Spend a Refresh Ticket to redeal the hand. Returns false when there is
   /// no ticket, which the original surfaces as "Refresh unavailable!".
   bool refreshHand() {
-    if (openingPending || state.dayEndPending) return false;
+    if (openingPending || state.dayEndPending || bookCompletionPending) {
+      return false;
+    }
     if (state.exhaustionPending) return false;
     if (state.rerolls <= 0) return false;
     state.rerolls--;
@@ -837,7 +894,9 @@ class Game {
   }
 
   bool move(int locationId) {
-    if (openingPending || state.dayEndPending) return false;
+    if (openingPending || state.dayEndPending || bookCompletionPending) {
+      return false;
+    }
     if (state.exhaustionPending) return false;
     if (inClass) return false;
     if (state.movementLocked) return false;
@@ -958,11 +1017,27 @@ class Game {
 
   // --- resolving an action ------------------------------------------------
 
+  /// Headless callers settle rewards synchronously; a UI host opts into
+  /// the resumable presentation before the action advances.
   ActionOutcome act(
     LocationAction action, {
     GameBook? book,
     bool deferExhaustion = false,
-  }) => _receipts(_act(action, book: book, deferExhaustion: deferExhaustion));
+    bool deferBookCompletion = false,
+  }) {
+    final outcome = _act(action, book: book, deferExhaustion: deferExhaustion);
+    if (!deferBookCompletion && bookCompletionPending) {
+      for (final pending in state.pendingBookRewards) {
+        for (final id in pending.beforeItems) {
+          _hookItems.update(id, (n) => n + 1, ifAbsent: () => 1);
+        }
+        awardBookReward(pending);
+      }
+      state.pendingBookRewards.clear();
+      return finishBookCompletionAction();
+    }
+    return _receipts(outcome);
+  }
 
   ActionOutcome _act(
     LocationAction action, {
@@ -970,7 +1045,7 @@ class Game {
     bool deferExhaustion = false,
   }) {
     if (state.finished) return ActionOutcome('The run is over.');
-    if (openingPending || state.dayEndPending) {
+    if (openingPending || state.dayEndPending || bookCompletionPending) {
       return ActionOutcome('Finish the current story first.');
     }
     if (state.exhaustionPending) {
@@ -1006,6 +1081,34 @@ class Game {
     if (goalMet) parts.add('Weekly goal met!');
     if (action.blockDuplicated) state.usedActionKeysToday.add(_key(action));
 
+    if (state.pendingBookRewards.isNotEmpty) {
+      state.bookCompletionContinuation = {
+        'parts': parts,
+        'exerciseBefore': exerciseBefore,
+        'partTimeBefore': partTimeBefore,
+        'goalMet': goalMet,
+        'deferExhaustion': deferExhaustion,
+        'pulses': effects.pulsedSwitches.toList(),
+      };
+      invalidateHand();
+      return ActionOutcome(parts.join(' '));
+    }
+    return _finishAction(
+      parts,
+      exerciseBefore,
+      partTimeBefore,
+      goalMet,
+      deferExhaustion,
+    );
+  }
+
+  ActionOutcome _finishAction(
+    List<String> parts,
+    int exerciseBefore,
+    int partTimeBefore,
+    bool goalMet,
+    bool deferExhaustion,
+  ) {
     final beforeEvents = <EventRun>[];
     if (state.exerciseLevel.level > exerciseBefore) {
       state.switches['EXERCISE_LEVEL_UP'] = 1;
@@ -1142,21 +1245,18 @@ class Game {
     if (traits.staminaFree(state)) return 0;
 
     final perWeight = pack.rules.number('staminaCost', 'perWeight', 6.25);
-    // What an action with no stamina weight costs. A pack's own
-    // staminaCost.<type> wins, then its shared staminaCost.base (kss16 sets
-    // 9.5 and weights every action), then the engine's default for the type.
-    num typeCost(String type, num fallback) {
-      final own = pack.rules.number('staminaCost', type, double.nan);
-      if (!own.isNaN) return own;
-      final shared = pack.rules.number('staminaCost', 'base', double.nan);
-      return shared.isNaN ? fallback : shared;
-    }
+    // What an action with no stamina weight costs: the pack's
+    // staminaCost.<type>, else the engine's default for the type. `base`
+    // covers every other action type.
+    num typeCost(String type, num fallback) =>
+        pack.rules.number('staminaCost', type, fallback);
 
     num cost = switch (action.actionType) {
-      'lesson' => pack.rules.number('staminaCost', 'lesson', 9),
+      'lesson' => typeCost('lesson', 9),
       'study' => typeCost('study', 16) + perWeight * action.hpWeight,
       'exercise' => typeCost('exercise', 24) + perWeight * action.hpWeight,
-      'partTimeJob' => typeCost('partTimeJob', 29) + perWeight * action.hpWeight,
+      'partTimeJob' =>
+        typeCost('partTimeJob', 29) + perWeight * action.hpWeight,
       _ => typeCost('base', 9.5) + perWeight * action.hpWeight,
     };
 
@@ -1201,13 +1301,46 @@ class Game {
     if (book != null) {
       final before = readCount(book);
       state.bookReadCounts[book.id] = before + 1;
-      // The moment a book is read through (not later re-reads of it). The
-      // separate completion item gacha is not implemented (TODO 39).
       if (book.doneCount > 0 &&
           before < book.doneCount &&
-          before + 1 >= book.doneCount) {
+          before + 1 >= book.doneCount &&
+          state.processedBookRewards.add(book.id)) {
         finished = ' Finished ${book.name}.';
+        final beforeItems = Map<int, int>.of(_hookItems);
         runHook('bookCompleted', [book.id]);
+        if (pack.bookRewards.enabled &&
+            pack.bookRewards.tier(book.tier) != null) {
+          final receipts = <int>[];
+          for (final entry in _hookItems.entries.toList()) {
+            final delta = entry.value - (beforeItems[entry.key] ?? 0);
+            for (var n = 0; n < delta; n++) {
+              receipts.add(entry.key);
+            }
+          }
+          _hookItems
+            ..clear()
+            ..addAll(beforeItems);
+          final pool = buildBookRewards(state, book);
+          if (pool.isNotEmpty) {
+            final chain = menuBooks(book.subject);
+            final index = chain.indexWhere((b) => b.id == book.id);
+            state.pendingBookRewards.add(
+              PendingBookReward(
+                bookId: book.id,
+                candidates: pool,
+                selectedIndex: Random(state.bookRewardSeed + book.id)
+                    .nextInt(pool.length),
+                beforeItems: receipts,
+                unlockedBookId:
+                    index >= 0 &&
+                        index + 1 < chain.length &&
+                        !isBookComplete(chain[index + 1])
+                    ? chain[index + 1].id
+                    : null,
+              ),
+            );
+          }
+        }
       }
     }
     return 'Studied ${_pretty(subject)}: +$amount.'

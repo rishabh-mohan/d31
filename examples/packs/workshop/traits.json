@@ -4,7 +4,9 @@
       "id": 69,
       "name": "Steady hands",
       "description": "No stamina cost. Crafting pays 3 extra Gold.",
-      "gachable": true
+      "gachable": true,
+      "bookRewardEligible": true,
+      "rank": "C"
     }
   ]
 }
