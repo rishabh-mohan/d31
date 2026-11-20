@@ -1,8 +1,8 @@
 # d30mode
 
-A data-driven game engine, written in Flutter, that recreates the
-**31-Day Mode** of *Korean Student Simulator* (KSS) and is built to be
-modded. The engine holds no content: the calendar, places, actions, events,
+A data-driven game engine, written in Flutter: an independent
+reimplementation of the **31-Day Mode** of *Korean Student Simulator* (KSS),
+built to be modded. The engine holds no content: the calendar, places, actions, events,
 items, traits, characters, colleges and every tuning number come from a
 **content pack** of JSON files. Change the pack and you change the game.
 
@@ -23,8 +23,8 @@ What works:
   study books and combos, weekly goals and refresh tickets.
 - **The event engine.** Node-graph events with dialogue, choices, branching,
   layered character portraits and backgrounds. A recursive condition
-  language covers switches, dates, locations, items, traits and computed
-  predicates, and changers carry around 60 effect verbs. Events can be
+  language covers switches, dates, locations, items, traits and 45 computed
+  predicates, and changers carry 57 effect verbs. Events can be
   scheduled, random, character-specific or story-set gated.
 - **Run setup.** Pick a mode, a character, up to seven university badges and
   five traits, and enter a name. Badges and traits come from what your account
@@ -116,7 +116,7 @@ test/              engine, pack and widget tests, including seeded full-run simu
 
 ## Tests
 
-`flutter test` runs about 490 tests. They include 200 seeded complete runs
+`flutter test` runs 531 tests. They include 200 seeded complete runs
 that must all reach the end of the calendar. Static checks confirm the engine
 implements every effect verb and condition the bundled packs use, and pack
 tests check the Workshop example and the `mechanics.json` validator. Several
